@@ -2,7 +2,7 @@
 
 Install Tank Frenzy as a Home Assistant app (formerly called an add-on). The Pi hosts the multiplayer game; players use Safari, Edge, Chrome, or another modern browser on their phones, tablets, or computers. Rendering and sound run on each player's device.
 
-Based on **Tank Frenzy v1.4.0** from [`tank-frenzy-2`](https://github.com/charlescsj-del/tank-frenzy-2/commit/e08f6047c9c699a9f1c9c8198a30685c050788d5). Includes existing gameplay, aiming guide, forgiving pickups, battle music and sound effects. Packaging follows the Home Assistant OS setup in [`yt_audio_studio`](https://github.com/charlescsj-del/yt_audio_studio), with separate ingress and LAN listeners.
+Based on **Tank Frenzy v1.6.0** from the [main game repository](https://github.com/charlescsj-del/tank-frenzy/commit/a5fd8aa6bd3578975eac5138e5d8324b6afbf6ec). Includes the approved B pre-game track, random A/C battle tracks, and selected cannon, ricochet, power-up and destruction effects. The Pi app provides separate Home Assistant sidebar and LAN listeners.
 
 ## Install
 
@@ -27,7 +27,7 @@ Use the direct LAN address for the best mobile/full-screen experience and invite
 
 Set **Configuration → public_url** to your LAN address, for example `http://192.168.1.50:8765`, so **Copy Invite** also produces a usable LAN link when you open the game through the sidebar. Leave it empty to use the address currently open in the browser. Temporary ingress URLs require a Home Assistant session and are not suitable as permanent invitations.
 
-Port `8765` is the game port and does not require a Home Assistant login. Change or disable its host mapping under **Network** if needed; update `public_url` to match. The internal ingress port `8099` is not published on the host, so it does not conflict with YT Audio Studio. Disabling the game port still permits sidebar play.
+Port `8765` is the game port and does not require a Home Assistant login. Change or disable its host mapping under **Network** if needed; update `public_url` to match. The internal ingress port `8099` is not published on the host. Disabling the game port still permits sidebar play.
 
 Music starts after the first tap/click, according to browser autoplay rules. Sound comes from the playing device, not the Pi's audio output. Scores and rooms are held in memory and reset when the app restarts.
 
@@ -50,4 +50,4 @@ docker run --rm -p 8765:8765 tank-frenzy-rpi
 
 Run the build on the intended architecture (or use Docker Buildx with `--platform linux/arm64`). The repository includes CI for tests and ARM64/AMD64 container builds. A physical Pi/Home Assistant installation and mobile play must still be checked on the target device; automated tests do not establish Pi performance under load.
 
-App package version: **1.0.0**. Game version: **1.4.0**. Bump `config.yaml` for future app updates and keep the Dockerfile default build version in sync.
+App package version: **1.1.0**. Game version: **1.6.0**. Bump `config.yaml` for future app updates and keep the Dockerfile default build version in sync.

@@ -3,35 +3,74 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const Music=require('../music.js');
 function context(){
-  let allocations=0;const sources=[];
+  const sources=[],downloads=[],decoded=[];
   const ac={currentTime:0,destination:{},createGain:()=>({connect(){},gain:{value:0,cancelScheduledValues(){},setValueAtTime(v){this.value=v;},linearRampToValueAtTime(v){this.value=v;}}}),
-    createBuffer(channels,length,rate){allocations++;const data=new Float32Array(length);return {duration:length/rate,length,sampleRate:rate,getChannelData:()=>data};},
+    async decodeAudioData(data){decoded.push(data);return {data};},
     createBufferSource(){const source={connect(){},disconnect(){this.disconnected=true;},start(){this.started=true;},stop(){this.stopped=true;}};sources.push(source);return source;}};
-  return {ac,sources,allocations:()=>allocations};
+  const fetcher=async url=>{downloads.push(url);return {ok:true,arrayBuffer:async()=>url};};
+  return {ac,sources,downloads,decoded,fetcher};
 }
-test('original lobby and battle music is bounded, non-silent and lower than effects',()=>{
-  const c=context();let previous;
-  for(const mode of ['lobby','battle']){
-    const buffer=Music.compose(c.ac,mode),samples=buffer.getChannelData(0);let peak=0,energy=0;
-    for(const value of samples){assert(Number.isFinite(value));peak=Math.max(peak,Math.abs(value));energy+=value*value;}
-    assert(peak>.1&&peak<=.551);assert(energy/samples.length>.001);assert(buffer.duration>=30&&buffer.duration<35);
-    assert(Math.abs(samples[0]-samples.at(-1))<.01,'loop boundary has no amplitude jump');
-    if(previous){assert(buffer.duration<previous.duration,'battle arrangement has a faster tempo');assert((buffer.length+previous.length)*4<6*1024*1024,'two tracks stay below six MiB');}previous=buffer;
-  }
-  const music=new Music(c.ac);music.play('lobby');assert(music.gain.gain.value<=.10);
-});
-
-test('battle arrangement is deterministic and develops across its four phrases',()=>{
-  const c=context(),a=Music.compose(c.ac,'battle').getChannelData(0),b=Music.compose(c.ac,'battle').getChannelData(0);
-  const {createHash}=require('node:crypto'),hash=data=>createHash('sha256').update(Buffer.from(data.buffer,data.byteOffset,data.byteLength)).digest('hex');
-  assert.equal(hash(a),hash(b),'procedural percussion uses a stable seed');
-  const phrases=Array.from({length:4},(_,i)=>hash(a.subarray(Math.floor(a.length*i/4),Math.floor(a.length*(i+1)/4))));
-  assert.equal(new Set(phrases).size,4,'the four sections are not a repeated one-bar loop');
-});
-test('music maintains one looping source, caches both tracks, and stops immediately',()=>{
-  const c=context(),music=new Music(c.ac);music.play('lobby');music.play('lobby');assert.equal(c.sources.length,1);assert(c.sources[0].loop);
-  music.play('battle');assert(c.sources[0].stopped&&c.sources[0].disconnected);assert.equal(c.sources.length,2);
-  music.stop();assert(c.sources[1].stopped);assert.equal(music.source,null);assert.equal(music.gain.gain.value,0);
-  music.play('lobby');assert.equal(c.allocations(),2,'buffers reused when returning to splash screen');assert.equal(c.sources.length,3);
+function deferred(){let resolve;const promise=new Promise(r=>{resolve=r;});return {promise,resolve};}
+test('B plays before battle, caches its MP3, and maintains one quiet looping source',async()=>{
+  const c=context(),music=new Music(c.ac,{fetcher:c.fetcher});
+  const first=music.play('lobby');assert.equal(music.play('lobby'),first,'pending requests are shared');
+  assert.equal(await first,true);await music.play('lobby');
+  assert.deepEqual(c.downloads,[Music.tracks.B]);assert.equal(c.sources.length,1);assert(c.sources[0].loop);
+  assert(music.gain.gain.value<=.10);
+  music.stop();assert(c.sources[0].stopped&&c.sources[0].disconnected);assert.equal(music.gain.gain.value,0);
+  await music.play('lobby');assert.equal(c.downloads.length,1);assert.equal(c.decoded.length,1);
   music.stop();music.stop();assert.equal(c.sources.filter(s=>!s.stopped).length,0);
+});
+test('A/C are chosen once per battle, retained across mute/return, with a three-track cache',async()=>{
+  const c=context();let choices=0;
+  const music=new Music(c.ac,{fetcher:c.fetcher,random:()=>choices++%2?.9:.1});
+  await music.play('lobby');await music.play('battle','ROOM:1');assert.equal(music.track,'A');
+  await music.play('battle','ROOM:1');music.stop();await music.play('battle','ROOM:1');
+  assert.equal(music.track,'A');assert.equal(choices,1);
+  await music.play('lobby');await music.play('battle','ROOM:2');assert.equal(music.track,'C');assert.equal(choices,2);
+  await music.play('battle','OTHER:2');assert.equal(music.track,'A');assert.equal(choices,3);
+  assert.deepEqual(c.downloads,[Music.tracks.B,Music.tracks.A,Music.tracks.C]);assert.equal(c.decoded.length,3);
+  assert.equal(music.buffers.size,3);assert.equal(c.sources.filter(s=>!s.stopped).length,1);
+});
+test('random selection may repeat on consecutive rounds without restarting the same track',async()=>{
+  const c=context();let choices=0;
+  const music=new Music(c.ac,{fetcher:c.fetcher,random:()=>{choices++;return .5;}});
+  await music.play('battle','one');await music.play('battle','two');
+  assert.equal(music.track,'C');assert.equal(choices,2);assert.equal(c.sources.length,1);
+});
+test('mute during downloading prevents any delayed playback; resume reuses the download',async()=>{
+  const c=context(),gate=deferred();let downloads=0;
+  const music=new Music(c.ac,{fetcher:()=>{downloads++;return gate.promise;}});
+  const loading=music.play('lobby');music.stop();
+  gate.resolve({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});
+  assert.equal(await loading,false);assert.equal(c.sources.length,0);
+  await music.play('lobby');assert.equal(downloads,1);assert.equal(c.sources.length,1);
+});
+test('mute during decoding prevents late starts, even if playback was requested again',async()=>{
+  const c=context(),gate=deferred();c.ac.decodeAudioData=()=>gate.promise;
+  const music=new Music(c.ac,{fetcher:c.fetcher});
+  const stale=music.play('lobby');await new Promise(setImmediate);music.stop();const current=music.play('lobby');
+  gate.resolve({});assert.equal(await stale,false);assert.equal(await current,true);
+  assert.equal(c.downloads.length,1);assert.equal(c.sources.length,1);
+});
+test('a slow lobby download cannot replace the battle song',async()=>{
+  const c=context(),gate=deferred();
+  const music=new Music(c.ac,{random:()=>0,fetcher:url=>url===Music.tracks.B?gate.promise:c.fetcher(url)});
+  const lobby=music.play('lobby');await music.play('battle','ROOM:1');
+  gate.resolve({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});
+  assert.equal(await lobby,false);assert.equal(music.track,'A');assert.equal(c.sources.length,1);
+});
+test('HTTP, network and decode failures are contained and can retry on a later interaction',async()=>{
+  for(const failure of ['http','network','decode']){
+    const c=context();let attempts=0;
+    const decode=c.ac.decodeAudioData;c.ac.decodeAudioData=async data=>{if(failure==='decode'&&attempts===1)throw Error('decode');return decode(data);};
+    const music=new Music(c.ac,{fetcher:url=>{
+      attempts++;
+      if(attempts===1&&failure==='http')return Promise.resolve({ok:false});
+      if(attempts===1&&failure==='network')return Promise.reject(Error('offline'));
+      return c.fetcher(url);
+    }});
+    assert.equal(await music.play('lobby'),false);assert.equal(c.sources.length,0);assert.equal(music.buffers.size,0);
+    assert.equal(await music.play('lobby'),true);assert.equal(attempts,2);assert.equal(c.sources.length,1);
+  }
 });

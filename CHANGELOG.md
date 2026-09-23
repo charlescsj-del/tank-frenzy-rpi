@@ -2,6 +2,12 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 1.1.0 — Tank Frenzy v1.6.0
+
+- Sync the current main-game release, including the approved B pre-game music, random A/C battle music and four selected combat effects.
+- Serve seven additional versioned MP3s through both the authenticated sidebar and LAN game, retaining the ingress prefix and WebSocket behavior.
+- Remove unrelated project references from the published documentation.
+
 ## App 1.0.0 — Home Assistant / Raspberry Pi
 
 - Package Tank Frenzy v1.4.0 for 64-bit Raspberry Pi and AMD64 Home Assistant OS.
@@ -10,6 +16,17 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 - Keep assets, sound, room discovery and WebSockets under the ingress prefix; support a configured invitation URL.
 - Include installation/update instructions and CI container builds for both architectures.
 - Verify 88 automated checks, including mixed ingress/LAN multiplayer. Physical Pi play still requires target-device verification.
+
+## 1.6.0
+
+- Install the approved Cannon A for normal and machine-gun fire, Ricochet C for bounces, Power-up A for pickups and Destruction C for tank explosions. Keep the previous samples as per-asset fallbacks.
+- Preserve double cannon and other unaffected cues, voice limits, spatial playback and mute.
+
+## 1.5.0
+
+- Play B — Overdrive before battles, including waiting and countdown.
+- Select A — Iron Advance or C — Steel Pressure locally for each battle; cache decoded tracks and use one looping music source.
+- Preserve independent music/effects controls and browser autoplay behavior.
 
 ## 1.4.0
 

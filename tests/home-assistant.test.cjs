@@ -7,6 +7,8 @@ const path=require('node:path');
 const WebSocket=require('ws');
 const {createGameServer}=require('../server.cjs');
 const {readOptions}=require('../addon.cjs');
+const Music=require('../music.js');
+const SoundBank=require('../sound-bank.js');
 
 async function listen(server){server.listen(0,'127.0.0.1');await once(server,'listening');return 'http://127.0.0.1:'+server.address().port;}
 function supervisor(req){Object.defineProperty(req.socket,'remoteAddress',{value:'172.30.32.2',configurable:true});}
@@ -36,7 +38,7 @@ test('ingress serves prefix-safe assets and shares live multiplayer rooms with L
   const html=await fetch(ingress+'/',{headers:{'X-Ingress-Path':prefix}}).then(r=>r.text());
   assert(html.includes('<base href="'+prefix+'/">'));
   const assets=[...html.matchAll(/src="([^\"]+)"/g)].map(m=>m[1]);assert(assets.length>=5);
-  for(const asset of [...assets,'./audio/cartoon-v1.mp3']){
+  for(const asset of [...assets,SoundBank.asset,...Object.values(Music.tracks),...new Set(Object.values(SoundBank.approvedAssets))]){
     const external=new URL(asset,'https://ha.example'+prefix+'/');assert(external.pathname.startsWith(prefix+'/'));
     assert.equal((await fetch(ingress+external.pathname.slice(prefix.length))).status,200);
   }

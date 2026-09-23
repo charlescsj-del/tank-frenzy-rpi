@@ -255,7 +255,8 @@ function rememberAudio(){try{localStorage.setItem('tank-frenzy-sfx',sound?'on':'
 function syncMusic(){
   if(!music||!audioReady||document.hidden){musicPlayer?.stop();return;}
   const ac=getAudio(true);if(!ac||typeof TankMusic==='undefined')return;
-  musicPlayer??=new TankMusic(ac);musicPlayer.play(joined&&latest?.phase!=='waiting'?'battle':'lobby');
+  musicPlayer??=new TankMusic(ac);
+  musicPlayer.play(joined&&latest?.phase==='playing'?'battle':'lobby',`${roomCode}:${latest?.map?.id}`);
 }
 function unlockAudio(){audioReady=true;syncMusic();}
 $('sound').addEventListener('click',()=>{sound=!sound;audioReady=true;updateAudioButtons();rememberAudio();if(sound)playCue('menu');else{stopMovementSound();stopCueSounds();}syncMusic();});

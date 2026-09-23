@@ -1,18 +1,18 @@
 # Tank Frenzy sound direction
 
-Status: approved effects shipped in v1.2.0, playback choices were updated in v1.3.0, and a more energetic original battle score shipped in v1.4.0.
+Status: approved effects shipped in v1.2.0, three approved MP3 music recordings shipped in v1.5.0, and the user's four selected battlefield effect recordings ship in v1.6.0.
 
 ## Shipped implementation
 
-The game uses the actual approved sample waveforms, packed into `audio/cartoon-v1.mp3` with offsets in `sound-bank.js`. The pack is 170 KiB and decodes once after the first audio interaction. It includes the proposed explosion, menu, start, shots, laser, ricochet, interception, hit, Immortal, Restore, Speed, win and defeat sounds. In v1.3.0, every pickup uses the approved Restore chime. Normal and machine-gun shots use the same cannon sample, including local shots; double cannon uses the paired-pop sample. Unused audition clips remain in the immutable asset to preserve its versioned offsets.
+The game retains `audio/cartoon-v1.mp3` for the older unaffected cues and uses four small MP3s from the user's latest audition: Cannon A for normal and machine-gun shots, Ricochet C for bouncing shells, Power-up A for every pickup, and Destruction C for tank explosions. Double cannon still uses its paired-pop recording. The originals remain in the old pack as fallback if a selected download fails. See `audio/README.md` for the exact filenames and mapping.
 
 Browser playback has a 12-voice limit, priority for important cues, repeated-effect rate limits, subtle panning, distance attenuation and result-cue ducking. Mute cancels active samples and fallback synth effects. The engine remains synthesized locally. Original tones are a fallback during loading or if the asset fails; old events are never queued for later playback.
 
-The original 16-bar score in `music.js` uses a D-minor battle theme over D minor / B-flat / F / C, with kick, snare, hi-hat, pulsing bass, sustained chords, brass-style melody and short drum fills. Battle tempo is 128 BPM; the splash/waiting arrangement is a calmer, sparser 112 BPM. Four changing phrases give each loop a beginning, development and turnaround.
+The v1.5.0 music update plays approved B — Overdrive on splash/waiting/countdown and picks A — Iron Advance or C — Steel Pressure for each battle. These are original synthesized, versioned MP3 recordings; selection and playback run locally on each player's device.
 
-Both arrangements render once into cached mono buffers on the device (about 5.4 MiB together). One looping source at gain 0.10 keeps music beneath the effects mix. Peaks remain bounded and a short edge taper prevents loop clicks. Music and effects have independent saved switches; hiding the page stops both. No server audio processing or music downloads are needed.
+Music decodes only tracks that are played and uses one looping source at gain 0.10 beneath the effects mix. Music and effects have independent saved switches; hiding the page stops both. Music and effects are served as static cached files, with no server-side audio processing.
 
-The sections below preserve the earlier design proposal; the shipped behavior above supersedes its pickup and local-shot suggestions.
+The sections below preserve the earlier design proposal; the shipped behavior above supersedes earlier pickup and shot suggestions.
 
 ## Direction: playful cartoon arcade
 

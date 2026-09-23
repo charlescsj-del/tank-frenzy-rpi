@@ -5,24 +5,28 @@ const fs=require('node:fs');
 const path=require('node:path');
 const SoundBank=require('../sound-bank.js');
 function context(){
-  const nodes=[],starts=[];
+  const nodes=[],starts=[],sources=[];
   const param=()=>({value:0,events:[],setValueAtTime(v,t){this.value=v;this.events.push([v,t]);},linearRampToValueAtTime(v,t){this.events.push([v,t]);},setTargetAtTime(v,t){this.events.push([v,t]);},cancelScheduledValues(){this.events=[];}});
   const node=()=>{const n={connect(){},disconnect(){this.disconnected=true;}};nodes.push(n);return n;};
-  const ac={currentTime:0,destination:{},decodeAudioData:async()=>({duration:11}),
+  const ac={currentTime:0,destination:{},decodeAudioData:async asset=>({duration:11,asset}),
     createGain:()=>({...node(),gain:param()}),createDynamicsCompressor:()=>({...node(),threshold:param(),knee:param(),ratio:param(),attack:param(),release:param()}),
     createStereoPanner:()=>({...node(),pan:param()}),
-    createBufferSource(){return {...node(),playbackRate:{value:1},start(...args){starts.push(args);},stop(when){if(when===undefined)this.cancelled=true;}};}};
-  return {ac,nodes,starts};
+    createBufferSource(){const source={...node(),playbackRate:{value:1},start(...args){starts.push(args);},stop(when){if(when===undefined)this.cancelled=true;}};sources.push(source);return source;}};
+  return {ac,nodes,starts,sources};
 }
-const success=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});
+const success=async asset=>({ok:true,arrayBuffer:async()=>asset});
 
-test('sound bank fetches/decode once, uses sprite ranges, and never replays sounds queued during loading',async()=>{
-  const {ac,starts}=context();let requests=0,resolve;
-  const bank=new SoundBank(ac,()=>{requests++;return new Promise(r=>resolve=r);});
+test('sound bank decodes approved recordings once, uses their ranges, and never replays sounds queued during loading',async()=>{
+  const {ac,starts,sources}=context(),requests=[];let resolve;
+  const bank=new SoundBank(ac,asset=>{requests.push(asset);return asset===SoundBank.asset?new Promise(r=>resolve=r):success(asset);});
   assert.equal(bank.play('explosion'),false);await Promise.resolve();
-  resolve(await success());assert.equal(await bank.ready,true);assert.equal(requests,1);assert.equal(starts.length,0);
+  resolve(await success(SoundBank.asset));assert.equal(await bank.ready,true);assert.equal(requests.length,5);assert.equal(new Set(requests).size,5);assert.equal(starts.length,0);
   assert.equal(bank.play('explosion'),true);assert.deepEqual(starts[0],[0,SoundBank.clips.explosion.start,SoundBank.clips.explosion.duration]);
-  assert.equal(bank.play('missing'),false);assert.equal(requests,1);
+  assert.equal(sources[0].buffer.asset,SoundBank.approvedAssets.explosion);
+  bank.play('shot');bank.play('machine-fire');
+  assert.equal(sources[1].buffer.asset,SoundBank.approvedAssets.shot);
+  assert.equal(sources[2].buffer.asset,SoundBank.approvedAssets.shot);
+  assert.equal(bank.play('missing'),false);assert.equal(requests.length,5);
 });
 
 test('failed downloads and decoding leave graceful fallback available',async()=>{
@@ -30,6 +34,15 @@ test('failed downloads and decoding leave graceful fallback available',async()=>
     const {ac}=context(),bank=new SoundBank(ac,broken);assert.equal(await bank.ready,false);assert.equal(bank.play('shot'),false);
   }
   const {ac}=context();ac.decodeAudioData=async()=>{throw Error('decode');};const bank=new SoundBank(ac,success);assert.equal(await bank.ready,false);assert.equal(bank.play('start'),false);
+});
+
+test('a failed selected recording falls back to its prior cue without hiding other approved sounds',async()=>{
+  const {ac,sources,starts}=context();
+  const bank=new SoundBank(ac,asset=>asset===SoundBank.approvedAssets.explosion?Promise.resolve({ok:false}):success(asset));
+  assert.equal(await bank.ready,false);
+  assert.equal(bank.play('explosion'),true);assert.equal(sources[0].buffer.asset,SoundBank.asset);
+  assert.equal(starts[0][1],SoundBank.legacyClips.explosion.start);
+  bank.play('ricochet');assert.equal(sources[1].buffer.asset,SoundBank.approvedAssets.ricochet);
 });
 
 test('sample voice budget preserves high-priority cues; stop cancels every voice and resets ducking',async()=>{
@@ -59,6 +72,13 @@ test('panning is bounded and ordinary endings release sample nodes',async()=>{
 test('every selected effect is present in the shipped audio asset and manifests',()=>{
   const file=path.join(__dirname,'..',SoundBank.asset);assert(fs.statSync(file).size>100000);
   for(const name of ['menu','start','shot','double','machine','machine-fire','laser','ricochet','intercept','hit','explosion','immortal','restore','speed','win','lose']){
-    const clip=SoundBank.clips[name];assert(clip.start>=0&&clip.duration>0&&clip.start+clip.duration<=10.84);
+    const clip=SoundBank.legacyClips[name];assert(clip.start>=0&&clip.duration>0&&clip.start+clip.duration<=10.84);
+  }
+  for(const asset of new Set(Object.values(SoundBank.approvedAssets))){
+    const mp3=fs.readFileSync(path.join(__dirname,'..',asset));
+    assert(mp3.subarray(0,3).equals(Buffer.from('ID3')));assert(mp3.length>5000&&mp3.length<30000);
+  }
+  for(const name of Object.keys(SoundBank.approvedAssets)){
+    const clip=SoundBank.clips[name];assert.equal(clip.start,0);assert(clip.duration>.1&&clip.duration<1.3);
   }
 });

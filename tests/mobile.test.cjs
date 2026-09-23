@@ -176,6 +176,9 @@ test('start cue waits for countdown completion and music/effects switches operat
   c.run("joined=true;latest={phase:'playing'}");c.elements.get('music').events.click();assert.equal(c.run('musicEvents.at(-1)'),'battle');
   c.run('document.hidden=true');c.documentEvents.visibilitychange();assert.equal(c.run('musicEvents.at(-1)'),'stop');
   c.run('document.hidden=false');c.documentEvents.visibilitychange();assert.equal(c.run('musicEvents.at(-1)'),'battle');
+  c.run("latest={phase:'countdown',map:{id:77},players:[]};updateRoomPhase(latest)");assert.equal(c.run('musicEvents.at(-1)'),'lobby');
+  c.run("musicPlayer.play=(mode,key)=>musicEvents.push(mode+':'+key);roomCode='BATTLE';latest.phase='playing';updateRoomPhase(latest)");
+  assert.equal(c.run('musicEvents.at(-1)'),'battle:BATTLE:77');
 });
 
 test('plain URLs open the room browser while room links keep the prefilled join form',()=>{
