@@ -17,7 +17,7 @@ let latest=null,lastEvent=0,seq=0,rosterSignature='',pointer={x:500,y:330,active
 let roomCode=(new URL(location.href).searchParams.get('room')||'').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,16),networkBase=appBase.href.replace(/\/$/,'');
 let lobbyVisible=false,lobbyRooms=[],selectedRoom=null,joinMode=null,roomRequest=0;
 let selectedGameMode='ffa',leaveDialogOpen=false;
-let roundAudioMap=null,resultAudioKey=null,activePower=null,lastMenuSound=-Infinity;
+let roundAudioMap=null,resultAudioKey=null,countdownAudioKey=null,activePower=null,lastMenuSound=-Infinity;
 let music=true,musicPlayer,waitingSignature='',roomPhase=null;
 try{sound=localStorage.getItem('tank-frenzy-sfx')!=='off';music=localStorage.getItem('tank-frenzy-music')!=='off';}catch{/* Storage can be unavailable in private browsing. */}
 const cueVoices=new Set();
@@ -134,7 +134,7 @@ function leave(){
   intentional=true;clearTimeout(retryTimer);release();send({type:'leave'});socket?.close();socket=null;joined=false;connecting=false;myId=null;token=null;retry=0;
   latest=null;tanks=[];shells=[];tracks=[];pickups=[];beams=[];pickupFlashes=[];$('leave').hidden=true;$('respawn').textContent='';$('latency').textContent='OFFLINE';$('roster').replaceChildren();
   touchAim=null;updateTouchControls();
-  roundAudioMap=null;resultAudioKey=null;activePower=null;roomPhase=null;waitingSignature='';stopCueSounds();syncMusic();
+  roundAudioMap=null;resultAudioKey=null;countdownAudioKey=null;activePower=null;roomPhase=null;waitingSignature='';stopCueSounds();syncMusic();
   roomCode='';$('roomCode').textContent='—';$('roomCount').textContent='0 / 4 PLAYERS';$('powerStatus').hidden=true;history.replaceState(null,'',location.pathname);showLobby();status('READY TO CONNECT');
 }
 function applySnapshot(data){
@@ -256,7 +256,9 @@ function syncMusic(){
   if(!music||!audioReady||document.hidden){musicPlayer?.stop();return;}
   const ac=getAudio(true);if(!ac||typeof TankMusic==='undefined')return;
   musicPlayer??=new TankMusic(ac);
-  musicPlayer.play(joined&&latest?.phase==='playing'?'battle':'lobby',`${roomCode}:${latest?.map?.id}`);
+  const key=`${roomCode}:${latest?.map?.id}`;
+  musicPlayer.play(joined&&latest?.phase==='playing'?'battle':'lobby',key);
+  if(joined&&latest?.phase==='countdown')musicPlayer.prepareBattle(key);
 }
 function unlockAudio(){audioReady=true;syncMusic();}
 $('sound').addEventListener('click',()=>{sound=!sound;audioReady=true;updateAudioButtons();rememberAudio();if(sound)playCue('menu');else{stopMovementSound();stopCueSounds();}syncMusic();});
@@ -387,7 +389,15 @@ let engine=null;
 // Snapshot transitions trigger a cue once, even though the server repeats state.
 function updateMatchSounds(data){
   const map=data.map?.id??mapId;
-  if(data.phase==='waiting'||data.phase==='countdown'){resultAudioKey=null;return;}
+  if(data.phase==='countdown'){
+    resultAudioKey=null;
+    const number=Math.max(1,Math.min(3,Math.ceil(data.countdownIn)));
+    const key=`${map}:${number}`;
+    if(countdownAudioKey!==key){countdownAudioKey=key;playCue('countdown'+number);}
+    return;
+  }
+  countdownAudioKey=null;
+  if(data.phase==='waiting'){resultAudioKey=null;return;}
   if(roundAudioMap!==map){roundAudioMap=map;resultAudioKey=null;if(!data.winner)playCue('start');}
   if(!data.winner){resultAudioKey=null;return;}
   const key=String(map)+':'+(data.winner.team??data.winner.id);
@@ -420,7 +430,7 @@ function playCue(kind,power){
   const sample=kind==='pickup'?'restore':kind;
   if(playEffect(sample,null,{channel:'cue',volume:kind==='menu'?.45:.85,priority:kind==='menu'?1:3,interval:kind==='menu'?.07:0,duck:kind==='win'||kind==='lose'}))return;
   const ac=getAudio();if(!ac)return;
-  const melody={menu:[[660,0,.07],[880,.045,.08]],start:[[392,0,.11],[523,.13,.11],[659,.26,.11],[784,.39,.26]],win:[[523,0,.14],[659,.15,.14],[784,.3,.16],[1047,.49,.4]],lose:[[392,0,.18],[330,.2,.18],[262,.4,.33]],pickup:[[659,0,.1],[988,.1,.12],[1319,.22,.18]]}[kind];
+  const melody={menu:[[660,0,.07],[880,.045,.08]],countdown3:[[330,0,.12]],countdown2:[[392,0,.12]],countdown1:[[440,0,.12]],start:[[392,0,.11],[523,.13,.11],[659,.26,.11],[784,.39,.26]],win:[[523,0,.14],[659,.15,.14],[784,.3,.16],[1047,.49,.4]],lose:[[392,0,.18],[330,.2,.18],[262,.4,.33]],pickup:[[659,0,.1],[988,.1,.12],[1319,.22,.18]]}[kind];
   if(!melody)return;
   // UI and celebratory sounds are short, local synth notes, with a fixed voice cap.
   if(cueVoices.size+melody.length>16)stopCueSounds();

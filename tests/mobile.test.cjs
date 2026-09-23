@@ -165,10 +165,14 @@ test('waiting screen lists players, restricts Start, and gives way to the countd
   c.run("latest.phase='playing';updateRoomPhase(latest)");assert.equal(c.elements.get('countdown').hidden,true);assert.equal(c.elements.get('thumbControls').hidden,false);
 });
 
-test('start cue waits for countdown completion and music/effects switches operate independently',()=>{
-  const c=client();c.run(`var cues=[];playCue=kind=>cues.push(kind);var state={map:{id:15},phase:'waiting',players:[]};updateMatchSounds(state);state.phase='countdown';updateMatchSounds(state)`);
-  assert.equal(c.run('cues.length'),0);c.run("state.phase='playing';updateMatchSounds(state);updateMatchSounds(state)");assert.equal(c.run('cues.join()'),'start');
-  c.run("var musicEvents=[];musicPlayer={play:mode=>musicEvents.push(mode),stop:()=>musicEvents.push('stop')};getAudio=()=>({});TankMusic=function(){};audioReady=true;joined=false;syncMusic()");
+test('countdown sounds once per number, start is distinct, and music/effects switches operate independently',()=>{
+  const c=client();c.run(`var cues=[];playCue=kind=>cues.push(kind);var state={map:{id:15},phase:'waiting',players:[]};updateMatchSounds(state);state.phase='countdown';state.countdownIn=3;updateMatchSounds(state);updateMatchSounds(state)`);
+  assert.equal(c.run('cues.join()'),'countdown3');
+  c.run('state.countdownIn=2.6;updateMatchSounds(state);state.countdownIn=1.8;updateMatchSounds(state);updateMatchSounds(state);state.countdownIn=.7;updateMatchSounds(state)');
+  assert.equal(c.run('cues.join()'),'countdown3,countdown2,countdown1');
+  c.run("state.phase='playing';updateMatchSounds(state);updateMatchSounds(state)");assert.equal(c.run('cues.join()'),'countdown3,countdown2,countdown1,start');
+  c.run("state.phase='countdown';state.map.id=16;state.countdownIn=3;updateMatchSounds(state)");assert.equal(c.run('cues.at(-1)'),'countdown3','next round starts new countdown');
+  c.run("var musicEvents=[];musicPlayer={play:mode=>musicEvents.push(mode),prepareBattle:key=>musicEvents.push('preload:'+key),stop:()=>musicEvents.push('stop')};getAudio=()=>({});TankMusic=function(){};audioReady=true;joined=false;syncMusic()");
   assert.equal(c.run('musicEvents.at(-1)'),'lobby');
   c.elements.get('sound').events.click();assert.equal(c.run('sound'),false);assert.equal(c.run('music'),true);assert.equal(c.run('musicEvents.at(-1)'),'lobby');
   c.elements.get('music').events.click();assert.equal(c.run('music'),false);assert.equal(c.run('musicEvents.at(-1)'),'stop');
@@ -176,7 +180,7 @@ test('start cue waits for countdown completion and music/effects switches operat
   c.run("joined=true;latest={phase:'playing'}");c.elements.get('music').events.click();assert.equal(c.run('musicEvents.at(-1)'),'battle');
   c.run('document.hidden=true');c.documentEvents.visibilitychange();assert.equal(c.run('musicEvents.at(-1)'),'stop');
   c.run('document.hidden=false');c.documentEvents.visibilitychange();assert.equal(c.run('musicEvents.at(-1)'),'battle');
-  c.run("latest={phase:'countdown',map:{id:77},players:[]};updateRoomPhase(latest)");assert.equal(c.run('musicEvents.at(-1)'),'lobby');
+  c.run("latest={phase:'countdown',map:{id:77},players:[]};updateRoomPhase(latest)");assert.equal(c.run('musicEvents.at(-2)'),'lobby');assert.equal(c.run('musicEvents.at(-1)'),'preload::77');
   c.run("musicPlayer.play=(mode,key)=>musicEvents.push(mode+':'+key);roomCode='BATTLE';latest.phase='playing';updateRoomPhase(latest)");
   assert.equal(c.run('musicEvents.at(-1)'),'battle:BATTLE:77');
 });

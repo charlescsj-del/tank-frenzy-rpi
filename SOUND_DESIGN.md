@@ -1,6 +1,6 @@
 # Tank Frenzy sound direction
 
-Status: approved effects shipped in v1.2.0, three approved MP3 music recordings shipped in v1.5.0, and the user's four selected battlefield effect recordings ship in v1.6.0.
+Status: approved effects shipped in v1.2.0, three approved MP3 music recordings shipped in v1.5.0, the user's selected battlefield effects in v1.6.0, and continuous looping plus new countdown/start cues in v1.7.0.
 
 ## Shipped implementation
 
@@ -10,7 +10,7 @@ Browser playback has a 12-voice limit, priority for important cues, repeated-eff
 
 The v1.5.0 music update plays approved B — Overdrive on splash/waiting/countdown and picks A — Iron Advance or C — Steel Pressure for each battle. These are original synthesized, versioned MP3 recordings; selection and playback run locally on each player's device.
 
-Music decodes only tracks that are played and uses one looping source at gain 0.10 beneath the effects mix. Music and effects have independent saved switches; hiding the page stops both. Music and effects are served as static cached files, with no server-side audio processing.
+Music decodes only tracks that are played and uses one looping source at gain 0.30. Its loop points omit each song's fade-out and opening silence, while battle music preloads during the countdown. Three rising countdown ticks use one compact sample sprite, followed by a separate battle-start recording. Music and effects have independent saved switches; hiding the page stops both. Music and effects are served as static cached files, with no server-side audio processing.
 
 The sections below preserve the earlier design proposal; the shipped behavior above supersedes earlier pickup and shot suggestions.
 

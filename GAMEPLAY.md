@@ -2,7 +2,7 @@
 
 A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarry, rounded menus and bold lettering. Choose Free-for-All or 2 vs 2 and invite your friends.
 
-Current release: **v1.6.0**, also shown in the bottom-right corner of the main room browser. See [CHANGELOG.md](CHANGELOG.md) for release notes. Keep the version in `shared.js`, `package.json`, and `package-lock.json` synchronized when releasing changes.
+Current release: **v1.7.0**, also shown in the bottom-right corner of the main room browser. See [CHANGELOG.md](CHANGELOG.md) for release notes. Keep the version in `shared.js`, `package.json`, and `package-lock.json` synchronized when releasing changes.
 
 See [SOUND_DESIGN.md](SOUND_DESIGN.md) for the approved cartoon arcade audio direction and implementation notes.
 
@@ -14,7 +14,7 @@ Room links such as https://tank-frenzy.onrender.com/?room=QUARRY still open the 
 
 After creating a room, everyone sees a waiting-room player list. Only the creator can press **Start Game**. If that player leaves or disconnects before starting, the first remaining connected player gets the button. Reconnecting does not take it back. After the first start, there is no owner; rounds restart automatically. Room rules remain fixed.
 
-Every round begins with a shared **3–2–1** countdown in the center of the field. The server freezes movement, aiming, firing and pickups until it ends. Late joins during a running round are allowed.
+Every round begins with a shared **3–2–1** countdown in the center of the field, with one rising audio tick per number and a separate battle-start sound when play begins. The server freezes movement, aiming, firing and pickups until it ends. Late joins during a running round are allowed.
 
 ## Host
 
@@ -44,9 +44,9 @@ Maps are 1600 by 1040 world units (about 2.5 times the previous area). Each room
 - Full Screen expands the arena on desktop and mobile. Where browser fullscreen is unavailable or rejected, it falls back to an expanded view inside the browser; browser bars may remain visible. Use Exit Full Screen to return. Landscape is recommended on phones.
 - W/A/S/D: move up/left/down/right along the unrotated map axes, including diagonal movement.
 - Audio: hear your own and opponents' shots. Normal and machine-gun fire use approved **Cannon A** (machine gun repeats it faster and slightly quieter). **Double cannon** keeps its distinct paired pops. All collected powers use approved **Power-up A**. **Ricochet C** and **Destruction C** play for bullet bounces and tank explosions. Nearby combat uses subtle stereo positioning that also works on mono phone speakers.
-- Other cues—laser, hits, interceptions, menus, start, victory and defeat—keep their existing recordings. Four new immutable MP3s total about 45 KiB alongside the original 170 KiB pack; they download and decode locally once, with bounded fallbacks while loading. Effects remain capped at 12 sample voices, with priority for result cues.
-- Approved MP3 soundtrack: **B — Overdrive** plays on the splash screen, in waiting rooms and during the countdown. Each battle randomly chooses **A — Iron Advance** or **C — Steel Pressure** on each player's device; consecutive rounds may choose the same track. The choice survives music toggles and tab hiding within that round. Tracks repeat with their original soft endings.
-- **Music** and **Effects** switches operate independently and remember preferences where browser storage is available. Music stays below effect volume. Audio begins after the first tap or keypress; hidden pages stop audio, and music restarts the selected track on return if enabled. Leaving returns to B.
+- Other cues—laser, hits, interceptions, menus, victory and defeat—keep their existing recordings. The four approved battlefield MP3s total about 45 KiB, and the separate countdown/start recordings add about 33 KiB alongside the original 170 KiB pack. They download and decode locally once, with bounded fallbacks while loading. Effects remain capped at 12 sample voices, with priority for result cues.
+- Approved MP3 soundtrack: **B — Overdrive** plays on the splash screen, in waiting rooms and during the countdown. Each battle randomly chooses **A — Iron Advance** or **C — Steel Pressure** on each player's device; consecutive rounds may choose the same track. The choice survives music toggles and tab hiding within that round. Tracks loop on their 12-bar phrase, skipping the intro silence and ending fade so playback stays continuous. The upcoming battle track downloads during the countdown when music is enabled.
+- **Music** and **Effects** switches operate independently and remember preferences where browser storage is available. Music gain is 30% (raised from 10%); effects retain their separate levels. Audio begins after the first tap or keypress; hidden pages stop audio, and music restarts the selected track on return if enabled. Leaving returns to B.
 - The three original stereo MP3s total about 1.97 MB, downloaded only when needed and served with immutable browser caching. At most three decoded buffers and one looping source are kept locally (about 28–32 MB of decoded samples at common browser sample rates). The server only serves static files: there are no music streams, playback timers, synchronization messages or extra simulation work.
 - Pickup icons are centered on their ground coordinates. A forgiving **60-world-unit collection radius** works equally from above, below and the sides; a wall between the tank and pickup blocks collection. Cosmetic bobbing does not move the actual collection area.
 - A single dashed **aiming centerline** extends from your muzzle toward the first wall or map edge. It follows mouse or thumb-stick aiming, is visible only to you and uses no additional network traffic. It shows initial direction, not ricochets or predicted moving-tank hits. Double cannon's parallel shells straddle this centerline.

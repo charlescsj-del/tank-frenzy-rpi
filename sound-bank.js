@@ -4,10 +4,14 @@
   const CLIPS={"menu":{"start":0.0,"duration":0.17501133786848072},"start":{"start":0.21501133786848073,"duration":0.96},"shot":{"start":1.2150113378684808,"duration":0.28},"double":{"start":1.5350113378684807,"duration":0.3849886621315193},"machine":{"start":1.96,"duration":0.5249886621315193},"laser":{"start":2.5249886621315194,"duration":0.47},"ricochet":{"start":3.034988662131519,"duration":0.44},"intercept":{"start":3.514988662131519,"duration":0.19},"hit":{"start":3.744988662131519,"duration":0.32},"explosion":{"start":4.104988662131519,"duration":1.04},"immortal":{"start":5.184988662131519,"duration":1.08},"restore":{"start":6.304988662131519,"duration":1.1},"speed":{"start":7.444988662131519,"duration":0.59},"win":{"start":8.074988662131519,"duration":1.5},"lose":{"start":9.61498866213152,"duration":1.18},"machine-fire":{"start":1.96,"duration":0.08}};
   // Original approved auditions, stored separately so unaffected cues retain
   // their exact v1 waveforms. Machine fire shares the new normal cannon.
-  const APPROVED_ASSETS=Object.freeze({shot:'./audio/effects-fire-a-v1.mp3',
+  const APPROVED_ASSETS=Object.freeze({start:'./audio/battle-start-v1.mp3',
+    countdown3:'./audio/countdown-v1.mp3',countdown2:'./audio/countdown-v1.mp3',countdown1:'./audio/countdown-v1.mp3',
+    shot:'./audio/effects-fire-a-v1.mp3',
     'machine-fire':'./audio/effects-fire-a-v1.mp3',ricochet:'./audio/effects-ricochet-c-v1.mp3',
     restore:'./audio/effects-pickup-a-v1.mp3',explosion:'./audio/effects-explosion-c-v1.mp3'});
-  const APPROVED_CLIPS={shot:{start:0,duration:.29},'machine-fire':{start:0,duration:.11},
+  const APPROVED_CLIPS={start:{start:0,duration:1.06},
+    countdown3:{start:0,duration:.26},countdown2:{start:.30,duration:.26},countdown1:{start:.60,duration:.26},
+    shot:{start:0,duration:.29},'machine-fire':{start:0,duration:.11},
     ricochet:{start:0,duration:.36},restore:{start:0,duration:.67},explosion:{start:0,duration:1.26}};
   class TankSoundBank{
     constructor(context,fetcher=fetch){

@@ -30,7 +30,7 @@ The app has no HA configuration/media mappings. `/data` is reserved for Supervis
 1. The app log should show listeners on game port `8765` and internal ingress port `8099`.
 2. Open **Web UI**: the lobby, banner and room list should load.
 3. Open `http://YOUR_PI_IP:8765` on two devices. Create and join one room, start a round, move, shoot, and confirm sound after interacting.
-4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `1.6.0`.
+4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `1.7.0`.
 5. Test an invitation generated from the sidebar after setting `public_url`.
 
 ## Updates

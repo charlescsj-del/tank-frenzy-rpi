@@ -2,6 +2,12 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 1.7.0 — Tank Frenzy v1.7.0
+
+- Match the Home Assistant app and game version numbers.
+- Raise music gain to 0.30, loop within the active phrases and preload battle music during the countdown.
+- Add separate original MP3s for the 3–2–1 countdown and battle start, served through sidebar and LAN access.
+
 ## App 1.1.0 — Tank Frenzy v1.6.0
 
 - Sync the current main-game release, including the approved B pre-game music, random A/C battle music and four selected combat effects.
@@ -16,6 +22,11 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 - Keep assets, sound, room discovery and WebSockets under the ingress prefix; support a configured invitation URL.
 - Include installation/update instructions and CI container builds for both architectures.
 - Verify 88 automated checks, including mixed ingress/LAN multiplayer. Physical Pi play still requires target-device verification.
+
+## 1.7.0
+
+- Raise background music gain from 0.10 to 0.30 and loop its active phrase without replaying the intro or faded ending.
+- Select and preload A or C during countdown; play three rising numbered countdown ticks and a separate battle-start recording.
 
 ## 1.6.0
 

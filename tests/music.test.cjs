@@ -5,18 +5,22 @@ const Music=require('../music.js');
 function context(){
   const sources=[],downloads=[],decoded=[];
   const ac={currentTime:0,destination:{},createGain:()=>({connect(){},gain:{value:0,cancelScheduledValues(){},setValueAtTime(v){this.value=v;},linearRampToValueAtTime(v){this.value=v;}}}),
-    async decodeAudioData(data){decoded.push(data);return {data};},
-    createBufferSource(){const source={connect(){},disconnect(){this.disconnected=true;},start(){this.started=true;},stop(){this.stopped=true;}};sources.push(source);return source;}};
+    async decodeAudioData(data){decoded.push(data);return {data,duration:{[Music.tracks.A]:27.91,[Music.tracks.B]:24.02,[Music.tracks.C]:29.89}[data]};},
+    createBufferSource(){const source={connect(){},disconnect(){this.disconnected=true;},start(...args){this.started=true;this.startArgs=args;},stop(){this.stopped=true;}};sources.push(source);return source;}};
   const fetcher=async url=>{downloads.push(url);return {ok:true,arrayBuffer:async()=>url};};
   return {ac,sources,downloads,decoded,fetcher};
 }
 function deferred(){let resolve;const promise=new Promise(r=>{resolve=r;});return {promise,resolve};}
-test('B plays before battle, caches its MP3, and maintains one quiet looping source',async()=>{
+test('B plays before battle, caches its MP3, and loops without its faded tail',async()=>{
   const c=context(),music=new Music(c.ac,{fetcher:c.fetcher});
   const first=music.play('lobby');assert.equal(music.play('lobby'),first,'pending requests are shared');
   assert.equal(await first,true);await music.play('lobby');
   assert.deepEqual(c.downloads,[Music.tracks.B]);assert.equal(c.sources.length,1);assert(c.sources[0].loop);
-  assert(music.gain.gain.value<=.10);
+  assert.equal(music.gain.gain.value,.30);
+  assert.equal(c.sources[0].loopStart,.12);
+  assert.equal(c.sources[0].loopEnd,Music.loopEnd.B);
+  assert.deepEqual(c.sources[0].startArgs,[0,.12]);
+  assert(c.sources[0].loopEnd<c.sources[0].buffer.duration-1.5,'loop excludes the recorded fade-out');
   music.stop();assert(c.sources[0].stopped&&c.sources[0].disconnected);assert.equal(music.gain.gain.value,0);
   await music.play('lobby');assert.equal(c.downloads.length,1);assert.equal(c.decoded.length,1);
   music.stop();music.stop();assert.equal(c.sources.filter(s=>!s.stopped).length,0);
@@ -31,6 +35,16 @@ test('A/C are chosen once per battle, retained across mute/return, with a three-
   await music.play('battle','OTHER:2');assert.equal(music.track,'A');assert.equal(choices,3);
   assert.deepEqual(c.downloads,[Music.tracks.B,Music.tracks.A,Music.tracks.C]);assert.equal(c.decoded.length,3);
   assert.equal(music.buffers.size,3);assert.equal(c.sources.filter(s=>!s.stopped).length,1);
+  for(const source of c.sources){assert.equal(source.loopStart,Music.loopStart);assert(source.loopEnd<source.buffer.duration-1.5);}
+});
+test('countdown preloads the battle selection without changing lobby music or choosing twice',async()=>{
+  const c=context();let choices=0;
+  const music=new Music(c.ac,{fetcher:c.fetcher,random:()=>{choices++;return .8;}});
+  await music.play('lobby');await music.prepareBattle('ROOM:5');await music.prepareBattle('ROOM:5');
+  assert.equal(music.track,'B');assert.equal(c.sources.length,1);assert.equal(choices,1);
+  assert.deepEqual(c.downloads,[Music.tracks.B,Music.tracks.C]);
+  await music.play('battle','ROOM:5');assert.equal(music.track,'C');assert.equal(c.downloads.length,2);
+  assert.equal(choices,1);assert.equal(c.sources[1].loopEnd,Music.loopEnd.C);
 });
 test('random selection may repeat on consecutive rounds without restarting the same track',async()=>{
   const c=context();let choices=0;
