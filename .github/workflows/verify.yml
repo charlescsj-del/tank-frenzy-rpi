@@ -1,0 +1,43 @@
+name: Verify Home Assistant app
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm test
+  container:
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --build-arg BUILD_ARCH=${{ matrix.arch }} -t tank-frenzy-test .
+      - name: Check container startup and health
+        run: |
+          docker run -d --name tank-frenzy -p 8765:8765 tank-frenzy-test
+          trap 'docker logs tank-frenzy; docker rm -f tank-frenzy' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail http://127.0.0.1:8765/health; then
+              curl --fail http://127.0.0.1:8765/rooms
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1

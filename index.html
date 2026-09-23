@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tank Frenzy — Cartoon Tank Battles</title>
+<meta name="theme-color" content="#365c4c">
+<meta name="description" content="Big fun. Tiny tanks. Play Tank Frenzy with friends: free-for-all or 2 vs 2, bouncing bullets and wild power-ups. No download needed.">
+<style>
+:root{--paper:#edece5;--ink:#25302b;--muted:#777e73;--line:#d0d3c6;--orange:#e77742;--blue:#5297bd;--green:#455448}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:"Trebuchet MS",sans-serif;background-image:radial-gradient(#56604b12 .8px,transparent .8px);background-size:6px 6px}button{font:inherit;cursor:pointer}button:focus-visible{outline:3px solid var(--orange);outline-offset:4px}button:hover{filter:brightness(1.08)}.page{max-width:1440px;margin:auto;padding:25px 42px 24px}.masthead{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:20px}.brand{font-size:25px;font-weight:900;letter-spacing:-1.8px}.brand span{color:var(--orange);padding:0 5px}.edition,.eyebrow,.tag,.metric,.key-label,footer{font-family:Consolas,monospace;font-size:10px;letter-spacing:1.7px;text-transform:uppercase}.edition{display:flex;gap:28px;align-items:center}.live-dot{display:inline-block;width:7px;height:7px;background:#719269;border-radius:50%;margin-right:7px}.intro{display:flex;align-items:flex-end;justify-content:space-between;padding:29px 0 25px}.eyebrow{color:var(--muted);margin:0 0 10px}.intro h1{font-size:clamp(32px,4vw,54px);margin:0;letter-spacing:-2.7px;line-height:1.06}.intro h1 span{font-weight:400;color:#7d8377}.intro p:last-child{color:#787d73;font-size:13px;line-height:1.7;margin:0;max-width:310px}.game{border:1px solid #b5bdae;background:#d0d7c3;border-radius:9px;overflow:hidden;box-shadow:0 22px 38px #34452b15}.scoreboard{display:grid;grid-template-columns:1fr 210px 1fr;align-items:center;padding:19px 26px;background:#f6f6ef;border-bottom:1px solid #bfc6b5}.player{display:flex;align-items:center;gap:14px}.player.right{flex-direction:row-reverse;text-align:right}.insignia{width:41px;height:41px;display:grid;place-items:center;background:#e7774218;border:1px solid #e7774255;transform:rotate(-5deg);border-radius:8px;color:#b9532c;font-weight:900;font-size:21px}.right .insignia{background:#5297bd18;border-color:#5297bd55;color:#387d9f;transform:rotate(5deg)}.player-name{font-size:12px;font-weight:900;letter-spacing:1.4px}.player-name small{font-size:9px;color:var(--muted);font-weight:normal;margin-left:8px}.health{display:flex;gap:4px;margin-top:8px}.right .health{justify-content:flex-end}.pip{width:27px;height:5px;background:var(--orange);transition:opacity .15s}.right .pip{background:var(--blue)}.pip.empty{opacity:.15}.score{text-align:center}.score strong{font-family:Consolas,monospace;font-size:24px;letter-spacing:9px;padding-left:9px}.score .metric{font-size:8px;letter-spacing:1.5px;color:var(--muted);margin-top:4px}.stage{position:relative;background:#c6ceba}.stage canvas{display:block;width:100%;aspect-ratio:1120/610;outline:none;touch-action:none}.stage-label{position:absolute;top:20px;left:24px;font-size:9px;letter-spacing:1.5px;font-family:Consolas,monospace;color:#5e6b55;pointer-events:none}.stage-label span{display:block;font-size:8px;margin-top:6px;opacity:.65}.arena-tools{position:absolute;top:15px;right:18px;display:flex;gap:7px}.tool{border:1px solid #8d9b804d;background:#eef0e3ba;border-radius:5px;padding:8px 11px;font-size:10px;letter-spacing:.7px;color:#4f5c47}.overlay{position:absolute;inset:0;display:grid;place-items:center;background:#34462b15;transition:opacity .2s}.overlay.hidden{opacity:0;pointer-events:none;visibility:hidden}.dialog{background:#f6f5ecf2;border:1px solid #ffffffa3;box-shadow:0 18px 50px #20362230;border-radius:10px;padding:26px 32px;text-align:center;width:min(360px,90%);backdrop-filter:blur(14px)}.dialog .eyebrow{color:#758366;font-size:9px}.dialog h2{font-size:32px;letter-spacing:-1.3px;margin:9px 0}.dialog p{font-size:12px;line-height:1.7;color:#7b8172;margin:10px 0 20px}.primary{border:0;background:#344632;color:#fffdf2;border-radius:5px;padding:13px 23px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;box-shadow:0 3px 0 #20321e}.hint{display:block;font-family:Consolas,monospace;font-size:8px;letter-spacing:1px;margin-top:14px;color:#8a907f}.battlebar{display:flex;justify-content:space-between;align-items:center;padding:13px 22px;background:#e4e8db;border-top:1px solid #bbc5ad;font:9px Consolas,monospace;letter-spacing:1px;color:#6a765e}.battlebar b{color:#45573b;font-weight:normal}.bottom{display:grid;grid-template-columns:1fr 1fr 1.1fr;gap:28px;margin-top:24px}.control-card{display:flex;gap:17px;align-items:flex-start;padding-right:22px;border-right:1px solid var(--line)}.control-card:last-child{border:0;padding:0}.key-label{font-size:9px;color:#7f8777;margin-bottom:9px}.control-card h3{font-size:13px;margin:0 0 7px;letter-spacing:-.2px}.control-card p{font-size:11px;line-height:1.6;color:#7a8073;margin:0}.keys{min-width:105px;display:grid;grid-template-columns:repeat(3,29px);gap:4px}.keys kbd:first-child{grid-column:2}.keys kbd:nth-child(2){grid-column:1}.keys kbd{border:1px solid #c6cbbc;box-shadow:0 2px 0 #c6cbbc;border-radius:4px;display:grid;place-items:center;height:24px;background:#f8f8f0;font:10px Consolas,monospace}.keys .fire{grid-column:1/4;font-size:8px;letter-spacing:1px;margin-top:3px}.orange{color:#bb623e}.blue{color:#4386a9}footer{display:flex;justify-content:space-between;border-top:1px solid var(--line);margin-top:24px;padding-top:15px;font-size:8px;color:#909686;letter-spacing:1px}.touch{display:none;justify-content:space-between;gap:14px;padding:12px;background:#e4e8db}.touch-group{display:grid;grid-template-columns:repeat(3,36px);gap:5px}.touch button{min-height:34px;border:1px solid #aab69e;background:#f4f4e9;color:#455448;border-radius:5px;touch-action:none;user-select:none}.touch button:first-child{grid-column:2}.touch button:nth-child(2){grid-column:1}.touch .touch-fire{grid-column:1/4;font-size:9px;letter-spacing:1px}.page{animation:arrive .65s ease-out}@keyframes arrive{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@media(max-width:800px){.page{padding:20px}.intro{gap:15px}.intro p:last-child{max-width:235px;font-size:11px}.scoreboard{padding:15px;grid-template-columns:1fr 120px 1fr}.bottom{gap:14px}.control-card{gap:10px;padding-right:10px}.keys{min-width:82px;grid-template-columns:repeat(3,23px)}.edition span:last-child{display:none}.pip{width:18px}.player-name small{display:none}}@media(max-width:570px){.page{padding:14px 10px}.masthead{padding-bottom:14px}.brand{font-size:22px}.edition{font-size:8px}.intro{padding:22px 4px;display:block}.intro h1{font-size:36px}.intro p:last-child{margin-top:12px;max-width:none}.scoreboard{grid-template-columns:1fr 75px 1fr;padding:12px 10px}.insignia{display:none}.player-name{font-size:10px}.pip{width:17px}.score strong{font-size:20px;letter-spacing:4px}.score .metric{font-size:6px;letter-spacing:.5px}.stage canvas{aspect-ratio:1.35}.stage-label{top:12px;left:12px;font-size:7px}.stage-label span{font-size:6px}.arena-tools{top:9px;right:9px}.tool{font-size:8px;padding:7px}.dialog{padding:17px;width:260px}.dialog h2{font-size:26px}.dialog p{margin:8px 0 12px;font-size:11px}.dialog .hint{margin-top:10px}.bottom{grid-template-columns:1fr 1fr;gap:20px 10px;margin-top:18px}.control-card:nth-child(2){border:0}.control-card:last-child{grid-column:1/-1;border-top:1px solid var(--line);padding-top:15px}.battlebar{padding:10px;font-size:7px;letter-spacing:.3px}footer{font-size:7px}.touch{display:flex}}@media(pointer:coarse){.touch{display:flex}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.score strong{white-space:nowrap}
+@media(max-width:570px){.score strong{font-size:18px;letter-spacing:2px;padding-left:2px}}
+
+
+[hidden]{display:none!important}
+.scoreboard{display:flex;flex-wrap:wrap;gap:10px;padding:14px 18px;min-height:81px}
+.roster-card{min-width:120px;flex:1;padding:9px 12px;border:1px solid #d4dacb;border-radius:6px;background:#eeefe6}
+.roster-card.me{border-color:var(--tank);box-shadow:inset 3px 0 var(--tank)}
+.roster-card.offline{opacity:.45}.roster-name{font-size:11px;font-weight:bold;display:flex;justify-content:space-between;gap:8px}.roster-stats{font:9px Consolas,monospace;color:#79826c;margin-top:6px}.roster-card .pip{width:18px;background:var(--tank)}
+.room-strip{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;background:#f6f6ef;border-bottom:1px solid #d4dacb;gap:12px}.room-title{font:11px Consolas,monospace;letter-spacing:1px}.room-title b{color:#b95b31}
+.dialog{width:min(410px,92%);padding:23px 28px}.dialog h2{font-size:29px}
+.join-fields{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;text-align:left;margin:16px 0}
+.join-fields label{font:9px Consolas,monospace;letter-spacing:1px;color:#6b775d}
+.join-fields input{display:block;width:100%;margin-top:6px;border:1px solid #c5cdb8;border-radius:4px;padding:10px;background:#fffef7;color:#344632;font:13px "Trebuchet MS",sans-serif}
+.join-fields input:focus{outline:2px solid #84996d}.primary:disabled{opacity:.6;cursor:wait}
+#networkNote{font-size:10px;letter-spacing:0;line-height:1.6;text-transform:none;overflow-wrap:anywhere}
+#respawn{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);background:#f6f5eced;padding:12px 20px;border-radius:6px;text-align:center;font:12px Consolas,monospace;pointer-events:none;box-shadow:0 6px 20px #20362220}
+#respawn:empty{display:none}.stage canvas{cursor:crosshair}.overlay.hidden{display:none}.bottom{grid-template-columns:1fr 1fr 1.2fr}.network-detail{font-size:11px!important;line-height:1.7;overflow-wrap:anywhere}.network-detail a{color:#486941}.room-empty{font:11px Consolas,monospace;color:#7c856f}.touch{display:none!important}
+@media(max-width:570px){.dialog{padding:15px 20px}.dialog h2{font-size:24px}.dialog p{margin:7px 0;font-size:10px}.join-fields{margin:10px 0}.join-fields input{padding:7px}.room-strip{padding:10px;align-items:flex-start}.room-title{font-size:9px;line-height:1.5}.room-strip .tool{font-size:8px}.scoreboard{padding:9px;gap:6px}.roster-card{min-width:100px;padding:7px}.roster-name{font-size:9px}.roster-stats{font-size:8px}.roster-card .pip{width:12px}.bottom{grid-template-columns:1fr 1fr}.stage canvas{aspect-ratio:1.1}#respawn{bottom:12px;font-size:10px;padding:8px;width:80%}}
+.room-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.arena-header{position:relative;flex-shrink:0}
+.arena-menu-button{display:none}
+.dialog{max-height:100%;overflow-y:auto}
+.room-browser{text-align:left;margin:12px 0}
+.lobby-actions{display:flex;gap:8px;justify-content:space-between;margin-bottom:10px}
+.room-list{display:grid;gap:6px;max-height:150px;overflow-y:auto}
+.room-choice{width:100%;min-height:44px;padding:10px;text-align:left;border:1px solid #bdc9b0;border-radius:5px;background:#eef0e3;color:#344632;font:12px Consolas,monospace;overflow-wrap:anywhere}
+.room-choice[aria-pressed=true]{border-color:#b95b31;background:#f7e1d1}
+#roomListStatus,#roomCapacity{font-size:12px;color:#4f5c47;margin:8px 0}
+.room-details{border-top:1px solid #bdc9b0;margin-top:12px;padding-top:10px}
+#roomPlayers{max-height:90px;overflow-y:auto;padding-left:20px;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+#joinSelected{width:100%}.primary:disabled{cursor:default}
+#browseRooms{margin-top:12px}
+.mode-banner{display:block;width:100%;height:130px;object-fit:cover;border-radius:8px;margin-bottom:10px}
+.in-lobby .intro,.in-lobby .bottom,.in-lobby footer{display:none}
+.game.lobby-open{margin-top:16px}
+.game.lobby-open .arena-header,.game.lobby-open .battlebar,.game.lobby-open canvas,.game.lobby-open .stage-label{display:none}
+.game.lobby-open .overlay{position:relative;padding:16px;background:#d9dfca}
+.game.lobby-open .dialog{width:min(560px,100%);max-height:none;overflow:visible}
+.game.lobby-open .mode-banner{height:clamp(130px,25vw,210px)}
+.mode-choices{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.mode-card{padding:14px 8px;min-height:70px;border:2px solid #c7ceba;border-radius:8px;background:#f2eedf;color:#344632;font-weight:bold}
+.mode-card small{display:block;margin-top:5px;font-weight:normal;font-size:11px}
+.mode-card[aria-pressed=true]{border-color:#d77238;background:#fff0d1;box-shadow:0 3px 0 #d7723833}
+.room-settings{border:1px solid #c5cdb8;border-radius:6px;padding:10px;margin:12px 0;text-align:left;font-size:12px}
+.room-settings label{display:flex;align-items:center;gap:8px;min-height:36px}
+.room-settings select{flex:1;min-height:36px;font:inherit}.room-settings input{width:20px;height:20px}
+.room-settings p,#roomRules{font-size:11px!important;line-height:1.5;margin:4px 0!important}
+#powerStatus{position:absolute;top:10px;left:12px;pointer-events:none}
+.leave-confirm{position:fixed;inset:0;z-index:2000;background:#18281899;display:grid;place-items:center;padding:20px}
+.leave-confirm .dialog{width:min(360px,100%)}.leave-confirm button{min-height:44px;margin:4px}
+#viewNote{margin:0;padding:8px 12px;background:#f6f6ef;font-size:11px;color:#4f5c47}
+#viewNote:empty{display:none}
+.thumb-controls{display:none;position:absolute;inset:0;pointer-events:none;z-index:2}
+.thumb-control{position:absolute;bottom:max(20px,env(safe-area-inset-bottom));text-align:center;color:#344632;font:10px Consolas,monospace;letter-spacing:1px}
+.thumb-control:first-child{left:max(18px,env(safe-area-inset-left))}.thumb-control:last-child{right:max(18px,env(safe-area-inset-right))}
+.thumb-pad{--stick-x:0px;--stick-y:0px;position:relative;width:112px;height:112px;border:2px solid #45544880;border-radius:50%;background:#eef0e37a;box-shadow:inset 0 0 0 20px #4554480c;touch-action:none;user-select:none;-webkit-user-select:none;pointer-events:auto;margin-bottom:6px}
+.thumb-pad span{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px;border:1px solid #45544899;border-radius:50%;background:#455448aa;transform:translate(var(--stick-x),var(--stick-y));pointer-events:none}
+#aimStick{border-color:#b9532c88;background:#f8e2d478}#aimStick span{background:#c5683dcc;border-color:#b9532c}
+.mobile-help{grid-column:1/-1;padding:16px;border:1px solid var(--line);border-radius:6px;background:#f6f5ec;font-size:12px;line-height:1.7}.mobile-help p{margin:4px 0;color:#6a765e}
+#desktopHelp{display:contents}
+.arena-expanded{overflow:hidden}
+.game:is(:fullscreen,:-webkit-full-screen,.expanded){display:flex;flex-direction:column;width:100%;height:100vh;height:100dvh;border:0;border-radius:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);background:#c6ceba}
+.game.expanded{position:fixed;inset:0;z-index:1000}
+.game:is(:fullscreen,:-webkit-full-screen,.expanded) .stage{flex:1;min-height:0}
+.game:is(:fullscreen,:-webkit-full-screen,.expanded) canvas{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto}
+.game:is(:fullscreen,:-webkit-full-screen,.expanded) .room-strip{padding:6px 12px;flex-shrink:0}
+.game:is(:fullscreen,:-webkit-full-screen,.expanded) .scoreboard{min-height:0;padding:5px 12px;gap:6px;flex-wrap:nowrap;overflow-x:auto;flex-shrink:0}
+.game:is(:fullscreen,:-webkit-full-screen,.expanded) .roster-card{padding:5px 8px}
+.game:is(:fullscreen,:-webkit-full-screen,.expanded) .battlebar{padding:6px 12px;flex-shrink:0}
+.overlay{z-index:3;overflow:auto}.dialog{margin:auto}.join-fields input{font-size:16px}
+@media(pointer:coarse) and (hover:none){
+  .thumb-controls{display:block}.tool{min-height:44px;min-width:44px}
+  .page{padding:12px}.intro{padding:16px 0}.intro h1{font-size:32px}
+  .room-strip{flex-wrap:wrap}.room-actions{margin-left:auto}
+  .stage canvas{aspect-ratio:1.05}.stage-label{top:12px;left:12px}.stage-label span{display:none}
+  .arena-tools{top:6px;right:8px}.battlebar>span:last-child{display:none}
+  #respawn{bottom:auto;top:62px;z-index:2}
+  .scoreboard{flex-wrap:nowrap;overflow-x:auto;min-height:0}.roster-card{min-width:105px}
+  .game:is(:fullscreen,:-webkit-full-screen,.expanded) .room-title{font-size:9px}
+}
+@media(pointer:coarse) and (hover:none) and (orientation:landscape){
+  .thumb-pad{width:96px;height:96px}.thumb-control{bottom:10px}
+  .stage canvas{aspect-ratio:1120/610}
+  .game:is(:fullscreen,:-webkit-full-screen,.expanded) .roster-stats{display:none}
+  .game:is(:fullscreen,:-webkit-full-screen,.expanded) .health{margin-top:4px}
+  .game:is(:fullscreen,:-webkit-full-screen,.expanded) .dialog{padding:10px 18px}
+  .game:is(:fullscreen,:-webkit-full-screen,.expanded) .dialog h2{font-size:20px;margin:4px 0}
+  .game:is(:fullscreen,:-webkit-full-screen,.expanded) .dialog p{display:none}
+  .game:is(:fullscreen,:-webkit-full-screen,.expanded) .join-fields{margin:7px 0}
+  .game:is(:fullscreen,:-webkit-full-screen,.expanded) .hint{margin-top:5px}
+}
+/* Keep the battlefield, rather than page chrome, dominant during touch play. */
+@media(pointer:coarse) and (hover:none){
+  .mobile-playing .page{padding:0;max-width:none;animation:none}
+  .mobile-playing .masthead,.mobile-playing .intro,.mobile-playing .bottom,.mobile-playing footer{display:none}
+  .game.mobile-active{display:flex;flex-direction:column;width:100%;height:100vh;height:100dvh;border:0;border-radius:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  .game.mobile-active .stage{flex:1;min-height:0}
+  .game.mobile-active canvas{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto}
+  .game.mobile-active .arena-header{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;align-items:center;gap:8px;height:44px;padding:0 8px;background:#f6f6ef;border-bottom:1px solid #d4dacb;z-index:4}
+  .game.mobile-active .room-strip{display:contents}
+  .game.mobile-active .room-title{grid-column:1;grid-row:1;font-size:9px;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .game.mobile-active .arena-menu-button{display:block;grid-column:3;grid-row:1;width:44px;height:44px;padding:0;font-size:9px;letter-spacing:0}
+  .game.mobile-active .room-actions{display:none;position:absolute;top:100%;right:8px;max-width:calc(100vw - 16px);padding:8px;gap:6px;background:#f6f6ef;border:1px solid #bfc6b5;border-radius:0 0 6px 6px;box-shadow:0 6px 18px #20362230}
+  .game.mobile-active.menu-open .room-actions{display:flex;flex-wrap:wrap}
+  .game.mobile-active .room-actions .tool{font-size:10px;letter-spacing:0;padding:6px 10px}
+  .game.mobile-active #viewNote{display:none}
+  .game.mobile-active .scoreboard{grid-column:2;grid-row:1;min-width:0;min-height:0;padding:0;gap:0;background:none;border:0;overflow:hidden}
+  .game.mobile-active .roster-card{display:none}
+  .game.mobile-active .roster-card.me{display:flex;align-items:center;gap:6px;min-width:0;padding:0;border:0;box-shadow:none;background:none}
+  .game.mobile-active .roster-name{font-size:10px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:block}
+  .game.mobile-active .roster-stats{display:none}
+  .game.mobile-active .health{margin:0;gap:3px;flex-shrink:0}
+  .game.mobile-active .pip{width:8px;height:5px}
+  .game.mobile-active .battlebar{padding:4px 8px;flex-shrink:0;font-size:8px;letter-spacing:0}
+  .game.mobile-active .stage-label{display:none}
+  .game.mobile-active .arena-tools{top:4px;right:8px;gap:4px}
+  .game.mobile-active .arena-tools .tool{font-size:9px;padding:6px 8px}
+  .game.mobile-active #latency{min-height:0;align-self:center;padding:4px;pointer-events:none}
+  .game.mobile-active .thumb-pad{background:#eef0e342;box-shadow:none}
+}
+/* Toy-box colors, round shapes and bold lettering across the whole game. */
+:root{--paper:#fff6dd;--ink:#304e45;--muted:#657661;--line:#d8dfb9;--orange:#ef8847;--blue:#54b6d6;--green:#365c4c;--round-font:ui-rounded,"Trebuchet MS","Arial Rounded MT Bold",system-ui,sans-serif}
+body{font-family:var(--round-font);background-color:var(--paper);background-image:radial-gradient(ellipse at 12% 0%,#e3f1c4 0,transparent 55%),radial-gradient(ellipse at 100% 60%,#ffe4a5 0,transparent 50%);background-size:auto}
+.page{max-width:1380px;padding-top:22px}
+.masthead{border-bottom:2px solid #dbddb8;padding-bottom:18px;gap:18px}
+.brand{font:1000 clamp(26px,3.5vw,42px)/1 var(--round-font);letter-spacing:-1.5px;color:#f7b74f;text-shadow:2px 0 #365444,-2px 0 #365444,0 -2px #365444,0 3px #365444,2px 3px #365444;transform:rotate(-2deg);white-space:nowrap}
+.brand span{color:#fff9dc;padding:0 5px 0 0}.edition{font-weight:800;color:#657661;letter-spacing:.7px}
+.edition,.eyebrow,.tag,.metric,.key-label,footer,.room-title,.roster-stats,.room-choice,.join-fields label,.hint,.battlebar,.room-empty,.stage-label,.thumb-control,.keys kbd{font-family:var(--round-font)}
+.eyebrow,.key-label{letter-spacing:1.3px;font-weight:900}.intro h1{color:#365c4c;font-weight:1000;letter-spacing:-2px}.intro h1 span{color:#d8753e;font-weight:900}
+.game{border:2px solid #7e9b6b;border-radius:22px;background:#c9e4a4;box-shadow:0 7px 0 #a5b985,0 16px 38px #536f3520}
+.stage{background:#badc91}.stage-label{left:auto;right:18px;color:#506e41;background:#fff9dfb8;border-radius:10px;padding:7px 10px;letter-spacing:.4px}
+.room-strip{background:#fff9e8;border-bottom:2px solid #e3e3bd}.room-title{font-weight:800;color:#5a705a}.room-title b{color:#b75226}
+.scoreboard{background:#f7f4db;border-bottom:2px solid #d6dfb8;padding:10px 16px;gap:10px;min-height:76px}
+.roster-card{border:2px solid #d3deb8;background:#fffdf0;border-radius:12px;padding:8px 12px}.roster-card.me{box-shadow:inset 4px 0 var(--tank)}
+.roster-name{font-weight:900}.roster-stats{color:#657660;font-weight:700;letter-spacing:.3px}.health .pip{border-radius:4px;height:6px}
+button{font-family:var(--round-font);font-weight:900;transition:transform .12s,filter .12s,box-shadow .12s}
+button:hover{filter:brightness(1.04)}button:active:not(:disabled){transform:translateY(2px);box-shadow:none}
+button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #338eaa;outline-offset:3px}
+.tool{border:2px solid #bdcda4;border-radius:11px;background:#fffcdf;padding:9px 13px;font-weight:900;letter-spacing:.3px;color:#47634e;box-shadow:0 3px 0 #bdcda4}
+.primary,#createRoom{border:2px solid #ae582d;border-radius:12px;background:#f59a50;color:#3d3926;font-size:12px;letter-spacing:.5px;padding:12px 22px;box-shadow:0 4px 0 #ae582d}
+.primary:disabled{filter:grayscale(.6);box-shadow:none}
+.overlay{background:#37543433}.dialog{background:#fffbebf5;border:2px solid #acbc8a;border-radius:22px;box-shadow:0 6px 0 #839860,0 18px 38px #3b572a25;padding:24px 28px;backdrop-filter:blur(8px)}
+.dialog h2{font-weight:1000;letter-spacing:-1px;color:#365c4c;font-size:32px}.dialog p{color:#69795e;font-size:13px;line-height:1.6}.dialog .eyebrow{color:#a96637;font-weight:900;letter-spacing:1.4px}
+.game.lobby-open .overlay{padding:24px 16px 30px;background:radial-gradient(ellipse at 50% 0%,#eaf3c6,#c9e1a4)}
+.game.lobby-open .dialog{width:min(600px,100%)}.game.lobby-open .mode-banner{height:clamp(150px,25vw,210px);border:3px solid #fff7d4;border-radius:17px;box-shadow:0 3px 0 #d1dcb4}
+.room-browser{margin-top:16px}.mode-choices{gap:12px;margin:16px 0}.mode-card{position:relative;border:2px solid #aabd91;border-radius:15px;min-height:84px;background:#f0f3dd;font-size:15px;letter-spacing:.2px;box-shadow:0 4px 0 #aabd91;padding:16px 8px 12px}
+.mode-card[aria-pressed=true]{border-color:#bf7537;background:#ffe4a2;box-shadow:0 4px 0 #bf7537}.mode-card[aria-pressed=true]::after{content:'★';position:absolute;right:8px;top:4px;font-size:13px;color:#aa652d}
+.mode-card small{font-size:11px;font-weight:700;opacity:.8}.mode-emblem{font-size:25px;line-height:1;display:block;margin-bottom:7px;color:#df793b;letter-spacing:-6px;padding-right:6px}#teamMode .mode-emblem{color:#3896bd}
+.lobby-actions{margin:16px 0 14px;gap:12px}.room-list{gap:9px;padding-bottom:5px;max-height:175px}.room-choice{border:2px solid #becda3;border-radius:12px;font-size:12px;font-weight:800;background:#f3f5df;padding:12px;box-shadow:0 3px 0 #d2dbb8}
+.room-choice[aria-pressed=true]{border-color:#c78145;background:#ffebbc}.room-details{border-top:2px dashed #c8d5ac;margin-top:15px;padding-top:14px}#selectedRoomName{color:#a65328}#roomPlayers{padding-left:22px;list-style:'★  ';color:#496847;font-weight:800}#roomCapacity,#roomListStatus{color:#607454;font-size:12px;font-weight:700}
+.join-fields{gap:12px}.join-fields label{font-size:10px;font-weight:900}.join-fields input{border:2px solid #b6c799;border-radius:11px;background:#fffef6;padding:11px;font-family:var(--round-font)}
+.room-settings{border:2px dashed #bfcea3;border-radius:14px;padding:12px;background:#f2f5df}.room-settings legend{font-weight:900;padding:0 7px}.room-settings label{font-weight:800;min-height:40px}.room-settings select{color:#385740;border:1px solid #b6c799;border-radius:8px;padding:6px;background:#fffdf0}.room-settings input{accent-color:#55845b}
+.power-guide{border:1px dashed #bdcba2;border-radius:12px;padding:9px 12px;background:#f8f7e5;margin:8px 0 16px}.power-guide summary{font-size:12px;font-weight:900;color:#657954;cursor:pointer}.power-legend{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;margin:12px 0 3px}.power-legend span{display:grid;justify-items:center;gap:5px}.power-legend svg{width:36px;height:36px;border-radius:10px;padding:5px;background:var(--power-color);color:#fffdf1;box-shadow:0 3px 0 #52664e33}.power-legend b{font-size:10px}.power-legend small{font-size:10px;color:#758565;line-height:1.3}
+#powerStatus{display:flex;align-items:center;gap:8px;z-index:1;background:#fffbecf5;border:2px solid var(--power-color);border-radius:14px;padding:5px 10px 9px 5px;box-shadow:0 3px 0 #49694033;min-width:78px;overflow:hidden}
+#powerStatus svg{display:block;width:32px;height:32px;padding:4px;background:var(--power-color);border-radius:9px;color:#fffdf1;animation:power-bob 1.4s ease-in-out infinite}
+#powerTime{font:900 15px var(--round-font);color:#365c4c;min-width:22px;text-align:center;font-variant-numeric:tabular-nums}
+.power-track{position:absolute;bottom:3px;left:8px;right:8px;height:3px;background:#dbe3c5;border-radius:4px;overflow:hidden}#powerMeter{display:block;height:100%;width:100%;background:var(--power-color);transform-origin:left;transition:transform .12s linear}
+#powerStatus.expiring{border-color:#de7b3b}#powerStatus.expiring svg{animation:power-bob .55s ease-in-out infinite}
+@keyframes power-bob{0%,100%{transform:rotate(-5deg) translateY(0)}50%{transform:rotate(5deg) translateY(-2px)}}
+#respawn{border:2px solid #b7ca95;border-radius:16px;background:#fff9e9f5;color:#3b5b42;font:900 13px var(--round-font);box-shadow:0 4px 0 #8eaa6d55}
+.battlebar{font-weight:800;background:#e9efcd;color:#5c744d;border-top:2px solid #b2c88e}.battlebar b{font-weight:900;color:#4a6940}.live-dot{background:#7caf4c;box-shadow:0 0 0 3px #7caf4c22}
+.thumb-control{font-weight:900;color:#385e49;letter-spacing:.6px;text-shadow:0 1px #fffbe3}.thumb-pad{border:3px solid #587e568c;background:#fff7d755;box-shadow:inset 0 0 0 8px #fffbd233}.thumb-pad span{border:3px solid #4d714f;background:#8ab96ddb;box-shadow:inset 0 4px 0 #d0e4a888,0 3px 0 #4d714f55}#aimStick{border:3px solid #b9704399;background:#ffe3ad55}#aimStick span{border:3px solid #b25d33;background:#ef9557e6;box-shadow:inset 0 4px 0 #ffe7b588,0 3px 0 #a85c3055}
+.control-card h3{color:#416649;font-weight:900}.keys kbd{border-radius:7px;background:#fffbea;font-weight:800}.mobile-help{border:2px solid #cad8ad;border-radius:15px;background:#fffbea}footer{font-weight:700;letter-spacing:.4px;color:#80916f}
+@media(max-width:570px){.edition{display:none}.masthead{justify-content:center;padding:6px 0 17px}.brand{font-size:33px}.page{padding:14px 10px}.game{border-radius:18px}.game.lobby-open .overlay{padding:13px 9px 19px}.game.lobby-open .dialog,.dialog{padding:17px 15px}.dialog h2{font-size:27px}.dialog p{font-size:12px}.mode-card{font-size:12px}.mode-card small{font-size:10px}.power-legend{gap:5px}.tool{font-size:10px}.primary,#createRoom{padding:10px 14px}.join-fields{grid-template-columns:1fr 1fr}#respawn{font-size:12px}}
+@media(pointer:coarse) and (hover:none){.game.mobile-active .arena-header{background:#fff9e8;border-bottom:2px solid #c6d7a6}.game.mobile-active .room-actions{background:#fff9e8;border:2px solid #b2c693;border-radius:0 0 14px 14px}.game.mobile-active .arena-menu-button{border:0;border-radius:8px;box-shadow:none;background:#f6e8b9}.game.mobile-active .pip{height:6px}.game.mobile-active .thumb-pad{background:#fff7d73d}.game.mobile-active .battlebar{border-top:1px solid #b2c88e}.game.mobile-active #powerStatus{top:8px;left:10px}.game.mobile-active .roster-name{font-weight:900}}
+@media(prefers-reduced-motion:reduce){#powerStatus svg{animation:none}#powerMeter{transition:none}}
+/* Health retains five compact pips: each full pip now represents two hits. */
+.health .pip.half{background:linear-gradient(90deg,var(--tank) 50%,transparent 50%);box-shadow:inset 0 0 0 1px var(--tank)}
+#versionBadge{display:none;position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));z-index:5;border:1px solid #b9c89b;border-radius:9px;padding:5px 9px;background:#fff9e9ed;color:#5f7551;font:800 11px var(--round-font);pointer-events:none}
+.in-lobby #versionBadge{display:block}.in-lobby.arena-expanded #versionBadge{display:none}
+.power-legend{grid-template-columns:repeat(3,1fr);row-gap:14px}
+
+/* Waiting room and audio controls share the existing compact top menu. */
+.room-actions{flex-wrap:wrap}
+.game.lobby-open .arena-header{display:block}
+.game.lobby-open .room-title,.game.lobby-open .scoreboard,.game.lobby-open #fullscreen,.game.lobby-open #copy,.game.lobby-open #latency{display:none}
+.waiting-panel{padding:24px 16px;background:radial-gradient(ellipse at top,#eef6cb,#c5e2a4);min-height:360px}
+.waiting-panel[hidden],.countdown[hidden]{display:none}
+.waiting-panel .dialog{width:min(520px,100%)}
+#waitingPlayers{list-style:none;padding:0;text-align:left;display:grid;gap:10px}
+#waitingPlayers li{padding:13px 16px;border:2px solid #cfdbb7;border-left:8px solid var(--tank);border-radius:12px;background:#fffdf1;font-weight:800;overflow-wrap:anywhere}
+.game.waiting-room canvas,.game.waiting-room .stage-label,.game.waiting-room .scoreboard{display:none}
+.game.waiting-room .stage{overflow:auto}
+.countdown{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;flex-direction:column;pointer-events:none;background:#35513c22;color:#fff5b0;text-shadow:0 5px #3b5d47,3px 0 #3b5d47,-3px 0 #3b5d47}
+.countdown span{font-weight:1000;font-size:clamp(18px,4vw,32px);letter-spacing:3px}
+.countdown strong{font:1000 clamp(100px,22vh,190px)/1.15 var(--round-font)}
+@media(pointer:coarse) and (hover:none){.game.mobile-active .room-actions{width:min(340px,calc(100vw - 16px))}.game.waiting-room .waiting-panel{min-height:100%;padding:18px 12px}.game.waiting-room .arena-header{grid-template-columns:minmax(0,1fr) 44px}.game.waiting-room .arena-menu-button{grid-column:2}}
+</style>
+</head>
+<body>
+<svg class="icon-defs" width="0" height="0" aria-hidden="true" style="position:absolute;overflow:hidden"><defs>
+<symbol id="power-laser" viewBox="-16 -16 32 32"><path d="M-11 11 5-5M-11-5-8-2M4 10 7 13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="m6-15 3 6 6 3-6 3-3 6-3-6-6-3 6-3z" fill="currentColor"/></symbol>
+<symbol id="power-double" viewBox="-16 -16 32 32"><g fill="currentColor"><rect x="-11" y="-9" width="8" height="21" rx="3"/><rect x="3" y="-9" width="8" height="21" rx="3"/><path d="M-9-13h4v6h-4zM5-13h4v6H5z"/></g><path d="M-7-5v5M7-5v5" fill="none" stroke="#a279f5" stroke-width="3" stroke-linecap="round"/></symbol>
+<symbol id="power-speed" viewBox="-16 -16 32 32"><path d="M3-13-10 2h8l-2 11L11-4H3z" fill="currentColor"/></symbol>
+<symbol id="power-machine" viewBox="-18 -18 36 36"><g transform="rotate(-26)" fill="currentColor"><rect x="-12" y="-7" width="6" height="16" rx="3"/><rect x="-3" y="-7" width="6" height="16" rx="3"/><rect x="6" y="-7" width="6" height="16" rx="3"/><path d="M-10 12h2v3h-2zM-1 12h2v3h-2zM8 12h2v3H8z"/></g></symbol>
+<symbol id="power-immortal" viewBox="-16 -16 32 32"><path d="m0-14 4.1 8.3 9.2 1.3-6.7 6.5 1.6 9.2L0 7l-8.2 4.3 1.6-9.2-6.7-6.5 9.2-1.3z" fill="#fff5a1"/></symbol>
+<symbol id="power-restore" viewBox="-16 -16 32 32"><path d="M0 12C-23-2-9-19 0-7 9-19 23-2 0 12" fill="#e94d5c"/></symbol>
+</defs></svg>
+<main class="page">
+<header class="masthead"><div class="brand" aria-label="Tank Frenzy"><span>TANK</span> FRENZY</div><div class="edition"><span><i class="live-dot"></i>PLAY WITH FRIENDS</span><span>2–4 PLAYERS · ZERO DOWNLOADS</span></div></header>
+<section class="intro"><div><p class="eyebrow">YOUR TANK. YOUR BROWSER. ONE BATTLEFIELD.</p><h1>Small tanks.<br><span>Big rivalries.</span></h1></div><p>Bring your friends into the field.<br><span id="introControls">Move with WASD. Aim with your mouse. Click to fire.</span></p></section>
+<section id="arena" class="game" aria-label="Network tank arena">
+<div id="arenaHeader" class="arena-header">
+<div class="room-strip"><span class="room-title">ROOM <b id="roomCode">QUARRY</b> &nbsp; / &nbsp; <span id="roomCount">0 / 4 PLAYERS</span></span><button id="arenaMenu" class="tool arena-menu-button" aria-expanded="false" aria-controls="arenaActions" aria-label="Arena menu">MENU</button><div id="arenaActions" class="room-actions"><button id="fullscreen" class="tool" aria-pressed="false">FULL SCREEN</button><button id="copy" class="tool">COPY INVITE</button><button id="leave" class="tool" hidden>LEAVE ROOM</button><button id="viewMode" class="tool" aria-pressed="false" hidden>FULL MAP</button><button id="sound" class="tool" aria-pressed="true">EFFECTS ON</button><button id="music" class="tool" aria-pressed="true" aria-label="Background music">MUSIC ON</button><span class="tool" id="latency">OFFLINE</span></div></div>
+<p id="viewNote" role="status"></p>
+<div id="roster" class="scoreboard"><span class="room-empty">Join the room to claim your tank.</span></div>
+</div>
+<div class="stage">
+<section id="waitingRoom" class="waiting-panel" aria-labelledby="waitingTitle" hidden><div class="dialog"><p class="eyebrow">GATHER YOUR SQUAD</p><h2 id="waitingTitle">Waiting room</h2><ul id="waitingPlayers" aria-label="Players in this room" aria-live="polite"></ul><p id="waitingMessage" role="status"></p><button id="startGame" class="primary" type="button" hidden>START GAME</button><p class="hint">Use Copy Invite in the top menu to invite friends.</p></div></section>
+<div id="countdown" class="countdown" role="status" aria-live="polite" hidden><span>GET READY</span><strong id="countdownNumber">3</strong></div>
+<canvas id="game" width="1120" height="610" tabindex="0" aria-label="Tank arena. Use W A S D to move, point the mouse to aim, and hold left click to fire."></canvas>
+<div class="stage-label"><b id="mapLabel">RANDOM MAP / NEW EACH MATCH</b><span>1600 x 1040 / 0.42 SECOND RELOAD</span></div>
+<div id="respawn" role="status" aria-live="polite"></div>
+<div id="powerStatus" role="img" aria-label="Active power-up" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><use id="powerGlyph" href="#power-speed" x="0" y="0" width="32" height="32"/></svg><span id="powerTime" aria-hidden="true"></span><span class="power-track" aria-hidden="true"><span id="powerMeter"></span></span></div>
+<div id="thumbControls" class="thumb-controls" hidden>
+<div class="thumb-control"><div id="moveStick" class="thumb-pad" role="group" aria-label="Move: drag with your left thumb"><span></span></div>MOVE</div>
+<div class="thumb-control"><div id="aimStick" class="thumb-pad" role="group" aria-label="Aim and fire: drag with your right thumb, release to stop firing"><span></span></div>AIM + FIRE</div>
+</div>
+<div id="overlay" class="overlay"><div class="dialog">
+<div id="dialogTag" class="eyebrow">ASSEMBLE YOUR RIVALS</div><h2 id="dialogTitle">Join the field.</h2><p id="dialogText">For 2-4 players, each in their own browser. Share a room code and explore a new random battlefield each match.</p>
+<section id="roomBrowser" class="room-browser" hidden aria-label="Available rooms">
+<img class="mode-banner" src="./mode-banner.webp" alt="Cartoon tanks facing off in a sunny quarry" width="2048" height="768">
+<div class="mode-choices" role="group" aria-label="Game mode"><button id="ffaMode" class="mode-card" type="button" aria-pressed="true"><span class="mode-emblem" aria-hidden="true">✦</span>FREE-FOR-ALL<small>Every tank for itself</small></button><button id="teamMode" class="mode-card" type="button" aria-pressed="false"><span class="mode-emblem" aria-hidden="true">★ ★</span>2 VS 2<small>Team up. No friendly fire.</small></button></div>
+<details class="power-guide"><summary>Power-up guide</summary><div class="power-legend">
+<span style="--power-color:#ef628b"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-laser" x="0" y="0" width="32" height="32"/></svg><b>Laser</b><small>4 damage · clears bullets</small></span>
+<span style="--power-color:#a279f5"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-double" x="0" y="0" width="32" height="32"/></svg><b>Double cannon</b><small>Two parallel shots</small></span>
+<span style="--power-color:#f2b931"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-speed" x="0" y="0" width="32" height="32"/></svg><b>Speed</b><small>Move faster</small></span>
+<span style="--power-color:#3fb5cc"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-machine" x="0" y="0" width="32" height="32"/></svg><b>Machine gun</b><small>Rapid fire</small></span>
+<span style="--power-color:#e8b933"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-immortal" x="0" y="0" width="32" height="32"/></svg><b>Immortal</b><small>No damage for 10s</small></span>
+<span style="--power-color:#ffe0e4"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-restore" x="0" y="0" width="32" height="32"/></svg><b>Restore</b><small>Full health instantly</small></span>
+</div></details>
+<div class="lobby-actions"><button id="refreshRooms" class="tool" type="button">REFRESH</button><button id="createRoom" class="tool" type="button">CREATE ROOM</button></div>
+<div id="roomListStatus" role="status"></div><div id="roomList" class="room-list"></div>
+<div id="roomDetails" class="room-details" hidden><strong id="selectedRoomName"></strong><p id="roomRules"></p><ul id="roomPlayers" aria-label="Players in selected room"></ul><div id="roomCapacity"></div><button id="joinSelected" class="primary" type="button" disabled>JOIN THIS ROOM</button></div>
+</section>
+<form id="joinForm"><div id="joinFields" class="join-fields"><label>CALLSIGN<input id="callsign" placeholder="Your name" maxlength="16" autocomplete="off"></label><label>ROOM CODE<input id="roomInput" maxlength="16" pattern="[A-Za-z0-9-]+" required autocomplete="off"></label></div><fieldset id="roomSettings" class="room-settings"><legend>New room rules</legend><label>Mode <select id="gameMode"><option value="ffa">Free-for-All</option><option value="teams">2 vs 2</option></select></label><label><input id="bounceOption" type="checkbox" checked>Bullet bouncing</label><label><input id="powersOption" type="checkbox" checked>Super powers</label><p>The first player sets the rules. Existing rooms keep their settings.</p></fieldset><button id="action" class="primary" type="submit">Join arena &gt;</button></form>
+<button id="browseRooms" class="tool" type="button">BROWSE ROOMS</button>
+<span id="networkNote" class="hint">WASD / MOVE &nbsp; MOUSE / AIM &nbsp; LEFT CLICK / FIRE</span>
+</div></div>
+</div>
+<div class="battlebar"><span><i class="live-dot"></i><b id="status">READY TO CONNECT</b></span><span>YOUR COLOR = YOUR SHELLS &nbsp; / &nbsp; TEN-HIT HULLS</span></div>
+<div id="leaveDialog" class="leave-confirm" hidden><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="leaveTitle"><h2 id="leaveTitle">Leave this room?</h2><p>Your spot will be released. You can join again from the room browser.</p><button id="cancelLeave" class="tool" type="button">KEEP PLAYING</button><button id="confirmLeave" class="primary" type="button">LEAVE ROOM</button></div></div>
+</section>
+<section class="bottom">
+<div id="mobileHelp" class="mobile-help" hidden><strong>Two thumbs. Full control.</strong><p>Left thumb to move. Right thumb to aim and fire. Release either control to stop.</p><p>The close view follows your tank. Open Menu for Full Map, sound, fullscreen, invite and leave controls. Turn your phone sideways for a wider battlefield.</p></div>
+<div id="desktopHelp">
+<div class="control-card"><div class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd class="fire">MOVE / STRAFE</kbd></div><div><div class="key-label">EVERY PLAYER</div><h3>Drive your own way.</h3><p>WASD moves in screen directions.<br>Combine keys to move diagonally.</p></div></div>
+<div class="control-card"><div><div class="key-label">INDEPENDENT TURRET</div><h3>Point. Click. Boom.</h3><p>The barrel follows your mouse. Hold left click to fire every 0.42 seconds. Straight map axes match WASD movement. Hear your engine and every cannon shot.</p></div></div>
+</div>
+<div class="control-card"><div><div class="key-label">BRING YOUR FRIENDS</div><h3>Same room. Different screens.</h3><p id="networkLinks" class="network-detail">Open this address in another browser and join the same room. The host keeps this server running.</p></div></div>
+</section>
+<footer><span>FIRST TO 10 / 2 - 4 PLAYERS / NO INSTALL FOR FRIENDS</span><span>TANK FRENZY &copy; 2026</span></footer>
+</main>
+<small id="versionBadge" aria-label="Game version"></small>
+<script src="./shared.js"></script>
+<script src="./sound-bank.js"></script>
+<script src="./music.js"></script>
+<script src="./client.js"></script>
+</body>
+</html>
