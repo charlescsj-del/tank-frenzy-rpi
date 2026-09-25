@@ -32,7 +32,7 @@ function createGameServer({ingress=false,publicUrl=''}={}){
     }
     if(url.pathname==='/rooms'){
       const available=[...rooms.values()].filter(room=>room.players.size>0).map(room=>({
-        code:room.code,capacity:maxPlayers,available:maxPlayers-room.players.size,settings:room.settings,phase:room.phase,
+        code:room.code,capacity:maxPlayers,available:room.phase==='postgame'?0:maxPlayers-room.players.size,settings:room.settings,phase:room.phase,
         players:[...room.players.values()].map(({name,slot,connected,team})=>({name,slot,connected,team}))
       })).sort((a,b)=>a.code.localeCompare(b.code));
       res.setHeader('Content-Type','application/json');res.end(JSON.stringify({rooms:available}));return;
@@ -93,6 +93,7 @@ function createGameServer({ingress=false,publicUrl=''}={}){
           if(rooms.has(code)&&rooms.get(code).players.size===0)rooms.delete(code);
           if(!rooms.has(code)){if(rooms.size>=32){send(ws,{type:'error',message:'Server is full. Try an existing room.'});ws.close();return;}rooms.set(code,new Room(code,msg.settings));}
           const room=rooms.get(code);const name=typeof msg.name==='string'?msg.name.replace(/[\x00-\x1f<>]/g,'').trim().slice(0,16):'';
+          if(room.phase==='postgame'){send(ws,{type:'error',message:'This match has ended and its rematch window closed. Choose another room or create a new one.'});ws.close();return;}
           const player=room.add(name);if(!player){send(ws,{type:'error',message:'Room full (4 players). Choose another room code.'});ws.close();return;}
           session={room,player,token:randomBytes(24).toString('hex'),ws};sessions.set(session.token,session);
         }
@@ -101,6 +102,7 @@ function createGameServer({ingress=false,publicUrl=''}={}){
       if(!session)return;
       if(session.ws!==ws)return;
       if(msg.type==='start')session.room.start(session.player);
+      if(msg.type==='rematch')session.room.voteRematch(session.player);
       if(msg.type==='input')session.room.setInput(session.player,msg);
       if(msg.type==='ping')send(ws,{type:'pong',sent:msg.sent});
       if(msg.type==='leave'){session.room.remove(session.player);if(session.room.players.size===0)rooms.delete(session.room.code);sessions.delete(session.token);ws.close(1000,'Left room');}

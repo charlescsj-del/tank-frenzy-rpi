@@ -2,7 +2,7 @@
 
 Install Tank Frenzy as a Home Assistant app (formerly called an add-on). The Pi hosts the multiplayer game; players use Safari, Edge, Chrome, or another modern browser on their phones, tablets, or computers. Rendering and sound run on each player's device.
 
-Based on **Tank Frenzy v1.7.1** from the [main game repository](https://github.com/charlescsj-del/tank-frenzy/commit/b469a8250e21499627cf994748e7b1589a7ee93e). Includes the compact phone Create/Join forms, approved music and combat effects, continuous music loops, and distinct 3–2–1 and Start sounds. The Pi app provides separate Home Assistant sidebar and LAN listeners.
+Based on **Tank Frenzy v1.8.0** from the [main game repository](https://github.com/charlescsj-del/tank-frenzy/commit/936d4d743a3ba46f3e7524a93e94da83b9343038). Includes the animated winner screen, 20-second unanimous rematch vote, compact phone Create/Join forms, and approved music and effects. The Pi app provides separate Home Assistant sidebar and LAN listeners.
 
 ## Install
 
@@ -29,7 +29,7 @@ Set **Configuration → public_url** to your LAN address, for example `http://19
 
 Port `8765` is the game port and does not require a Home Assistant login. Change or disable its host mapping under **Network** if needed; update `public_url` to match. The internal ingress port `8099` is not published on the host. Disabling the game port still permits sidebar play.
 
-Music starts after the first tap/click, according to browser autoplay rules. Sound comes from the playing device, not the Pi's audio output. Scores and rooms are held in memory and reset when the app restarts.
+Music starts after the first tap/click, according to browser autoplay rules. Sound comes from the playing device, not the Pi's audio output. After a win, each connected player must choose Rematch within 20 seconds to start another round; otherwise the finished result remains until players leave. Scores and rooms are held in memory and reset when the app restarts.
 
 See [DOCS.md](DOCS.md) for local installation, updates and troubleshooting, and [GAMEPLAY.md](GAMEPLAY.md) for controls and game rules.
 
@@ -50,4 +50,4 @@ docker run --rm -p 8765:8765 tank-frenzy-rpi
 
 Run the build on the intended architecture (or use Docker Buildx with `--platform linux/arm64`). The repository includes CI for tests and ARM64/AMD64 container builds. A physical Pi/Home Assistant installation and mobile play must still be checked on the target device; automated tests do not establish Pi performance under load.
 
-App package version: **1.7.1**. Game version: **1.7.1**. Bump `config.yaml` for future app updates and keep the Dockerfile default build version in sync.
+App package version: **1.8.0**. Game version: **1.8.0**. Bump `config.yaml` for future app updates and keep the Dockerfile default build version in sync.

@@ -2,7 +2,7 @@
 
 A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarry, rounded menus and bold lettering. Choose Free-for-All or 2 vs 2 and invite your friends.
 
-Current release: **v1.7.1**, also shown in the bottom-right corner of the main room browser. See [CHANGELOG.md](CHANGELOG.md) for release notes. Keep the version in `shared.js`, `package.json`, and `package-lock.json` synchronized when releasing changes.
+Current release: **v1.8.0**, also shown in the bottom-right corner of the main room browser. See [CHANGELOG.md](CHANGELOG.md) for release notes. Keep the version in `shared.js`, `package.json`, and `package-lock.json` synchronized when releasing changes.
 
 See [SOUND_DESIGN.md](SOUND_DESIGN.md) for the approved cartoon arcade audio direction and implementation notes.
 
@@ -14,7 +14,7 @@ Room links such as https://tank-frenzy.onrender.com/?room=QUARRY still open the 
 
 On narrow screens, Create/Join keeps the “Small tanks. Big rivalries.” tagline in one compact line and gives the form its own layout, with the room rules and submit button visible without the arena header or controls taking space. The room browser and active game keep their existing layouts.
 
-After creating a room, everyone sees a waiting-room player list. Only the creator can press **Start Game**. If that player leaves or disconnects before starting, the first remaining connected player gets the button. Reconnecting does not take it back. After the first start, there is no owner; rounds restart automatically. Room rules remain fixed.
+After creating a room, everyone sees a waiting-room player list. Only the creator can press **Start Game**. If that player leaves or disconnects before starting, the first remaining connected player gets the button. Reconnecting does not take it back. After the first start, there is no owner. Room rules remain fixed.
 
 Every round begins with a shared **3–2–1** countdown in the center of the field, with one rising audio tick per number and a separate battle-start sound when play begins. The server freezes movement, aiming, firing and pickups until it ends. Late joins during a running round are allowed.
 
@@ -60,7 +60,7 @@ Maps are 1600 by 1040 world units (about 2.5 times the previous area). Each room
 - Left click: fire. Hold to keep firing, with a 0.42-second cooldown between shots.
 - Tanks have **10 health**: ten normal shells or three unprotected laser hits destroy a full-health tank. Respawn takes three seconds and restores all 10 health. Five compact health pips each represent two health; half pips show odd health values without widening the mobile header.
 - Mid-match joins and respawns have three seconds of protection, even while moving and firing. Protected tanks slowly fade in/out; the ten-second Immortal power uses the same effect. Reduced-motion mode uses steady translucency.
-- First to ten kills wins; after the ten-second results screen, the next match starts automatically with another three-second countdown.
+- First to ten kills wins. A large animated result card appears over the field and combat stops. Every connected player can choose **Rematch** within 20 seconds; only unanimous votes start the next three-second countdown. If the vote expires, the room stays open with its result displayed until everyone leaves; it remains listed but cannot be newly joined. Start or join another room for a new battle. Late joiners during the vote can participate. Disconnecting players cannot vote, and their votes are not required until they reconnect.
 - Leaving the tab stops your controls, but other players keep playing.
 - A brief connection loss reserves your tank for 15 seconds and reconnects automatically. Reloading or leaving creates a new player session.
 

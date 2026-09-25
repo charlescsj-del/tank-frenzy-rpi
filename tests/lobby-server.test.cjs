@@ -112,3 +112,26 @@ test('start messages are server-authorized, transfer before start, and cannot re
   room.step(3);b.emit('message',JSON.stringify({type:'start'}));assert.equal(room.phase,'playing');
   b.emit('message',JSON.stringify({type:'leave'}));assert.equal(s.game.rooms.has('START'),false);
 });
+
+test('rematch messages are accepted only from joined players during a live vote',()=>{
+  const s=server(),a=s.join('AGAIN','create','Alice'),b=s.join('AGAIN','join','Bob'),room=s.game.rooms.get('AGAIN');
+  a.emit('message',JSON.stringify({type:'rematch'}));assert.equal(room.rematchVotes.size,0);
+  a.emit('message',JSON.stringify({type:'start'}));room.step(3);
+  const [alice,bob]=[...room.players.values()];bob.shieldUntil=0;alice.kills=9;room.damage(bob,alice.id,10);
+  assert.equal(s.list().body.rooms[0].phase,'results');
+  a.emit('message',JSON.stringify({type:'rematch'}));assert.equal(room.phase,'results');
+  assert.deepEqual(room.snapshot().rematchVotes,[alice.id]);
+  b.emit('message',JSON.stringify({type:'rematch'}));assert.equal(room.phase,'countdown');
+  a.emit('message',JSON.stringify({type:'rematch'}));assert.deepEqual(room.snapshot().rematchVotes,[]);
+});
+
+test('ended rooms stay listed but cannot trap a new joiner after the vote closes',()=>{
+  const s=server(),a=s.join('FINISH','create','Alice'),room=s.game.rooms.get('FINISH');
+  a.emit('message',JSON.stringify({type:'start'}));room.step(3);
+  const b=s.join('FINISH','join','Bob'),[alice,bob]=[...room.players.values()];
+  bob.shieldUntil=0;alice.kills=9;room.damage(bob,alice.id,10);room.step(20);
+  assert.equal(s.list().body.rooms[0].available,0);
+  const c=s.join('FINISH','join','Charlie');assert.match(c.messages.at(-1).message,/match has ended/i);
+  assert.equal(room.players.size,2);assert.equal(room.phase,'postgame');
+  b.emit('message',JSON.stringify({type:'rematch'}));assert.equal(room.phase,'postgame');
+});

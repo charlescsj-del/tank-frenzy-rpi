@@ -22,7 +22,7 @@ function rayBox(x,y,dx,dy,w){
   return near;
 }
 class Room {
-  constructor(code,options={}){this.code=code;this.settings=Object.freeze({mode:options?.mode==='teams'?'teams':'ffa',bouncing:options?.bouncing!==false,powers:options?.powers!==false});this.phase='waiting';this.countdownUntil=0;this.ownerId=null;this.teamScores=[0,0];this.pickups=[];this.pickupId=0;this.nextPickup=6;this.map=generateMap();this.players=new Map();this.shells=[];this.events=[];this.time=0;this.eventId=0;this.shellId=0;this.winner=null;this.restartAt=0;}
+  constructor(code,options={}){this.code=code;this.settings=Object.freeze({mode:options?.mode==='teams'?'teams':'ffa',bouncing:options?.bouncing!==false,powers:options?.powers!==false});this.phase='waiting';this.countdownUntil=0;this.ownerId=null;this.teamScores=[0,0];this.pickups=[];this.pickupId=0;this.nextPickup=6;this.map=generateMap();this.players=new Map();this.shells=[];this.events=[];this.time=0;this.eventId=0;this.shellId=0;this.winner=null;this.rematchUntil=0;this.rematchVotes=new Set();}
   emit(type,data){this.events.push({id:++this.eventId,type,...data});}
   add(name){
     if(this.players.size>=F.maxPlayers)return null;
@@ -37,11 +37,22 @@ class Room {
     if(this.phase!=='waiting'){this.ownerId=null;return;}
     if(!this.players.get(this.ownerId)?.connected)this.ownerId=[...this.players.values()].find(p=>p.connected)?.id??null;
   }
-  remove(p){this.players.delete(p.id);this.refreshOwner();}
+  remove(p){this.players.delete(p.id);this.rematchVotes.delete(p.id);this.refreshOwner();}
   start(p){
     this.refreshOwner();
     if(this.phase!=='waiting'||!p?.connected||p.id!==this.ownerId||!this.players.has(p.id))return false;
     this.beginCountdown();return true;
+  }
+  voteRematch(p){
+    if(this.phase!=='results'||this.time>=this.rematchUntil||!p?.connected||this.players.get(p.id)!==p||this.rematchVotes.has(p.id))return false;
+    this.rematchVotes.add(p.id);
+    const connected=[...this.players.values()].filter(player=>player.connected);
+    if(connected.every(player=>this.rematchVotes.has(player.id))){
+      this.winner=null;this.rematchUntil=0;this.rematchVotes.clear();this.teamScores=[0,0];this.map=generateMap();
+      for(const player of this.players.values()){player.kills=0;player.deaths=0;}
+      this.beginCountdown();this.emit('restart',{});
+    }
+    return true;
   }
   beginCountdown(){
     this.phase='countdown';this.ownerId=null;this.countdownUntil=this.time+3;
@@ -78,7 +89,7 @@ class Room {
     if(!attacker)return;
     attacker.kills++;
     const teams=this.settings.mode==='teams',score=teams?++this.teamScores[attacker.team]:attacker.kills;
-    if(score>=F.targetScore){this.winner={id:attacker.id,team:attacker.team,name:teams?(attacker.team===0?'Orange team':'Blue team'):attacker.name};this.restartAt=this.time+10;}
+    if(score>=F.targetScore){this.winner={id:attacker.id,team:attacker.team,name:teams?(attacker.team===0?'Orange team':'Blue team'):attacker.name};this.phase='results';this.rematchUntil=this.time+20;this.rematchVotes.clear();this.shells=[];this.pickups=[];}
   }
   spawnPickup(){
     if(!this.settings.powers||this.pickups.length>=2)return;
@@ -146,7 +157,8 @@ class Room {
       if(this.time>=this.countdownUntil){this.phase='playing';for(const p of this.players.values()){p.input=neutral();p.pendingShot=false;p.lastInput=this.time;}this.emit('start',{});}
       return;
     }
-    if(this.winner){if(this.time>=this.restartAt){this.winner=null;this.teamScores=[0,0];this.map=generateMap();for(const p of this.players.values()){p.kills=0;p.deaths=0;}this.beginCountdown();this.emit('restart',{});}return;}
+    if(this.phase==='results'){if(this.time>=this.rematchUntil){this.phase='postgame';this.rematchVotes.clear();}return;}
+    if(this.phase==='postgame')return;
     this.pickups=this.pickups.filter(p=>p.expiresAt>this.time);
     if(this.settings.powers&&this.time>=this.nextPickup){this.spawnPickup();this.nextPickup=this.time+F.pickupInterval;}
     for(const p of this.players.values()){
@@ -214,6 +226,6 @@ class Room {
     }
     this.shells=this.shells.filter(s=>s.life>0);
   }
-  snapshot(){return {type:'state',room:this.code,settings:this.settings,phase:this.phase,countdownIn:this.phase==='countdown'?Math.max(0,this.countdownUntil-this.time):0,ownerId:this.ownerId,teamScores:this.teamScores,pickups:this.pickups,map:this.map,time:this.time,winner:this.winner,restartIn:Math.max(0,this.restartAt-this.time),players:[...this.players.values()].map(({id,slot,name,x,y,a,aim,hp,kills,deaths,connected,respawnAt,shieldUntil,life,team,power,powerUntil})=>({id,slot,name,x,y,a,aim,hp,kills,deaths,connected,respawnIn:Math.max(0,respawnAt-this.time),shield:shieldUntil>this.time,life,team,power,powerRemaining:Math.max(0,powerUntil-this.time)})),shells:this.shells,events:this.events};}
+  snapshot(){return {type:'state',room:this.code,settings:this.settings,phase:this.phase,countdownIn:this.phase==='countdown'?Math.max(0,this.countdownUntil-this.time):0,ownerId:this.ownerId,teamScores:this.teamScores,pickups:this.pickups,map:this.map,time:this.time,winner:this.winner,rematchIn:this.phase==='results'?Math.max(0,this.rematchUntil-this.time):0,rematchVotes:[...this.rematchVotes],players:[...this.players.values()].map(({id,slot,name,x,y,a,aim,hp,kills,deaths,connected,respawnAt,shieldUntil,life,team,power,powerUntil})=>({id,slot,name,x,y,a,aim,hp,kills,deaths,connected,respawnIn:Math.max(0,respawnAt-this.time),shield:shieldUntil>this.time,life,team,power,powerRemaining:Math.max(0,powerUntil-this.time)})),shells:this.shells,events:this.events};}
 }
 module.exports={Room,hitRect};

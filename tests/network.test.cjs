@@ -56,11 +56,13 @@ test('wall blocking, edge and concrete ricochets, mouse taps and ten-hit damage'
   for(let i=0;i<10;i++){r.shells=[{id:10+i,x:b.x-24,y:b.y,vx:410,vy:0,owner:a.id,slot:0,life:1,bounces:0}];r.step(1/120);assert.equal(b.hp,9-i);}
   assert.equal(b.hp,0);assert.equal(a.kills,1);assert.equal(b.deaths,1);step(r,3.1);assert.equal(b.hp,10);assert(b.shieldUntil>r.time);
 });
-test('four unique slots, capacity, winner, restart, disconnect expiry',()=>{
+test('four unique slots, capacity, winner, voted rematch, disconnect expiry',()=>{
   const r=new Room('TEST');const ps=Array.from({length:4},(_,i)=>r.add('P'+i));assert.equal(new Set(ps.map(p=>p.slot)).size,4);assert.equal(r.add('Fifth'),null);
   ps[0].kills=9;ps[1].hp=1;ps[1].shieldUntil=0;
   r.shells=[{id:1,x:ps[1].x-24,y:ps[1].y,vx:410,vy:0,owner:ps[0].id,slot:0,life:1,bounces:0}];r.step(1/120);assert.equal(r.winner.id,ps[0].id);
-  const previousMap=r.map.id;step(r,10.1);assert.notEqual(r.map.id,previousMap);assert.equal(r.winner,null);assert.equal(ps[0].kills,0);
+  const previousMap=r.map.id;step(r,10.1);assert.equal(r.map.id,previousMap);assert.equal(r.phase,'results');
+  for(const p of ps)assert.equal(r.voteRematch(p),true);
+  assert.notEqual(r.map.id,previousMap);assert.equal(r.winner,null);assert.equal(ps[0].kills,0);
   r.disconnect(ps[3]);step(r,15.1);assert(!r.players.has(ps[3].id));
 });
 test('unrotated projection and mouse aiming match at all canvas sizes',()=>{

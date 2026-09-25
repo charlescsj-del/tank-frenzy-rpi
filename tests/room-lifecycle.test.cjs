@@ -38,12 +38,32 @@ test('all-disconnected waiting room recovers a starter on reconnect and expires 
   r.disconnect(a);r.step(16);assert.equal(r.players.size,0);assert.equal(r.ownerId,null);
 });
 
-test('later rounds reset scores and powers and repeat the frozen countdown automatically',()=>{
+test('a win freezes play and requires every connected player to vote for a rematch within 20 seconds',()=>{
   const {r,a}=running(),b=r.add('B');b.shieldUntil=0;a.kills=9;
-  r.damage(b,a.id,10);assert(r.winner);const oldMap=r.map.id;r.step(10);
-  assert.equal(r.winner,null);assert.equal(r.phase,'countdown');assert.equal(r.snapshot().countdownIn,3);
+  r.damage(b,a.id,10);assert(r.winner);assert.equal(r.phase,'results');assert.equal(r.snapshot().rematchIn,20);
+  const oldMap=r.map.id,x=a.x;input(r,a);r.step(10);assert.equal(a.x,x);assert.equal(r.phase,'results');assert.equal(r.winner.id,a.id);
+  assert.equal(r.voteRematch(a),true);assert.equal(r.voteRematch(a),false,'duplicate votes are ignored');
+  assert.equal(r.phase,'results');assert.deepEqual(r.snapshot().rematchVotes,[a.id]);
+  assert.equal(r.voteRematch(b),true);assert.equal(r.phase,'countdown');assert.equal(r.winner,null);
+  assert.equal(r.snapshot().countdownIn,3);assert.equal(r.snapshot().rematchIn,0);assert.equal(r.snapshot().rematchVotes.length,0);
   assert.notEqual(r.map.id,oldMap);assert.equal(a.kills,0);assert.equal(b.deaths,0);assert.equal(b.hp,10);assert.equal(r.ownerId,null);
-  input(r,a);const x=a.x;r.step(2.9);assert.equal(a.x,x);assert.equal(r.phase,'countdown');r.step(.11);assert.equal(r.phase,'playing');
+  input(r,a);const nextX=a.x;r.step(2.9);assert.equal(a.x,nextX);assert.equal(r.phase,'countdown');r.step(.11);assert.equal(r.phase,'playing');
+});
+
+test('an expired rematch stays ended, rejects late votes, and never auto-starts',()=>{
+  const {r,a}=running(),b=r.add('B');b.shieldUntil=0;a.kills=9;r.damage(b,a.id,10);
+  assert.equal(r.voteRematch(a),true);r.step(20);assert.equal(r.phase,'postgame');assert(r.winner);
+  assert.equal(r.snapshot().rematchIn,0);assert.deepEqual(r.snapshot().rematchVotes,[]);
+  assert.equal(r.voteRematch(b),false);assert.equal(r.start(a),false);r.step(200);assert.equal(r.phase,'postgame');
+});
+
+test('rematch authorization excludes disconnected players but admits late joins and reconnects',()=>{
+  const {r,a}=running(),b=r.add('B'),c=r.add('C');b.shieldUntil=0;a.kills=9;r.damage(b,a.id,10);
+  assert.equal(r.voteRematch({id:a.id,connected:true}),false);
+  assert.equal(r.voteRematch(a),true);r.disconnect(b);assert.equal(r.voteRematch(b),false);
+  const late=r.add('Late');assert.equal(r.voteRematch(c),true);assert.equal(r.phase,'results');
+  b.connected=true;assert.equal(r.voteRematch(late),true);assert.equal(r.phase,'results');
+  assert.equal(r.voteRematch(b),true);assert.equal(r.phase,'countdown');
 });
 
 test('mid-match joins can move and fire while remaining immune for exactly three seconds',()=>{

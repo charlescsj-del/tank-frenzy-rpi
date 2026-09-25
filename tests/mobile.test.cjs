@@ -165,6 +165,28 @@ test('waiting screen lists players, restricts Start, and gives way to the countd
   c.run("latest.phase='playing';updateRoomPhase(latest)");assert.equal(c.elements.get('countdown').hidden,true);assert.equal(c.elements.get('thumbControls').hidden,false);
 });
 
+test('winner fills the arena, rematch vote is one-shot, and expiry does not restart play',()=>{
+  const c=client();
+  c.run(`latest={room:'TEST',phase:'results',winner:{id:'other',team:null,name:'Friend'},rematchIn:19.3,rematchVotes:[],settings:{mode:'ffa'},players:[{id:'me',name:'Me',connected:true,slot:0},{id:'other',name:'Friend',connected:true,slot:1}]};updateRoomPhase(latest);updateHud(latest)`);
+  assert.equal(c.elements.get('results').hidden,false);
+  assert.equal(c.elements.get('resultsTitle').textContent,'Friend wins!');
+  assert.equal(c.elements.get('resultsOutcome').textContent,'GOOD BATTLE!');
+  assert.equal(c.elements.get('resultsVotes').textContent,'0 / 2 players ready');
+  assert.match(c.elements.get('resultsTimer').textContent,/20s/);
+  assert.equal(c.elements.get('respawn').textContent,'');
+  assert.equal(c.elements.get('thumbControls').hidden,true);
+  const before=c.sent.length;c.run('sendInput()');assert.equal(c.sent.length,before);
+  c.elements.get('rematch').events.click();assert.equal(c.sent.at(-1).type,'rematch');
+  assert.equal(c.elements.get('rematch').disabled,true);
+  c.run("latest.rematchVotes=['me'];updateRoomPhase(latest)");
+  assert.equal(c.elements.get('rematch').textContent,'READY ✓');
+  c.run("latest.phase='postgame';latest.rematchIn=0;updateRoomPhase(latest)");
+  assert.equal(c.elements.get('rematch').textContent,'REMATCH CLOSED');
+  const sent=c.sent.length;c.elements.get('rematch').events.click();assert.equal(c.sent.length,sent);
+  c.run("latest.phase='countdown';latest.winner=null;latest.countdownIn=3;updateRoomPhase(latest)");
+  assert.equal(c.elements.get('results').hidden,true);
+});
+
 test('countdown sounds once per number, start is distinct, and music/effects switches operate independently',()=>{
   const c=client();c.run(`var cues=[];playCue=kind=>cues.push(kind);var state={map:{id:15},phase:'waiting',players:[]};updateMatchSounds(state);state.phase='countdown';state.countdownIn=3;updateMatchSounds(state);updateMatchSounds(state)`);
   assert.equal(c.run('cues.join()'),'countdown3');

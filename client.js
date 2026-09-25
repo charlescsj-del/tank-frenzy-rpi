@@ -26,7 +26,7 @@ $('versionBadge').textContent='v'+FIELD.version;
 $('versionBadge').setAttribute('aria-label','Tank Frenzy version '+FIELD.version);
 function status(text){$('status').textContent=text;}
 function networkMessage(title,text,form=false){
-  $('waitingRoom').hidden=true;$('countdown').hidden=true;$('arena').classList.toggle('waiting-room',false);
+  $('waitingRoom').hidden=true;$('countdown').hidden=true;$('results').hidden=true;$('arena').classList.toggle('waiting-room',false);
   document.body.classList.toggle('in-lobby',false);document.body.classList.toggle('in-room-form',form);
   $('arena').classList.toggle('lobby-open',false);$('arena').classList.toggle('room-form-open',form);
   $('overlay').classList.remove('hidden');$('dialogTitle').textContent=title;$('dialogText').textContent=text;
@@ -51,7 +51,7 @@ function renderRoomDetails(){
   if(!room)return;
   $('selectedRoomName').textContent=room.code;
   for(const p of room.players){const item=document.createElement('li');item.textContent=p.name+(p.team!=null?' · '+(p.team===0?'Orange':'Blue'):'')+(p.connected?'':' (reconnecting)');$('roomPlayers').append(item);}
-  $('roomCapacity').textContent=room.available>0?room.available+' open '+(room.available===1?'spot':'spots'):'Room full — all spots occupied or reserved.';
+  $('roomCapacity').textContent=room.phase==='postgame'?'Match ended — choose another room.':room.available>0?room.available+' open '+(room.available===1?'spot':'spots'):'Room full — all spots occupied or reserved.';
   $('roomRules').textContent=(room.settings?.mode==='teams'?'2 VS 2':'FREE-FOR-ALL')+' · Bounce '+(room.settings?.bouncing===false?'OFF':'ON')+' · Powers '+(room.settings?.powers===false?'OFF':'ON');
 }
 function renderRooms(){
@@ -59,7 +59,7 @@ function renderRooms(){
   const rooms=lobbyRooms.filter(room=>(room.settings?.mode||'ffa')===selectedGameMode);
   for(const room of rooms){
     const button=document.createElement('button');button.type='button';button.className='room-choice';
-    button.textContent=room.code+' · '+room.players.filter(p=>p.connected).length+'/'+room.capacity+' online · '+(room.phase==='waiting'?'WAITING':room.phase==='countdown'?'STARTING':'IN GAME')+(room.available<=0?' · FULL':'');
+    button.textContent=room.code+' · '+room.players.filter(p=>p.connected).length+'/'+room.capacity+' online · '+(room.phase==='waiting'?'WAITING':room.phase==='countdown'?'STARTING':room.phase==='results'?'REMATCH VOTE':room.phase==='postgame'?'MATCH ENDED':'IN GAME')+(room.available<=0&&room.phase!=='postgame'?' · FULL':'');
     button.setAttribute('aria-pressed',String(room.code===selectedRoom));
     button.addEventListener('click',()=>{selectedRoom=room.code;renderRooms();});$('roomList').append(button);
   }
@@ -92,7 +92,7 @@ $('joinSelected').addEventListener('click',()=>{const room=lobbyRooms.find(r=>r.
 setInterval(()=>{if(lobbyVisible&&!document.hidden)refreshRooms();},5000);
 function send(data){if(socket?.readyState===WebSocket.OPEN&&socket.bufferedAmount<32768)socket.send(JSON.stringify(data));}
 function sendInput(){
-  if(!joined||latest?.phase==='waiting'||latest?.phase==='countdown')return;
+  if(!joined||(latest&&latest.phase!=='playing'))return;
   const me=tanks.find(t=>t.id===myId);
   const aim=touchAim?{x:(me?.x??500)+touchAim.x*150,y:(me?.y??330)+touchAim.y*150}:pointer.active?pointer:{x:(me?.x??500)+Math.cos(me?.aim||0)*150,y:(me?.y??330)+Math.sin(me?.aim||0)*150};
   send({type:'input',seq:++seq,x:Math.max(-1,Math.min(1,sticks.move.x+Number(keys.has('KeyD'))-Number(keys.has('KeyA')))),y:Math.max(-1,Math.min(1,sticks.move.y+Number(keys.has('KeyS'))-Number(keys.has('KeyW')))),aimX:aim.x,aimY:aim.y,fire:firing||Math.hypot(sticks.aim.x,sticks.aim.y)>0});
@@ -169,10 +169,22 @@ function applySnapshot(data){
   updateRoomPhase(data);updateHud(data);
 }
 function updateRoomPhase(data){
-  const waiting=data.phase==='waiting',countdown=data.phase==='countdown';
+  const waiting=data.phase==='waiting',countdown=data.phase==='countdown',results=data.phase==='results',postgame=data.phase==='postgame';
   $('waitingRoom').hidden=!waiting;$('arena').classList.toggle('waiting-room',waiting);
   $('countdown').hidden=!countdown;
+  $('results').hidden=!(results||postgame);
   if(countdown){const number=String(Math.max(1,Math.ceil(data.countdownIn)));if($('countdownNumber').textContent!==number)$('countdownNumber').textContent=number;}
+  if(results||postgame){
+    const won=data.settings?.mode==='teams'?data.players.find(p=>p.id===myId)?.team===data.winner.team:myId===data.winner.id;
+    $('results').classList.toggle('is-blue',data.winner.team===1);
+    $('resultsTitle').textContent=data.winner.name+' wins!';
+    $('resultsOutcome').textContent=won?'VICTORY!':'GOOD BATTLE!';
+    const connected=data.players.filter(p=>p.connected),votes=data.rematchVotes||[],voted=votes.includes(myId);
+    $('resultsVotes').textContent=postgame?'The rematch window has closed.':votes.filter(id=>connected.some(p=>p.id===id)).length+' / '+connected.length+' players ready';
+    $('rematch').disabled=postgame||voted||!joined;
+    $('rematch').textContent=postgame?'REMATCH CLOSED':voted?'READY ✓':'REMATCH';
+    $('resultsTimer').textContent=postgame?'Leave the room to start or join a new battle.':'All connected players must choose Rematch within '+Math.ceil(data.rematchIn)+'s.';
+  }
   if(waiting){
     const signature=JSON.stringify([data.ownerId,data.players.map(p=>[p.id,p.name,p.connected,p.team])]);
     if(signature!==waitingSignature){
@@ -191,6 +203,7 @@ function updateRoomPhase(data){
   if(roomPhase!==data.phase){roomPhase=data.phase;release();updateTouchControls();resize();syncMusic();}
 }
 $('startGame').addEventListener('click',()=>{if(joined&&latest?.phase==='waiting'&&latest.ownerId===myId){release();send({type:'start'});}});
+$('rematch').addEventListener('click',()=>{if(joined&&latest?.phase==='results'&&latest.rematchIn>0&&!latest.rematchVotes?.includes(myId)){send({type:'rematch'});$('rematch').disabled=true;}});
 function updateHud(data){
   const count=data.players.filter(p=>p.connected).length;
   $('roomCount').textContent=count+' / 4 PLAYERS';
@@ -210,7 +223,7 @@ function updateHud(data){
   const me=data.players.find(p=>p.id===myId);
   if(data.phase==='waiting'){$('respawn').textContent='';status('WAITING ROOM / INVITE YOUR FRIENDS');}
   else if(data.phase==='countdown'){$('respawn').textContent='';status('GET READY');}
-  else if(data.winner){$('respawn').textContent=data.winner.name+' wins! New match in '+Math.ceil(data.restartIn)+'s';status('MATCH COMPLETE');}
+  else if(data.winner){$('respawn').textContent='';status(data.phase==='results'?'MATCH COMPLETE / REMATCH VOTE':'MATCH COMPLETE / REMATCH CLOSED');}
   else if(me?.hp<=0){$('respawn').textContent='Tank destroyed. Respawning in '+Math.ceil(me.respawnIn)+'s';status('REGROUPING');}
   else{$('respawn').textContent='';status(data.settings?.mode==='teams'?'ORANGE '+data.teamScores[0]+' — '+data.teamScores[1]+' BLUE / FIRST TO 10':count<2?'PRACTICE / WAITING FOR PLAYER 2':'LIVE BATTLE / FIRST TO 10 KILLS');}
   const power=me?.hp>0&&me?.powerRemaining>0&&FIELD.powers.includes(me.power)?me.power:null;
@@ -259,7 +272,7 @@ function syncMusic(){
   const ac=getAudio(true);if(!ac||typeof TankMusic==='undefined')return;
   musicPlayer??=new TankMusic(ac);
   const key=`${roomCode}:${latest?.map?.id}`;
-  musicPlayer.play(joined&&latest?.phase==='playing'?'battle':'lobby',key);
+  musicPlayer.play(joined&&['playing','results'].includes(latest?.phase)?'battle':'lobby',key);
   if(joined&&latest?.phase==='countdown')musicPlayer.prepareBattle(key);
 }
 function unlockAudio(){audioReady=true;syncMusic();}
@@ -331,7 +344,7 @@ function updateTouchControls(){
   $('arena').classList.toggle('mobile-active',mobile&&joined);
   document.body.classList.toggle('mobile-playing',mobile&&joined);
   $('viewMode').hidden=!mobile||!joined;
-  $('thumbControls').hidden=!mobile||!joined||latest?.phase==='waiting'||latest?.phase==='countdown';
+  $('thumbControls').hidden=!mobile||!joined||(latest?.phase!=null&&latest.phase!=='playing');
   $('mobileHelp').hidden=!mobile;
   $('desktopHelp').hidden=mobile;
   $('introControls').textContent=mobile?'Left thumb to move. Right thumb to aim and fire.':'Move with WASD. Aim with your mouse. Click to fire.';

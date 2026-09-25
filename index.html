@@ -196,6 +196,25 @@ button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visi
 .countdown{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;flex-direction:column;pointer-events:none;background:#35513c22;color:#fff5b0;text-shadow:0 5px #3b5d47,3px 0 #3b5d47,-3px 0 #3b5d47}
 .countdown span{font-weight:1000;font-size:clamp(18px,4vw,32px);letter-spacing:3px}
 .countdown strong{font:1000 clamp(100px,22vh,190px)/1.15 var(--round-font)}
+.results-screen[hidden]{display:none}
+.results-screen{position:absolute;inset:0;z-index:4;display:grid;place-items:center;overflow:auto;padding:12px;background:radial-gradient(circle at 50% 40%,#fff3b868,#284829d9);text-align:center}
+.results-card{position:relative;width:min(540px,96%);max-height:100%;overflow:auto;padding:clamp(12px,3vh,26px);border:3px solid #fbe9a9;border-radius:28px;background:#fff9e9f5;box-shadow:0 8px 0 #82995f,0 24px 50px #1c351088;color:#355236;animation:result-pop .55s cubic-bezier(.2,1.3,.25,1) both}
+.results-card:before,.results-card:after{content:'✦  ★  ✦';position:absolute;top:12%;left:2%;color:#f99b53;font-size:clamp(14px,2.5vw,28px);animation:result-spark 1.6s ease-in-out infinite alternate;pointer-events:none}
+.results-card:after{left:auto;right:2%;color:#6ebfe2;animation-delay:.45s}
+.results-tank{width:clamp(70px,13vh,118px);height:clamp(70px,13vh,118px);margin:auto;color:#f28c48;filter:drop-shadow(0 7px 0 #50704755);animation:result-float 1.6s ease-in-out infinite alternate}
+.results-screen.is-blue .results-tank{color:#55add5}
+.results-eyebrow{margin:3px 0;color:#ad632e;font:900 clamp(11px,2.4vh,17px) var(--round-font);letter-spacing:2px}
+.results-screen h2{margin:2px 0 4px;font:1000 clamp(28px,6vw,57px)/1.05 var(--round-font);color:#3b603c;text-shadow:2px 3px 0 #c6dfa5;overflow-wrap:anywhere}
+.results-screen .results-outcome{margin:3px 0 10px;font:900 clamp(12px,2.6vh,19px) var(--round-font);color:#a65c3b}
+.results-screen .results-note{margin:4px 0 8px;font:800 clamp(11px,2vh,15px) var(--round-font)}
+.results-screen .primary{min-height:48px;min-width:min(260px,90%);font-size:15px;border-radius:14px;background:#e87342;box-shadow:0 4px 0 #a3472e}
+.results-screen .primary:disabled{background:#879c71;box-shadow:0 4px 0 #627451;cursor:default;filter:none}
+.results-screen .results-timer{margin:10px 0 0;font:800 clamp(11px,2vh,15px) var(--round-font)}
+@keyframes result-pop{from{opacity:0;transform:scale(.7) rotate(-5deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes result-float{from{transform:translateY(2px) rotate(-8deg)}to{transform:translateY(-8px) rotate(8deg)}}
+@keyframes result-spark{to{transform:translateY(-12px) rotate(18deg);opacity:.55}}
+@media(max-height:440px){.results-card{padding:6px 16px}.results-tank{width:52px;height:52px}.results-screen h2{font-size:30px}.results-screen .results-outcome{margin:0}.results-screen .primary{min-height:40px}.results-screen .results-timer{margin:3px 0 0}}
+@media(prefers-reduced-motion:reduce){.results-card,.results-tank,.results-card:before,.results-card:after{animation:none}}
 /* Create/Join uses the available page height without changing the room browser. */
 .in-room-form .intro{padding:12px 0}.in-room-form .intro .eyebrow,.in-room-form .intro p:last-child,.in-room-form .bottom,.in-room-form footer{display:none}
 .in-room-form .intro h1{font-size:clamp(18px,2.8vw,25px);letter-spacing:-.6px;line-height:1.15}
@@ -240,6 +259,11 @@ button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visi
 <div class="stage">
 <section id="waitingRoom" class="waiting-panel" aria-labelledby="waitingTitle" hidden><div class="dialog"><p class="eyebrow">GATHER YOUR SQUAD</p><h2 id="waitingTitle">Waiting room</h2><ul id="waitingPlayers" aria-label="Players in this room" aria-live="polite"></ul><p id="waitingMessage" role="status"></p><button id="startGame" class="primary" type="button" hidden>START GAME</button><p class="hint">Use Copy Invite in the top menu to invite friends.</p></div></section>
 <div id="countdown" class="countdown" role="status" aria-live="polite" hidden><span>GET READY</span><strong id="countdownNumber">3</strong></div>
+<section id="results" class="results-screen" aria-labelledby="resultsTitle" hidden><div class="results-card">
+<svg class="results-tank" viewBox="0 0 120 120" aria-hidden="true"><path d="M60 5 66 20 82 15 77 30 92 40 76 45 78 62 60 54 42 62 44 45 28 40 43 30 38 15 54 20Z" fill="#ffd65a"/><rect x="22" y="73" width="76" height="33" rx="14" fill="#385b43"/><path d="M43 76 55 48h10l12 28" fill="currentColor" stroke="#385b43" stroke-width="5" stroke-linejoin="round"/><rect x="52" y="35" width="16" height="33" rx="5" fill="currentColor" stroke="#385b43" stroke-width="4"/><circle cx="41" cy="90" r="8" fill="#fff3cf"/><circle cx="60" cy="90" r="8" fill="#fff3cf"/><circle cx="79" cy="90" r="8" fill="#fff3cf"/></svg>
+<p class="results-eyebrow">BATTLE COMPLETE!</p><h2 id="resultsTitle">Winner</h2><p id="resultsOutcome" class="results-outcome"></p>
+<p id="resultsVotes" class="results-note"></p><button id="rematch" class="primary" type="button">REMATCH</button><p id="resultsTimer" class="results-timer"></p>
+</div></section>
 <canvas id="game" width="1120" height="610" tabindex="0" aria-label="Tank arena. Use W A S D to move, point the mouse to aim, and hold left click to fire."></canvas>
 <div class="stage-label"><b id="mapLabel">RANDOM MAP / NEW EACH MATCH</b><span>1600 x 1040 / 0.42 SECOND RELOAD</span></div>
 <div id="respawn" role="status" aria-live="polite"></div>
