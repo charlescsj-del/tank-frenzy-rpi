@@ -27,7 +27,8 @@ $('versionBadge').setAttribute('aria-label','Tank Frenzy version '+FIELD.version
 function status(text){$('status').textContent=text;}
 function networkMessage(title,text,form=false){
   $('waitingRoom').hidden=true;$('countdown').hidden=true;$('arena').classList.toggle('waiting-room',false);
-  document.body.classList.toggle('in-lobby',false);$('arena').classList.toggle('lobby-open',false);
+  document.body.classList.toggle('in-lobby',false);document.body.classList.toggle('in-room-form',form);
+  $('arena').classList.toggle('lobby-open',false);$('arena').classList.toggle('room-form-open',form);
   $('overlay').classList.remove('hidden');$('dialogTitle').textContent=title;$('dialogText').textContent=text;
   $('joinFields').hidden=!form;$('action').hidden=!form;$('action').disabled=false;
   lobbyVisible=false;$('roomBrowser').hidden=true;$('browseRooms').hidden=!form;
@@ -38,6 +39,7 @@ function showRoomForm(code,mode=null){
   networkMessage(mode==='create'?'Create a room.':'Join '+code+'.',mode==='create'?'Choose a room code and enter your callsign.':'Enter your callsign to join the battle.',true);
   $('action').textContent=mode==='create'?'CREATE & JOIN':'JOIN ARENA';
   $('gameMode').value=selectedGameMode;$('bounceOption').checked=true;$('powersOption').checked=true;
+  window.scrollTo?.(0,0);
 }
 function selectGameMode(mode){selectedGameMode=mode;selectedRoom=null;$('ffaMode').setAttribute('aria-pressed',String(mode==='ffa'));$('teamMode').setAttribute('aria-pressed',String(mode==='teams'));renderRooms();}
 $('ffaMode').addEventListener('click',()=>selectGameMode('ffa'));

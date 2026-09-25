@@ -2,6 +2,11 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 1.7.1 — Tank Frenzy v1.7.1
+
+- Keep the Create and Join forms visible without scrolling on narrow screens. Preserve the tagline in a compact line and hide inactive arena chrome while the form is open.
+- Keep the room browser and active game layouts unchanged; retain Home Assistant ingress and LAN multiplayer paths.
+
 ## App 1.7.0 — Tank Frenzy v1.7.0
 
 - Match the Home Assistant app and game version numbers.
@@ -22,6 +27,11 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 - Keep assets, sound, room discovery and WebSockets under the ingress prefix; support a configured invitation URL.
 - Include installation/update instructions and CI container builds for both architectures.
 - Verify 88 automated checks, including mixed ingress/LAN multiplayer. Physical Pi play still requires target-device verification.
+
+## 1.7.1
+
+- Use a dedicated compact phone layout for Create and Join, with the tagline on one line, tighter form spacing and a return to the top of the page.
+- Leave the room browser and active game views unchanged.
 
 ## 1.7.0
 

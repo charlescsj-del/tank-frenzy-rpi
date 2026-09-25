@@ -2,7 +2,7 @@
 
 A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarry, rounded menus and bold lettering. Choose Free-for-All or 2 vs 2 and invite your friends.
 
-Current release: **v1.7.0**, also shown in the bottom-right corner of the main room browser. See [CHANGELOG.md](CHANGELOG.md) for release notes. Keep the version in `shared.js`, `package.json`, and `package-lock.json` synchronized when releasing changes.
+Current release: **v1.7.1**, also shown in the bottom-right corner of the main room browser. See [CHANGELOG.md](CHANGELOG.md) for release notes. Keep the version in `shared.js`, `package.json`, and `package-lock.json` synchronized when releasing changes.
 
 See [SOUND_DESIGN.md](SOUND_DESIGN.md) for the approved cartoon arcade audio direction and implementation notes.
 
@@ -11,6 +11,8 @@ See [SOUND_DESIGN.md](SOUND_DESIGN.md) for the approved cartoon arcade audio dir
 Play online at https://tank-frenzy.onrender.com/ to browse active rooms or create a new room. Select a room to preview player names and available spots before joining. The list refreshes every five seconds; reconnecting players keep their reserved spots briefly, and full rooms remain visible but cannot be joined.
 
 Room links such as https://tank-frenzy.onrender.com/?room=QUARRY still open the join form with that code prefilled. Creating a room checks that its code is unused; rooms exist while players are present and disappear after everyone leaves (or their reconnection reservations expire).
+
+On narrow screens, Create/Join keeps the “Small tanks. Big rivalries.” tagline in one compact line and gives the form its own layout, with the room rules and submit button visible without the arena header or controls taking space. The room browser and active game keep their existing layouts.
 
 After creating a room, everyone sees a waiting-room player list. Only the creator can press **Start Game**. If that player leaves or disconnects before starting, the first remaining connected player gets the button. Reconnecting does not take it back. After the first start, there is no owner; rounds restart automatically. Room rules remain fixed.
 

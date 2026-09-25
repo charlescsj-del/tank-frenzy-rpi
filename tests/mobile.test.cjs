@@ -200,8 +200,14 @@ test('room selection previews names before joining and create opens a separate e
   assert.deepEqual(c.elements.get('roomPlayers').children.map(p=>p.textContent),['Alice','Bob (reconnecting)']);
   c.elements.get('joinSelected').events.click();
   assert.equal(c.run('joinMode'),'join');assert.equal(c.elements.get('roomInput').value,'ALPHA');assert.equal(c.elements.get('roomInput').readOnly,true);
+  assert(c.sandbox.document.body.classList.contains('in-room-form'));
+  assert(c.elements.get('arena').classList.contains('room-form-open'));
   c.elements.get('createRoom').events.click();
   assert.equal(c.run('joinMode'),'create');assert.equal(c.elements.get('roomInput').readOnly,false);assert.match(c.elements.get('roomInput').value,/^ROOM-/);
+  c.elements.get('browseRooms').events.click();
+  assert.equal(c.sandbox.document.body.classList.contains('in-room-form'),false);
+  assert.equal(c.elements.get('arena').classList.contains('room-form-open'),false);
+  assert.equal(c.elements.get('roomBrowser').hidden,false);
 });
 
 test('full and vanished rooms cannot be joined; request failures provide a retry message',async()=>{
