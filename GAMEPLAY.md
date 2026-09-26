@@ -2,15 +2,15 @@
 
 A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarry, rounded menus and bold lettering. Choose Free-for-All or 2 vs 2 and invite your friends.
 
-Current release: **v1.14.0**, also shown in the top-left corner of the room browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. Keep the version in `shared.js`, `package.json`, and `package-lock.json` synchronized when releasing changes.
+Current release: **v1.14.0**, also shown in the top-left corner of the room browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [CLAUDE.md](CLAUDE.md).
 
 See [SOUND_DESIGN.md](SOUND_DESIGN.md) for the approved cartoon arcade audio direction and implementation notes.
 
-## Public Game
+## Rooms
 
-Play online at https://tank-frenzy.onrender.com/ to browse active rooms or create a new room. Select a room to preview player names and available spots before joining. The list refreshes every five seconds; reconnecting players keep their reserved spots briefly, and full rooms remain visible but cannot be joined.
+Open the game's address (in the Home Assistant app: `http://YOUR_PI_IP:8765`, the sidebar, or your `public_url` such as a Cloudflare Tunnel address) to browse active rooms or create a new room. Select a room to preview player names and available spots before joining. The list refreshes every five seconds; reconnecting players keep their reserved spots briefly, and full rooms remain visible but cannot be joined.
 
-Room links such as https://tank-frenzy.onrender.com/?room=QUARRY still open the join form with that code prefilled. Creating a room checks that its code is unused; rooms exist while players are present and disappear after everyone leaves (or their reconnection reservations expire).
+Room links such as `https://your-game-address/?room=QUARRY` open the join form with that code prefilled. Creating a room checks that its code is unused; rooms exist while players are present and disappear after everyone leaves (or their reconnection reservations expire).
 
 The room browser has a **Your name** box (remembered on this device and shared with the Create/Join form), **⚡ Quick Play**, **Create Room** and a refresh button. Every room row shows its players and rules with its own **Join** button, so one tap joins. Quick Play joins a waiting room in the chosen mode first, then the fullest open room, and creates a new room when none is open. Full rooms and ended matches show **FULL** or **ENDED**. Effects and music are the round 🔊/🎵 buttons in the panel corner.
 
@@ -42,7 +42,7 @@ Keep the server running during play. Stop it with Ctrl+C.
 
 Each player opens the host's address in a separate tab, browser, or device, enters a name, and joins the same room code. Two to four players can battle in a room; the creator can start a solo practice match. Different room codes create separate matches. The Copy Invite button includes the room code.
 
-On other devices, use the host's LAN address, not localhost. Both devices must be able to reach each other on the network. If Windows prompts for Node.js network access, allow it on your trusted private network. No firewall rules are changed by this project. For public Internet play, use the deployed URL above.
+On other devices, use the host's LAN address, not localhost. Both devices must be able to reach each other on the network. If Windows prompts for Node.js network access, allow it on your trusted private network. No firewall rules are changed by this project. For public Internet play, put the game behind an HTTPS tunnel or reverse proxy with WebSockets enabled (see DOCS.md).
 
 Maps are 1600 by 1040 world units (about 2.5 times the previous area). Each room gets a random map, regenerated for every new match. Clear spawn zones and connected lanes keep the arena traversable. All players receive the same map from the server.
 
@@ -83,13 +83,13 @@ Maps are 1600 by 1040 world units (about 2.5 times the previous area). Each room
 - Leaving the tab stops your controls, but other players keep playing.
 - A brief connection loss reserves your tank for 15 seconds and reconnects automatically. Reloading or leaving creates a new player session.
 
-The server owns movement, collision, firing cooldowns, health, scoring, and respawns. Browsers send input over WebSocket and render shared snapshots. No user accounts or database are required; match state resets when the server stops.
+The server owns movement, collision, firing cooldowns, health, scoring, and respawns. Browsers send input over WebSocket and render shared snapshots. No user accounts or database are required; rooms and match state reset when the server stops (only the leaderboard is saved, and only in the Home Assistant app).
 
 ## Checks
 
 Run `npm test` for simulation and real WebSocket integration checks.
 
-Server work is bounded: at most 144 active shells per room / 36 per player, two pickups, and four players. Machine gun cooldown is 0.12 seconds; laser traces cover and tanks, then checks at most 144 shells per shot (0.8-second cooldown). Immortal adds a damage guard; Restore assigns maximum health once when collected. Neither adds timers or background jobs. Beam animation and particles are drawn only in the browser. The menu artwork is cached separately and is never sent in game snapshots. These limits keep the additions modest for small rooms; actual hosting capacity depends on concurrent rooms and the server plan.
+Server work is bounded: at most 32 rooms, and per room 144 active shells / 36 per player, two pickups, and four players. Machine gun cooldown is 0.12 seconds; laser traces cover and tanks, then checks at most 144 shells per shot (0.8-second cooldown). Immortal adds a damage guard; Restore assigns maximum health once when collected. Neither adds timers or background jobs. Beam animation and particles are drawn only in the browser. The menu artwork is cached separately and is never sent in game snapshots. These limits keep the additions modest for small rooms; actual hosting capacity depends on concurrent rooms and the server plan.
 
 Rendering, icon/fade animation, countdown display and audio playback run in each browser. Waiting/countdown phases and start authorization use the existing server tick and snapshot; no extra simulation timers are added. Waiting rooms skip combat simulation. The Start Game command is checked against the connected starter on the server. The tank collision shapes, aiming and compact 44px touch header are unchanged.
 

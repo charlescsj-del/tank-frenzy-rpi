@@ -29,13 +29,13 @@ Set **Configuration → public_url** to your LAN address, for example `http://19
 
 Port `8765` is the game port and does not require a Home Assistant login. Change or disable its host mapping under **Network** if needed; update `public_url` to match. The internal ingress port `8099` is not published on the host. Disabling the game port still permits sidebar play.
 
-Music starts after the first tap/click, according to browser autoplay rules. Sound comes from the playing device, not the Pi's audio output. After a win, a rematch starts when a majority of connected players (both, with two players) vote within 20 seconds; otherwise the finished result remains until players leave. Rooms and match scores are held in memory and reset when the app restarts; the 🏆 all-time leaderboard is saved in the app's `/data` folder.
+Music starts after the first tap/click, according to browser autoplay rules. Sound comes from the playing device, not the Pi's audio output. After a win, a rematch starts when a majority of connected players (both, with two players) vote within 20 seconds; otherwise the finished result remains until players leave. Rooms and match scores are held in memory and reset when the app restarts; the 🏆 leaderboard (today, this week, this month, all time, by region) is saved in the app's `/data` folder.
 
 Set **Configuration → notify_service** (for example `notify.mobile_app_your_phone`) to get a Home Assistant notification whenever someone opens a room.
 
 **Add to Home Screen:** on iPhone/iPad open the game in Safari and choose **Share → Add to Home Screen**; the game then opens full screen without browser bars. Android Chrome offers **Add to Home screen** too, but opens it as a normal full-screen app only over HTTPS (for example through a reverse proxy set as `public_url`); over plain LAN HTTP it adds a shortcut that opens in the browser.
 
-See [DOCS.md](DOCS.md) for local installation, updates and troubleshooting, and [GAMEPLAY.md](GAMEPLAY.md) for controls and game rules.
+See [DOCS.md](DOCS.md) for local installation, options (including the private admin page), updates and troubleshooting, and [GAMEPLAY.md](GAMEPLAY.md) for controls and game rules. Contributors: [CLAUDE.md](CLAUDE.md) covers the architecture, network protocol, test harness and release checklist.
 
 ## Development and verification
 
@@ -45,7 +45,7 @@ npm test
 npm start
 ```
 
-`npm start` runs the standalone server at port 8765. `node addon.cjs` starts both Home Assistant listeners and reads `/data/options.json` if available. No HA API, host networking, privileged mode, or media access is required.
+`npm start` runs the standalone server at port 8765. `node addon.cjs` starts both Home Assistant listeners and reads `/data/options.json` if available. The Home Assistant API (`homeassistant_api`) is used only for the optional `notify_service` notifications; no host networking, privileged mode or media access is required.
 
 ```bash
 docker build --build-arg BUILD_ARCH=aarch64 -t tank-frenzy-rpi .
@@ -54,6 +54,6 @@ docker run --rm -p 8765:8765 tank-frenzy-rpi
 
 Run the build on the intended architecture (or use Docker Buildx with `--platform linux/arm64`). The repository includes CI for tests and ARM64/AMD64 container builds. A physical Pi/Home Assistant installation and mobile play must still be checked on the target device; automated tests do not establish Pi performance under load.
 
-App package version: **1.14.0**. Game version: **1.14.0**. Bump `config.yaml` for future app updates and keep the Dockerfile default build version in sync.
+App package version: **1.14.0**. Game version: **1.14.0**. Releases bump the version in several files at once; see the release checklist in [CLAUDE.md](CLAUDE.md).
 
 The How to Play screenshots in `tutorial/` are rendered by the game itself. After a visual change, run `npm start` and then `npx -y -p playwright node tools/tutorial-screenshots.cjs` to regenerate them (set `ONLY=win.webp` for one image).
