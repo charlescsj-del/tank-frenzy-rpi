@@ -26,7 +26,7 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
     await page.screenshot({path:out+'/admin-'+width+'.png',fullPage:true});
   }
   console.log('Desktop, tablet and phone gauges rendered; history bounded.');
-  const high=JSON.parse(JSON.stringify(fixture));Object.assign(high.system,{sampledAt:166000,cpuPercent:95.6,load:[8.4,5.1,3.7]});high.system.memory.usedPercent=94;high.system.game.cpuPercent=146;
+  const high=JSON.parse(JSON.stringify(fixture));Object.assign(high.system,{sampledAt:166000,cpuPercent:95.6,load:[8.4,5.1,3.7]});Object.assign(high.system.memory,{usedPercent:94,usedBytes:3.76*1073741824,availableBytes:.24*1073741824});high.system.game.cpuPercent=146;
   await page.evaluate(state=>render(state),high);assert.equal(await page.locator('#cpuResource').getAttribute('data-tone'),'high');assert.equal(await page.locator('#memoryResource').getAttribute('data-tone'),'high');
   assert.equal(await page.locator('#load1').textContent(),'8.40');assert.match(await page.locator('#gameCpu').textContent(),/146.0%/);
   assert.equal(await page.locator('#loadBar1').evaluate(e=>e.style.width),'100%');assert.equal(await page.locator('#loadRatio1').textContent(),'2.10 per core');
