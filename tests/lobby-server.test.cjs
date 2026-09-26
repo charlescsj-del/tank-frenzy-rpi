@@ -148,3 +148,14 @@ test('tutorial screenshots are served as cached WebP images',async()=>{
   }
   assert.equal((await s.read('/tutorial/missing.webp')).status,404);
 });
+
+test('the home-screen app manifest and icons are served with the right types',async()=>{
+  const s=server(),manifest=await s.read('/manifest.webmanifest');
+  assert.equal(manifest.status,200);assert.equal(manifest.headers['Content-Type'],'application/manifest+json');
+  const data=JSON.parse(manifest.body.toString());
+  assert.equal(data.start_url,'./');assert.equal(data.display,'fullscreen');
+  for(const icon of [...data.icons.map(i=>i.src),'icons/apple-touch-icon.png']){
+    const response=await s.read('/'+icon);assert.equal(response.status,200);assert.equal(response.headers['Content-Type'],'image/png');
+    assert.deepEqual(response.body.subarray(1,4).toString(),'PNG');
+  }
+});

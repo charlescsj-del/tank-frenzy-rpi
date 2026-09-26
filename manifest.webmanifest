@@ -1,0 +1,16 @@
+{
+  "name": "Tank Frenzy",
+  "short_name": "Tank Frenzy",
+  "description": "Cartoon tank battles for 2–4 friends on the same network.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#fff6dd",
+  "theme_color": "#365c4c",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

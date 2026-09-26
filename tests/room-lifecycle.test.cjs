@@ -60,10 +60,27 @@ test('an expired rematch stays ended, rejects late votes, and never auto-starts'
 test('rematch authorization excludes disconnected players but admits late joins and reconnects',()=>{
   const {r,a}=running(),b=r.add('B'),c=r.add('C');b.shieldUntil=0;a.kills=9;r.damage(b,a.id,10);
   assert.equal(r.voteRematch({id:a.id,connected:true}),false);
-  assert.equal(r.voteRematch(a),true);r.disconnect(b);assert.equal(r.voteRematch(b),false);
-  const late=r.add('Late');assert.equal(r.voteRematch(c),true);assert.equal(r.phase,'results');
-  b.connected=true;assert.equal(r.voteRematch(late),true);assert.equal(r.phase,'results');
-  assert.equal(r.voteRematch(b),true);assert.equal(r.phase,'countdown');
+  assert.equal(r.voteRematch(a),true);assert.equal(r.phase,'results','one of three is not a majority');
+  r.disconnect(b);assert.equal(r.voteRematch(b),false);
+  const late=r.add('Late');b.connected=true;assert.equal(r.snapshot().rematchNeeded,3);
+  assert.equal(r.voteRematch(c),true);assert.equal(r.phase,'results','two of four is not a majority');
+  assert.equal(r.voteRematch(late),true);assert.equal(r.phase,'countdown');
+});
+
+test('a majority starts the rematch, and a non-voter leaving can complete it',()=>{
+  const {r,a}=running(),b=r.add('B'),c=r.add('C'),d=r.add('D');b.shieldUntil=0;a.kills=9;r.damage(b,a.id,10);
+  assert.equal(r.voteRematch(a),true);assert.equal(r.voteRematch(c),true);assert.equal(r.phase,'results');
+  r.disconnect(d);r.step(.01);assert.equal(r.phase,'countdown','two of three connected players now agree');
+  for(const p of [a,b,c,d])assert.equal(p.kills+p.shots+p.hits+p.streak,0,'match stats reset');
+});
+
+test('kills report the attacker and streak; shots and hits count per match',()=>{
+  const {r,a}=running(),b=r.add('B');b.shieldUntil=0;a.cool=0;a.aim=0;
+  r.fire(a);assert.equal(a.shots,1);
+  r.damage(b,a.id,4);assert.equal(a.hits,1);
+  r.damage(b,a.id,10);const kill=r.events.findLast(e=>e.type==='destroyed');
+  assert.equal(kill.by,a.id);assert.equal(kill.streak,1);assert.equal(b.streak,0);
+  const view=r.snapshot().players.find(p=>p.id===a.id);assert.deepEqual([view.shots,view.hits,view.streak],[1,2,1]);
 });
 
 test('mid-match joins can move and fire while remaining immune for exactly three seconds',()=>{

@@ -2,6 +2,15 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 1.11.0 — Tank Frenzy v1.11.0
+
+- Room browser: saved player name, Quick Play, and one-tap Join on every room row with its players and rules. Round icon buttons for effects and music.
+- Kill feed with streak banners, an end-of-match scoreboard (kills, deaths, hit rate) and a low-health heartbeat.
+- Rematch needs a majority of connected players instead of everyone; a non-voter leaving can complete it.
+- Desktop waiting rooms and battles fit the window. Removed the map label, bottom help cards, footer and masthead slogans.
+- Add to Home Screen: web app manifest and icons; landscape lock on Android when fullscreen starts.
+- Fix the Room Code pattern, which browsers rejected as invalid. Add `tools/tutorial-screenshots.cjs` and regenerate the tutorial images.
+
 ## App 1.10.0 — Tank Frenzy v1.10.0
 
 - Redesign the room browser to fit one screen without scrolling: artwork beside the room panel on wide screens, above it on phones. Only the room list scrolls.
@@ -49,6 +58,11 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 - Keep assets, sound, room discovery and WebSockets under the ingress prefix; support a configured invitation URL.
 - Include installation/update instructions and CI container builds for both architectures.
 - Verify 88 automated checks, including mixed ingress/LAN multiplayer. Physical Pi play still requires target-device verification.
+
+## 1.11.0
+
+- Quick Play, one-tap Join, remembered name, kill feed and streaks, scoreboard, heartbeat, majority rematch, home-screen app support and a one-screen desktop battle view.
+- Destroyed events carry the attacker and streak; snapshots carry shots, hits, streak and the rematch vote target.
 
 ## 1.10.0
 
