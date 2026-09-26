@@ -378,6 +378,10 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   .game.lobby-open .mode-card small,.room-row small+small{display:none}
   #roomListStatus:has(+ .room-list:not(:empty)){display:none}
 }
+/* Waiting-room bot controls for the room starter. */
+.bot-controls{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;margin:12px 0 4px}
+.bot-controls .tool{min-height:42px}.bot-controls label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:900;color:#47634e}
+.bot-controls select{min-height:42px;padding:6px 10px;border:2px solid #bdcda4;border-radius:11px;background:#fffcdf;color:#385740;font:800 13px var(--round-font)}
 /* Kill feed and streak banner over the arena. */
 .kill-feed{position:absolute;top:10px;right:12px;z-index:2;display:grid;justify-items:end;gap:4px;margin:0;padding:0;list-style:none;pointer-events:none}
 .kill-feed li{padding:4px 10px;border:2px solid #d6dfb8;border-radius:10px;background:#fffbe9e6;box-shadow:0 2px 0 #52664e22;color:#4f5c47;font:800 12px var(--round-font);animation:feed-in .25s ease-out}
@@ -415,7 +419,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 <div id="roster" class="scoreboard"><span class="room-empty">Join the room to claim your tank.</span></div>
 </div>
 <div class="stage">
-<section id="waitingRoom" class="waiting-panel" aria-labelledby="waitingTitle" hidden><div class="dialog"><p class="eyebrow">GATHER YOUR SQUAD</p><h2 id="waitingTitle">Waiting room</h2><ul id="waitingPlayers" aria-label="Players in this room" aria-live="polite"></ul><p id="waitingMessage" role="status"></p><button id="startGame" class="primary" type="button" hidden>START GAME</button><p id="networkLinks" class="hint network-detail">Open this address in another browser and join the same room.</p></div></section>
+<section id="waitingRoom" class="waiting-panel" aria-labelledby="waitingTitle" hidden><div class="dialog"><p class="eyebrow">GATHER YOUR SQUAD</p><h2 id="waitingTitle">Waiting room</h2><ul id="waitingPlayers" aria-label="Players in this room" aria-live="polite"></ul><div id="botControls" class="bot-controls" hidden><button id="addBot" class="tool" type="button">🤖 ADD BOT</button><button id="removeBot" class="tool" type="button">REMOVE BOT</button><label>Bot skill <select id="botSkill"><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></label></div><p id="waitingMessage" role="status"></p><button id="startGame" class="primary" type="button" hidden>START GAME</button><p id="networkLinks" class="hint network-detail">Open this address in another browser and join the same room.</p></div></section>
 <div id="countdown" class="countdown" role="status" aria-live="polite" hidden><span>GET READY</span><strong id="countdownNumber">3</strong></div>
 <section id="results" class="results-screen" aria-labelledby="resultsTitle" hidden><div class="results-card">
 <svg class="results-tank" viewBox="0 0 120 120" aria-hidden="true"><path d="M60 5 66 20 82 15 77 30 92 40 76 45 78 62 60 54 42 62 44 45 28 40 43 30 38 15 54 20Z" fill="#ffd65a"/><rect x="22" y="73" width="76" height="33" rx="14" fill="#385b43"/><path d="M43 76 55 48h10l12 28" fill="currentColor" stroke="#385b43" stroke-width="5" stroke-linejoin="round"/><rect x="52" y="35" width="16" height="33" rx="5" fill="currentColor" stroke="#385b43" stroke-width="4"/><circle cx="41" cy="90" r="8" fill="#fff3cf"/><circle cx="60" cy="90" r="8" fill="#fff3cf"/><circle cx="79" cy="90" r="8" fill="#fff3cf"/></svg>

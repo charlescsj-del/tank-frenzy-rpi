@@ -2,6 +2,7 @@
 const {randomUUID}=require('node:crypto');
 const F=require('./shared.js');
 const {generateMap}=require('./map-generator.cjs');
+const Bots=require('./bots.cjs');
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function hitRect(x,y,r,w){return (x-clamp(x,w.x,w.x+w.w))**2+(y-clamp(y,w.y,w.y+w.h))**2<r*r;}
 // First contact along a relative motion segment, as a fraction of one tick.
@@ -22,35 +23,52 @@ function rayBox(x,y,dx,dy,w){
   return near;
 }
 class Room {
-  constructor(code,options={}){this.code=code;this.settings=Object.freeze({mode:options?.mode==='teams'?'teams':'ffa',bouncing:options?.bouncing!==false,powers:options?.powers!==false});this.phase='waiting';this.countdownUntil=0;this.ownerId=null;this.teamScores=[0,0];this.pickups=[];this.pickupId=0;this.nextPickup=6;this.map=generateMap();this.players=new Map();this.shells=[];this.events=[];this.time=0;this.eventId=0;this.shellId=0;this.winner=null;this.rematchUntil=0;this.rematchVotes=new Set();}
+  constructor(code,options={}){this.code=code;this.settings=Object.freeze({mode:options?.mode==='teams'?'teams':'ffa',bouncing:options?.bouncing!==false,powers:options?.powers!==false});this.phase='waiting';this.countdownUntil=0;this.ownerId=null;this.teamScores=[0,0];this.pickups=[];this.pickupId=0;this.nextPickup=6;this.map=generateMap();this.players=new Map();this.shells=[];this.events=[];this.time=0;this.eventId=0;this.shellId=0;this.winner=null;this.botSkill='normal';this.rematchUntil=0;this.rematchVotes=new Set();}
   emit(type,data){this.events.push({id:++this.eventId,type,...data});}
-  add(name){
+  humans(){return [...this.players.values()].filter(p=>!p.bot);}
+  add(name,{bot=false}={}){
+    // A human joining a full room takes the most recently added bot's place.
+    if(this.players.size>=F.maxPlayers&&!bot){const seat=[...this.players.values()].reverse().find(p=>p.bot);if(seat)this.players.delete(seat.id);}
     if(this.players.size>=F.maxPlayers)return null;
     const slot=Array.from({length:F.maxPlayers},(_,i)=>i).find(i=>![...this.players.values()].some(p=>p.slot===i));
-    const p={id:randomUUID(),slot,name:name||F.palette[slot].name,x:0,y:0,a:0,aim:0,hp:F.maxHealth,kills:0,deaths:0,shots:0,hits:0,streak:0,cool:0,respawnAt:0,shieldUntil:0,connected:true,disconnectedAt:0,input:neutral(),lastInput:this.time,seq:-1,life:0};
+    const p={id:randomUUID(),slot,bot,name:bot?'🤖 '+Bots.botNames[slot*2+Math.floor(Math.random()*2)]:name||F.palette[slot].name,x:0,y:0,a:0,aim:0,hp:F.maxHealth,kills:0,deaths:0,shots:0,hits:0,streak:0,cool:0,respawnAt:0,shieldUntil:0,connected:true,disconnectedAt:0,input:neutral(),lastInput:this.time,seq:-1,life:0};
     const teams=[0,1].map(team=>[...this.players.values()].filter(t=>t.team===team).length);
     p.team=this.settings.mode==='teams'?(teams[0]<=teams[1]?0:1):null;
-    if(this.phase==='waiting')this.ownerId??=p.id;
+    if(this.phase==='waiting'&&!bot)this.ownerId??=p.id;
     this.players.set(p.id,p);this.spawn(p);return p;
   }
   refreshOwner(){
     if(this.phase!=='waiting'){this.ownerId=null;return;}
-    if(!this.players.get(this.ownerId)?.connected)this.ownerId=[...this.players.values()].find(p=>p.connected)?.id??null;
+    if(!this.players.get(this.ownerId)?.connected)this.ownerId=this.humans().find(p=>p.connected)?.id??null;
   }
-  remove(p){this.players.delete(p.id);this.rematchVotes.delete(p.id);this.refreshOwner();}
+  remove(p){
+    this.players.delete(p.id);this.rematchVotes.delete(p.id);
+    // Bots never keep an otherwise empty room alive.
+    if(!this.humans().length)this.players.clear();
+    this.refreshOwner();
+  }
+  // Waiting-room bot controls belong to the room starter.
+  botCommand(p,msg){
+    this.refreshOwner();
+    if(this.phase!=='waiting'||!p?.connected||p.id!==this.ownerId)return false;
+    if(msg.action==='add')return !!this.add('',{bot:true});
+    if(msg.action==='remove'){const bot=[...this.players.values()].reverse().find(t=>t.bot);if(!bot)return false;this.players.delete(bot.id);return true;}
+    if(msg.action==='skill'&&Object.hasOwn(Bots.skills,msg.skill)){this.botSkill=msg.skill;return true;}
+    return false;
+  }
   start(p){
     this.refreshOwner();
     if(this.phase!=='waiting'||!p?.connected||p.id!==this.ownerId||!this.players.has(p.id))return false;
     this.beginCountdown();return true;
   }
   voteRematch(p){
-    if(this.phase!=='results'||this.time>=this.rematchUntil||!p?.connected||this.players.get(p.id)!==p||this.rematchVotes.has(p.id))return false;
+    if(this.phase!=='results'||this.time>=this.rematchUntil||!p?.connected||p.bot||this.players.get(p.id)!==p||this.rematchVotes.has(p.id))return false;
     this.rematchVotes.add(p.id);this.checkRematch();
     return true;
   }
   // A majority of connected players starts the rematch, so one idle player cannot block it.
   // With two players both must agree.
-  rematchNeeded(){return Math.floor([...this.players.values()].filter(player=>player.connected).length/2)+1;}
+  rematchNeeded(){return Math.floor(this.humans().filter(player=>player.connected).length/2)+1;}
   checkRematch(){
     if(this.phase!=='results')return;
     const votes=[...this.rematchVotes].filter(id=>this.players.get(id)?.connected).length;
@@ -169,6 +187,7 @@ class Room {
     if(this.phase==='postgame')return;
     this.pickups=this.pickups.filter(p=>p.expiresAt>this.time);
     if(this.settings.powers&&this.time>=this.nextPickup){this.spawnPickup();this.nextPickup=this.time+F.pickupInterval;}
+    for(const p of this.players.values())if(p.bot)Bots.think(this,p,rayBox);
     for(const p of this.players.values()){
       if(!p.connected)continue;
       if(p.hp<=0){if(this.time>=p.respawnAt)this.spawn(p);continue;}
@@ -234,6 +253,6 @@ class Room {
     }
     this.shells=this.shells.filter(s=>s.life>0);
   }
-  snapshot(){return {type:'state',room:this.code,settings:this.settings,phase:this.phase,countdownIn:this.phase==='countdown'?Math.max(0,this.countdownUntil-this.time):0,ownerId:this.ownerId,teamScores:this.teamScores,pickups:this.pickups,map:this.map,time:this.time,winner:this.winner,rematchIn:this.phase==='results'?Math.max(0,this.rematchUntil-this.time):0,rematchVotes:[...this.rematchVotes],rematchNeeded:this.phase==='results'?this.rematchNeeded():0,players:[...this.players.values()].map(({id,slot,name,x,y,a,aim,hp,kills,deaths,shots,hits,streak,connected,respawnAt,shieldUntil,life,team,power,powerUntil})=>({id,slot,name,x,y,a,aim,hp,kills,deaths,shots,hits,streak,connected,respawnIn:Math.max(0,respawnAt-this.time),shield:shieldUntil>this.time,life,team,power,powerRemaining:Math.max(0,powerUntil-this.time)})),shells:this.shells,events:this.events};}
+  snapshot(){return {type:'state',room:this.code,settings:this.settings,phase:this.phase,countdownIn:this.phase==='countdown'?Math.max(0,this.countdownUntil-this.time):0,ownerId:this.ownerId,teamScores:this.teamScores,pickups:this.pickups,map:this.map,time:this.time,winner:this.winner,rematchIn:this.phase==='results'?Math.max(0,this.rematchUntil-this.time):0,rematchVotes:[...this.rematchVotes],botSkill:this.botSkill,rematchNeeded:this.phase==='results'?this.rematchNeeded():0,players:[...this.players.values()].map(({id,slot,bot,name,x,y,a,aim,hp,kills,deaths,shots,hits,streak,connected,respawnAt,shieldUntil,life,team,power,powerUntil})=>({id,slot,bot,name,x,y,a,aim,hp,kills,deaths,shots,hits,streak,connected,respawnIn:Math.max(0,respawnAt-this.time),shield:shieldUntil>this.time,life,team,power,powerRemaining:Math.max(0,powerUntil-this.time)})),shells:this.shells,events:this.events};}
 }
 module.exports={Room,hitRect};

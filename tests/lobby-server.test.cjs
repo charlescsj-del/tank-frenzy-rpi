@@ -63,7 +63,7 @@ test('room directory starts empty and lists only public player details',()=>{
   assert.deepEqual(body.rooms.map(r=>r.code),['ALPHA','ZETA']);
   assert.equal(body.rooms[0].available,2);assert.equal(body.rooms[0].capacity,4);
   assert.deepEqual(body.rooms[0].players.map(p=>p.name),['Alice','Bob']);
-  assert.deepEqual(Object.keys(body.rooms[0].players[0]).sort(),['connected','name','slot','team']);
+  assert.deepEqual(Object.keys(body.rooms[0].players[0]).sort(),['bot','connected','name','slot','team']);
   assert.equal(headers['Cache-Control'],'no-store');
 });
 

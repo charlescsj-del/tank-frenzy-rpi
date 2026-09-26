@@ -2,6 +2,12 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 1.12.0 — Tank Frenzy v1.12.0
+
+- Computer-controlled bots: the room starter adds or removes up to three bots in the waiting room and sets Easy, Normal or Hard skill.
+- Bots use normal player input and rules, aim with skill-based error and target leading, steer around walls, unstick themselves and fetch nearby power-ups.
+- People joining a full room replace a bot; bots never own rooms, vote on rematches or keep empty rooms alive.
+
 ## App 1.11.0 — Tank Frenzy v1.11.0
 
 - Room browser: saved player name, Quick Play, and one-tap Join on every room row with its players and rules. Round icon buttons for effects and music.
@@ -58,6 +64,10 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 - Keep assets, sound, room discovery and WebSockets under the ingress prefix; support a configured invitation URL.
 - Include installation/update instructions and CI container builds for both architectures.
 - Verify 88 automated checks, including mixed ingress/LAN multiplayer. Physical Pi play still requires target-device verification.
+
+## 1.12.0
+
+- Bots with three skill levels, controlled from the waiting room. New `bots.cjs`; the room directory lists open seats by people and marks bots.
 
 ## 1.11.0
 
