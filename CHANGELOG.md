@@ -2,6 +2,12 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 1.15.0 — Tank Frenzy v1.15.0
+
+- Replace the admin's plain resource numbers with system CPU and memory gauges, showing game usage separately.
+- Show Pi load over 1, 5 and 15 minutes with per-core values, reference markers, and a recent 60-second trend.
+- Exclude reclaimable cache from Linux memory usage; label unavailable and stale readings clearly. Share one resource sample per second across admin viewers.
+
 ## App 1.14.0 — Tank Frenzy v1.14.0
 
 - About 70% less network traffic: snapshots are encoded once per room, numbers are rounded, shells carry only what the browser draws, and the map is resent once a second instead of 30 times.
@@ -77,6 +83,11 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 - Keep assets, sound, room discovery and WebSockets under the ingress prefix; support a configured invitation URL.
 - Include installation/update instructions and CI container builds for both architectures.
 - Verify 88 automated checks, including mixed ingress/LAN multiplayer. Physical Pi play still requires target-device verification.
+
+## 1.15.0
+
+- Add `system-metrics.cjs`: lazy host CPU deltas, Linux available-memory accounting, process usage, load averages and one-second caching. Preserve legacy admin fields and include the module in the container.
+- Add responsive SVG gauges and a bounded load-history chart to `admin.html`; prevent overlapping refreshes and time out stalled requests.
 
 ## 1.14.0
 

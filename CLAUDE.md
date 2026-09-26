@@ -23,6 +23,7 @@ Multiplayer browser tank game packaged as a **Home Assistant app** (formerly add
 | `client.js` | Whole browser client (vanilla JS, canvas): lobby, tutorial pager, leaderboard modal, input, rendering, effects, fullscreen, spectating. |
 | `index.html` | Page markup and all CSS (inline `<style>`). |
 | `admin.html` | Standalone admin UI (polls state, draws mini-maps, Watch live, End room). |
+| `system-metrics.cjs` | Lazy one-second resource sampler shared by admin viewers: host CPU, available RAM, load averages, and separate game CPU/RSS. No background timer. |
 | `music.js`, `sound-bank.js`, `audio/` | Music and effects. Audio files are cached as immutable: a changed MP3 needs a new filename plus updates to the manifest and the server allowlist. |
 | `tutorial/*.webp` | How to Play screenshots, rendered by `tools/tutorial-screenshots.cjs`. |
 | `icons/`, `manifest.webmanifest` | PWA icons and manifest. `icon.png` (128 px) and `logo.png` (250×100) are the HA app-list icon and logo. |
@@ -66,7 +67,7 @@ Phases: `waiting` → `countdown` (3 s) → `playing` → `results` (20 s rematc
 
 ## Tests
 
-`npm test` runs `node --test tests/*.test.cjs` (about 130 tests, around 10 seconds). CI (`.github/workflows/verify.yml`) runs the tests, then builds the Docker image on amd64 and aarch64 and checks `/health` and `/rooms`.
+`npm test` runs `node --test tests/*.test.cjs` (about 135 tests, around 10 seconds). CI (`.github/workflows/verify.yml`) runs the tests, builds the Docker image on amd64 and aarch64, checks `/health` and `/rooms`, and runs `tools/admin-ui-check.cjs` in Chromium at desktop/tablet/phone widths. The UI job temporarily installs Playwright and uploads screenshots; it adds no game runtime dependency.
 
 Harness quirks:
 - `client.js` and `server.cjs` are loaded into `vm` sandboxes with hand-made fake DOM elements (children, `append`, `prepend`, `replaceChildren`, `classList`, events, `setAttribute`). They have no `querySelector`, `closest` or `dataset`; if new client code uses a browser API, add it to the fake (or guard the call), or the sandbox throws.

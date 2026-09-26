@@ -2,7 +2,7 @@
 
 Install Tank Frenzy as a Home Assistant app (formerly called an add-on). The Pi hosts the multiplayer game; players use Safari, Edge, Chrome, or another modern browser on their phones, tablets, or computers. Rendering and sound run on each player's device.
 
-Based on **Tank Frenzy v1.8.0** from the [main game repository](https://github.com/charlescsj-del/tank-frenzy/commit/936d4d743a3ba46f3e7524a93e94da83b9343038), with the v1.9.0–1.14.0 updates made here: a live /admin view of every room, a daily/weekly/monthly/all-time leaderboard by region saved on the Pi, leaner network traffic, Home Assistant notifications for new rooms, computer-controlled bots, a one-screen room browser with Quick Play and one-tap Join, a paged How to Play guide with screenshots, fiery hit effects, a kill feed with streaks, an end-of-match scoreboard, majority rematch votes, a halo around your own tank, automatic fullscreen and Add to Home Screen support. Includes the animated winner screen, compact phone Create/Join forms, and approved music and effects. The Pi app provides separate Home Assistant sidebar and LAN listeners.
+**Tank Frenzy v1.15.0**, developed directly in this repository. The private admin page now has CPU and memory gauges, separate game usage, and Pi load averages with a recent trend and CPU core reference. Includes live room monitoring, hidden spectating, a persistent leaderboard by period and region, bots, Quick Play, a visual tutorial, majority rematches, and music and effects. The Pi app provides separate Home Assistant sidebar and LAN listeners.
 
 ## Install
 
@@ -54,6 +54,6 @@ docker run --rm -p 8765:8765 tank-frenzy-rpi
 
 Run the build on the intended architecture (or use Docker Buildx with `--platform linux/arm64`). The repository includes CI for tests and ARM64/AMD64 container builds. A physical Pi/Home Assistant installation and mobile play must still be checked on the target device; automated tests do not establish Pi performance under load.
 
-App package version: **1.14.0**. Game version: **1.14.0**. Releases bump the version in several files at once; see the release checklist in [CLAUDE.md](CLAUDE.md).
+App package version: **1.15.0**. Game version: **1.15.0**. Releases bump the version in several files at once; see the release checklist in [CLAUDE.md](CLAUDE.md).
 
 The How to Play screenshots in `tutorial/` are rendered by the game itself. After a visual change, run `npm start` and then `npx -y -p playwright node tools/tutorial-screenshots.cjs` to regenerate them (set `ONLY=win.webp` for one image).
