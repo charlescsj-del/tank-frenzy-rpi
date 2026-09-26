@@ -51,7 +51,11 @@ Then check for updates and update/rebuild the app. Releases change `config.yaml`
 
 ## Optional external access
 
-If you already run Cloudflare Tunnel, point your chosen game hostname at `http://homeassistant.local:8765` (or the Pi LAN IP and mapped host port). WebSockets must be supported and the original Host/Origin preserved. Set `public_url` to the HTTPS game address. This app has no separate game login on the LAN/tunnel listener, so apply your tunnel's access policy if you want restricted access. Creating this repository does not configure or expose a tunnel.
+If you already run Cloudflare Tunnel, add a public hostname whose service is `http://YOUR_PI_IP:8765` (or `http://homeassistant.local:8765`, or your mapped host port). Turn **WebSockets** on in the zone's Network settings and leave **HTTP Host Header** empty: the game only accepts WebSocket connections whose Origin matches the Host the browser used. Set `public_url` to the HTTPS game address. Cloudflare also sends each player's country (`CF-IPCountry`), which the leaderboard's Region filter uses; players on the LAN have no country. This app has no separate game login on the LAN/tunnel listener, so apply your tunnel's access policy if you want restricted access (for example a Cloudflare Access rule on just your `admin_path`). Creating this repository does not configure or expose a tunnel.
+
+## Capacity
+
+Each room holds four tanks, and the server allows 32 rooms at once. Snapshots go out 30 times a second at about 0.7 Mbit/s per player in a busy match, so a group of 19 people (five rooms) needs roughly 13 Mbit/s of upload and a modest share of one Pi 4 core. Bots add a little CPU and no extra connections. Wi-Fi quality on the players' side usually matters more than the Pi.
 
 ## Troubleshooting
 
@@ -66,5 +70,9 @@ If you already run Cloudflare Tunnel, point your chosen game hostname at `http:/
 | Wrong invitation address | Set `public_url` to the address reachable by the other players and restart. |
 | Silent until tapped | Expected browser autoplay behavior. Tap a control and confirm sound/music toggles. |
 | Slow game | Check Pi CPU load, other apps and Wi-Fi quality; first compare one room with two players. |
+| App does not start after changing options | The log names the invalid option (`public_url`, `notify_service`, `admin_password` shorter than 8 characters, or an `admin_path` that is not 3–64 letters/digits/`-`/`_` or reuses a game address). |
+| Admin page shows "Not found" | On the game port or public address it needs `admin_password`; with `admin_path` set, `/admin` no longer exists. Open `/<admin_path>` and restart after changing options. |
+| No room notifications | Check `notify_service` under **Developer tools → Actions**; at most one notification is sent per minute. |
+| Leaderboard has no regions | Only players arriving through Cloudflare have a country. |
 
 The container uses the maintained `node:22-alpine` tag; patch updates may change the underlying image on future rebuilds. ARM64 build success and real-device performance are separate checks.
