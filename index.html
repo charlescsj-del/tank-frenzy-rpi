@@ -324,7 +324,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .game.lobby-open #roomBrowser{display:flex;flex-direction:column;flex:1;min-height:0;margin:8px 0 0}
 .game.lobby-open .mode-choices,.game.lobby-open .lobby-actions,.game.lobby-open #roomListStatus{flex-shrink:0}
 .game.lobby-open .mode-choices{margin:4px 0 12px}.game.lobby-open .lobby-actions{margin:0 0 8px}
-.game.lobby-open .room-list{flex:1 1 100px;min-height:64px;max-height:none;overflow-y:auto}
+.game.lobby-open .room-list{flex:1 1 100px;align-content:start;min-height:64px;max-height:none;overflow-y:auto}
 @media(max-height:760px){.game.lobby-open .mode-card{min-height:0;padding:10px 6px 8px}.game.lobby-open .mode-emblem{font-size:18px;margin-bottom:3px}.game.lobby-open .dialog{padding:12px 14px}}
 @media(max-height:500px){
   .in-lobby .page{padding-top:6px}.in-lobby .masthead{padding-bottom:6px}.in-lobby .brand{font-size:22px}
@@ -388,6 +388,15 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .leaderboard-card{width:min(600px,100%);height:auto;max-height:100%}
 .leaderboard-body{overflow:auto;padding:12px 20px 18px}.leaderboard-body .results-board td:nth-child(2),.leaderboard-body .results-board th:nth-child(2){text-align:left}
 .leaderboard-body .results-board th:first-child,.leaderboard-body .results-board td:first-child{width:2em;text-align:center}
+/* Hidden spectators only get view controls. */
+.spectating #copy,.spectating #latency,.spectating #rematch{display:none}
+/* Leaderboard periods and region filter. */
+.leaderboard-filters{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.period-tabs{display:flex;flex-wrap:wrap;gap:6px}
+.period-tabs button{min-height:36px;padding:4px 12px;border:2px solid #becda3;border-radius:999px;background:#f3f5df;color:#47634e;font-size:12px}
+.period-tabs button[aria-pressed=true]{border-color:#bf7537;background:#ffe4a2;color:#6d3a14}
+.region-filter{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:900;color:#47634e}
+.region-filter select{min-height:36px;max-width:190px;padding:4px 8px;border:2px solid #bdcda4;border-radius:10px;background:#fffcdf;color:#385740;font:800 13px var(--round-font)}
 @media(orientation:portrait) and (max-width:900px),(max-width:640px){.in-lobby #leaderboardButton{min-height:40px;min-width:44px;font-size:18px}}
 /* Kill feed and streak banner over the arena. */
 .kill-feed{position:absolute;top:10px;right:12px;z-index:2;display:grid;justify-items:end;gap:4px;margin:0;padding:0;list-style:none;pointer-events:none}
@@ -461,7 +470,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 </main>
 <section id="leaderboard" class="tutorial" role="dialog" aria-modal="true" aria-labelledby="leaderboardTitle" hidden><div class="tutorial-card leaderboard-card">
 <header class="tutorial-head"><div><p class="eyebrow">HALL OF FAME</p><h2 id="leaderboardTitle">Leaderboard</h2></div><button id="closeLeaderboard" class="tool" type="button" aria-label="Close leaderboard">CLOSE ✕</button></header>
-<div class="leaderboard-body"><table class="results-board"><thead><tr><th scope="col">#</th><th scope="col">Player</th><th scope="col">Wins</th><th scope="col">Matches</th><th scope="col">Kills</th><th scope="col">K/D</th></tr></thead><tbody id="leaderboardRows"></tbody></table><p id="leaderboardNote" class="hint" role="status"></p></div>
+<div class="leaderboard-body"><div class="leaderboard-filters"><div id="leaderboardPeriods" class="period-tabs" role="group" aria-label="Period"><button type="button" data-period="day" aria-pressed="false">Today</button><button type="button" data-period="week" aria-pressed="false">This week</button><button type="button" data-period="month" aria-pressed="false">This month</button><button type="button" data-period="all" aria-pressed="true">All time</button></div><label class="region-filter">Region <select id="leaderboardRegion"><option value="">All regions</option></select></label></div><table class="results-board"><thead><tr><th scope="col">#</th><th scope="col">Player</th><th scope="col">Wins</th><th scope="col">Matches</th><th scope="col">Kills</th><th scope="col">K/D</th></tr></thead><tbody id="leaderboardRows"></tbody></table><p id="leaderboardNote" class="hint" role="status"></p></div>
 </div></section>
 <section id="tutorial" class="tutorial" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" hidden><div class="tutorial-card">
 <header class="tutorial-head"><div><p class="eyebrow">BOOT CAMP</p><h2 id="tutorialTitle">How to play</h2></div><button id="closeTutorial" class="tool" type="button" aria-label="Close how to play">CLOSE ✕</button></header>

@@ -2,6 +2,13 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 1.14.0 — Tank Frenzy v1.14.0
+
+- About 70% less network traffic: snapshots are encoded once per room, numbers are rounded, shells carry only what the browser draws, and the map is resent once a second instead of 30 times.
+- Private admin page (`/admin` or your own `admin_path`, never linked from the game) with live mini-maps, scores and server load for every room, hidden-spectator **Watch live** and End room. Free through the Home Assistant sidebar; on the public address only with the new `admin_password` option.
+- Leaderboard views for today, this week, this month and all time, filtered by the country Cloudflare reports. Recent match history is kept for 62 days in `/data/leaderboard.json`.
+- App-list icon and logo for Home Assistant. One or two rooms no longer stretch to fill the room list.
+
 ## App 1.13.0 — Tank Frenzy v1.13.0
 
 - All-time leaderboard saved as `/data/leaderboard.json`: wins, matches, kills and deaths by player name, shown from the 🏆 button. Written atomically; bots are not ranked.
@@ -70,6 +77,10 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 - Keep assets, sound, room discovery and WebSockets under the ingress prefix; support a configured invitation URL.
 - Include installation/update instructions and CI container builds for both architectures.
 - Verify 88 automated checks, including mixed ingress/LAN multiplayer. Physical Pi play still requires target-device verification.
+
+## 1.14.0
+
+- Leaner snapshots (`encodeState`, optional map with `mapId`), `/admin` with `admin.html`, and leaderboard periods and regions.
 
 ## 1.13.0
 

@@ -14,7 +14,7 @@ function server(options={}){
     terminate(){this.close();}
   }
   class WSS extends EventEmitter{clients=new Set();close(cb){cb();}}
-  const sandbox={module:{exports:{}},__dirname:require('node:path').resolve(__dirname,'..'),URL,performance,
+  const sandbox={module:{exports:{}},__dirname:require('node:path').resolve(__dirname,'..'),URL,performance,process,Buffer,
     setInterval(){},clearInterval(){},setTimeout(){},clearTimeout(){},
     require(name){
       if(name==='node:http')return {createServer(handler){const http=new EventEmitter();http.on('request',handler);http.close=cb=>cb();return http;}};
@@ -26,14 +26,15 @@ function server(options={}){
   const game=sandbox.module.exports.createGameServer(options);
   function join(room,mode,name='Player',token,settings){const socket=new Socket();game.wss.emit('connection',socket);socket.emit('message',JSON.stringify({type:'join',room,mode,name,token,settings}));return socket;}
   function list(){let body,headers={};game.server.emit('request',{url:'/rooms',method:'GET'},{setHeader(k,v){headers[k]=v;},end(raw){body=JSON.parse(raw);}});return {body,headers};}
-  function read(url){return new Promise((resolve,reject)=>{
+  function read(url,{method='GET',headers:requestHeaders={}}={}){return new Promise((resolve,reject)=>{
     const {Writable}=require('node:stream'),chunks=[],headers={};let status=200;
     const response=new Writable({write(chunk,encoding,done){chunks.push(Buffer.from(chunk));done();}});
-    response.setHeader=(key,value)=>{headers[key]=value;};response.writeHead=code=>{status=code;};
+    response.setHeader=(key,value)=>{headers[key]=value;};response.writeHead=(code,extra={})=>{status=code;Object.assign(headers,extra);};
     response.on('finish',()=>resolve({status,headers,body:Buffer.concat(chunks)}));response.on('error',reject);
-    game.server.emit('request',{url,method:'GET'},response);
+    game.server.emit('request',{url,method,headers:requestHeaders},response);
   });}
-  return {game,join,list,read};
+  function watch(room,pass){const socket=new Socket();game.wss.emit('connection',socket);socket.emit('message',JSON.stringify({type:'spectate',room,pass}));return socket;}
+  return {game,join,list,read,watch};
 }
 
 test('approved audio is served with the right type/cache policy and unrelated files stay private',async()=>{
@@ -165,5 +166,63 @@ test('the leaderboard endpoint lists the top ten, and creating a room triggers t
   sandboxServer.join('ALPHA','create','Ann');sandboxServer.join('ALPHA','join','Bo');
   assert.equal(created.length,1);assert.equal(created[0].code,'ALPHA');assert.equal(created[0].name,'Ann');assert.equal(created[0].url,'http://pi.local:8765/?room=ALPHA');
   const board=await sandboxServer.read('/leaderboard');assert.equal(board.status,200);
-  assert.deepEqual(JSON.parse(board.body.toString()),{players:[],persistent:false});
+  assert.deepEqual(JSON.parse(board.body.toString()),{players:[],countries:[],period:'all',country:'',persistent:false});
+});
+
+test('/admin is hidden without a password, asks for one, and shows and ends rooms with it',async()=>{
+  const closed=server();assert.equal((await closed.read('/admin')).status,404);assert.equal((await closed.read('/admin/state')).status,404);
+  const s=server({adminPassword:'tank-secret'}),auth=password=>({authorization:'Basic '+Buffer.from('admin:'+password).toString('base64')});
+  const challenge=await s.read('/admin');assert.equal(challenge.status,401);assert.match(challenge.headers['WWW-Authenticate'],/Basic/);
+  assert.equal((await s.read('/admin/state',{headers:auth('wrong-pass')})).status,401);
+  const page=await s.read('/admin',{headers:auth('tank-secret')});assert.equal(page.status,200);assert.match(page.body.toString(),/Tank Frenzy Admin/);
+  const ann=s.join('ALPHA','create','Ann');s.join('BETA','create','Bo');
+  const state=JSON.parse((await s.read('/admin/state',{headers:auth('tank-secret')})).body.toString());
+  assert.deepEqual(state.rooms.map(r=>r.code).sort(),['ALPHA','BETA']);assert.equal(state.rooms.find(r=>r.code==='ALPHA').players[0].name,'Ann');
+  assert(Number.isFinite(state.cpu)&&state.memory>0&&state.palette.length>=4);
+  assert.equal((await s.read('/admin/close?room=ALPHA',{method:'POST',headers:auth('tank-secret')})).status,404,'needs the admin header');
+  assert.equal((await s.read('/admin/close?room=ALPHA',{method:'POST',headers:{...auth('tank-secret'),'x-tank-admin':'1'}})).status,204);
+  assert(!s.game.rooms.has('ALPHA'));assert.equal(ann.messages.at(-1).title,'Room closed');assert.equal(ann.readyState,3);
+  assert.equal((await s.read('/admin/close?room=ALPHA',{method:'POST',headers:{...auth('tank-secret'),'x-tank-admin':'1'}})).status,404);
+});
+
+test('players get the country Cloudflare reports, and the leaderboard filters by period and region',async()=>{
+  const {countryOf}=require('../server.cjs');
+  assert.equal(countryOf({headers:{'cf-ipcountry':'my'}}),'MY');
+  for(const bad of ['XX','T1','','Malaysia'])assert.equal(countryOf({headers:{'cf-ipcountry':bad}}),'');
+  const s=server(),board=s.game.leaderboard,{Room}=require('../game-server.cjs');
+  const r=new Room('LB'),a=r.add('Ann'),b=r.add('Bo');a.country='MY';b.country='SG';a.kills=10;r.winner={id:a.id,name:'Ann'};board.record(r);
+  const read=async query=>JSON.parse((await s.read('/leaderboard'+query)).body.toString());
+  assert.deepEqual((await read('?period=day')).players.map(p=>p.name),['Ann','Bo']);
+  assert.deepEqual((await read('?period=week&country=sg')).players.map(p=>p.name),['Bo']);
+  assert.deepEqual((await read('')).countries,[{code:'MY',players:1},{code:'SG',players:1}]);
+});
+
+test('/admin stops accepting passwords after 20 wrong guesses in a minute',async()=>{
+  const s=server({adminPassword:'tank-secret'}),auth=password=>({authorization:'Basic '+Buffer.from('x:'+password).toString('base64')});
+  for(let i=0;i<20;i++)assert.equal((await s.read('/admin/state',{headers:auth('guess'+i)})).status,401);
+  assert.equal((await s.read('/admin/state',{headers:auth('tank-secret')})).status,429,'even the right password waits out the minute');
+});
+
+test('the admin page can live at a private address, and /admin then does not exist',async()=>{
+  const s=server({adminPassword:'tank-secret',adminPath:'hq-7f3k'}),auth={authorization:'Basic '+Buffer.from('x:tank-secret').toString('base64')};
+  assert.equal((await s.read('/admin',{headers:auth})).status,404);assert.equal((await s.read('/admin/state',{headers:auth})).status,404);
+  assert.equal((await s.read('/hq-7f3k',{headers:auth})).status,200);assert.equal((await s.read('/hq-7f3k/state',{headers:auth})).status,200);
+  assert.equal((await s.read('/hq-7f3k')).status,401);
+});
+
+test('hidden spectators watch a room without appearing to its players, and leave when it ends',async()=>{
+  const s=server({adminPassword:'tank-secret'}),auth={authorization:'Basic '+Buffer.from('x:tank-secret').toString('base64'),'x-tank-admin':'1'};
+  const ann=s.join('ALPHA','create','Ann');s.join('ALPHA','join','Bo');
+  assert.equal((await s.read('/admin/watch?room=ALPHA',{method:'POST',headers:{authorization:auth.authorization}})).status,404,'needs the admin header');
+  const {pass}=JSON.parse((await s.read('/admin/watch?room=ALPHA',{method:'POST',headers:auth})).body.toString());
+  const bad=s.watch('ALPHA','wrong');assert.equal(bad.messages[0].type,'error');assert.equal(bad.readyState,3);
+  const spy=s.watch('ALPHA',pass);
+  assert.equal(spy.messages[0].type,'spectating');const view=spy.messages[1];
+  assert.equal(view.type,'state');assert.deepEqual(view.players.map(p=>p.name).sort(),['Ann','Bo'],'sees the players');assert(view.map,'gets the map');
+  const room=s.game.rooms.get('ALPHA');assert.equal(room.players.size,2,'not added as a player');
+  assert.equal(s.list().body.rooms[0].available,2,'open seats unchanged');
+  assert.equal(JSON.parse(JSON.stringify(room.snapshot())).players.length,2,'players never receive the spectator');
+  spy.emit('message',JSON.stringify({type:'join',room:'ALPHA',name:'Sneaky'}));assert.equal(room.players.size,2,'a spectator socket cannot also join');
+  await s.read('/admin/close?room=ALPHA',{method:'POST',headers:auth});
+  assert.equal(spy.messages.at(-1).title,'Room closed');assert.equal(spy.readyState,3);assert.equal(ann.messages.at(-1).title,'Room closed');
 });

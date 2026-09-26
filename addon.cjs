@@ -13,7 +13,14 @@ function readOptions(file='/data/options.json'){
   // Optional Home Assistant notify service, written as notify.mobile_app_phone or mobile_app_phone.
   const notifyService=String(options.notify_service||'').trim().replace(/^notify\./,'');
   if(notifyService&&!/^[a-z0-9_]+$/.test(notifyService))throw Error('notify_service must look like notify.mobile_app_your_phone');
-  return {ingress:true,publicUrl,notifyService};
+  // Password for /admin on the public game port; the Home Assistant sidebar never needs it.
+  const adminPassword=String(options.admin_password||'');
+  if(adminPassword&&adminPassword.length<8)throw Error('admin_password must be at least 8 characters');
+  // Private address of the admin page, for example hq-7f3k for /hq-7f3k. Letters, digits, - and _.
+  const adminPath=String(options.admin_path||'admin').trim().replace(/^\/+|\/+$/g,'')||'admin';
+  if(!/^[A-Za-z0-9_-]{3,64}$/.test(adminPath))throw Error('admin_path must be 3-64 letters, digits, - or _ (for example hq-7f3k)');
+  if(['audio','icons','tutorial','rooms','ws','health','leaderboard','network-info'].includes(adminPath.toLowerCase()))throw Error('admin_path must not reuse a game address');
+  return {ingress:true,publicUrl,notifyService,adminPassword,adminPath};
 }
 // Sends "room opened" notifications through the Supervisor's Home Assistant API,
 // at most one a minute so a busy evening does not flood phones.

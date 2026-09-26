@@ -109,7 +109,8 @@ test('real network: independent sessions, shared state, isolation, validation, r
   const a=await client('ARENA','Alice'),aw=await a.wait(m=>m.type==='welcome');
   const b=await client('ARENA','Bob'),bw=await b.wait(m=>m.type==='welcome');
   assert.notEqual(aw.id,bw.id);assert.notEqual(aw.slot,bw.slot);
-  const aState=await a.wait(m=>m.type==='state'&&m.players.length===2),bState=await b.wait(m=>m.type==='state'&&m.players.length===2);assert.deepEqual(aState.map,bState.map,'players receive the same generated map');
+  const aState=await a.wait(m=>m.type==='state'&&m.players.length===2),bState=await b.wait(m=>m.type==='state'&&m.players.length===2);assert.equal(aState.mapId,bState.mapId,'players share the same generated map');
+  const aMap=await a.wait(m=>m.type==='state'&&m.map),bMap=await b.wait(m=>m.type==='state'&&m.map);assert.deepEqual(aMap.map,bMap.map,'joining sends the full map');
   const c=await client('OTHER','Charlie');await c.wait(m=>m.type==='welcome');const isolated=await c.wait(m=>m.type==='state');assert.equal(isolated.players.length,1);
   a.ws.send(JSON.stringify({type:'start'}));await a.wait(m=>m.type==='state'&&m.phase==='playing');
   const initial=game.rooms.get('ARENA').players.get(aw.id),startX=initial.x;
@@ -128,4 +129,16 @@ test('real network: independent sessions, shared state, isolation, validation, r
   assert.match(await fetch(base+'/').then(r=>r.text()),/Tank Frenzy/);
   assert.equal((await fetch(base+'/client.js')).status,200);
   for(const ws of clients)ws.terminate();
+});
+
+test('snapshots are compact: minimal shells, rounded numbers and an optional map',()=>{
+  const {encodeState}=require('../game-server.cjs');
+  const r=new Room('LEAN'),a=r.add('A');r.start(a);step(r,3.1);a.cool=0;a.aim=.123456;r.fire(a);
+  const full=r.snapshot(),lean=r.snapshot({withMap:false});
+  assert.equal(full.map.id,r.map.id);assert.equal(lean.map,undefined);assert.equal(lean.mapId,r.map.id);
+  assert.deepEqual(Object.keys(lean.shells[0]).sort(),['id','slot','x','y']);
+  const decoded=JSON.parse(encodeState(lean));
+  assert(!('map' in decoded));assert.equal(decoded.players[0].aim,.12);
+  assert(decoded.shells.every(s=>Number.isInteger(s.x*10)));
+  assert(encodeState(lean).length<JSON.stringify(full).length);
 });

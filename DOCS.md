@@ -19,19 +19,21 @@ The complete repository must be inside `/addons/tank_frenzy`, with `config.yaml`
 
 ## Configuration
 
+- `admin_path`: Optional private address of the admin page, for example `hq-7f3k` for `https://your-domain/hq-7f3k`. Nothing in the game links to it, and the default `/admin` stops existing once you change it. Letters, digits, `-` and `_`, 3–64 characters.
+- `admin_password`: Optional. Required to open the admin page on the game port and your public address; the browser asks for it (any user name works). At least 8 characters; after 20 wrong passwords in a minute, sign-in pauses for the rest of that minute. Leave it empty to keep the admin page off the public address. Inside the Home Assistant sidebar, type the admin address after the sidebar URL instead; it opens without a password because Home Assistant has already signed you in. For stronger protection on a Cloudflare address, you can also add a Cloudflare Access rule for the admin path.
 - `notify_service`: Optional Home Assistant notify service that announces each newly opened room, for example `notify.mobile_app_your_phone` or `notify.notify`. The message names the player, room and mode; with `public_url` set, tapping it opens the room. At most one notification is sent per minute. Leave empty to turn notifications off. Find your service names under **Developer tools → Actions** by searching for `notify.`.
 - `public_url`: Optional absolute game URL used for invitations. Example: `http://192.168.1.50:8765`. For a reverse proxy, use its HTTPS address. Do not include a room query, username, password, or fragment. Restart after changing it.
 - **Network → 8765/tcp**: Host port for LAN players. Default: `8765`. Set a different free host port if occupied, or disable to use only Home Assistant ingress.
 - **Show in sidebar**: Opens the game through Home Assistant authentication. The dedicated ingress listener accepts only the Supervisor proxy at `172.30.32.2`.
 
-The app has no HA configuration/media mappings. It uses the Home Assistant API only to send the optional notifications. `/data` holds Supervisor options and `leaderboard.json`, the all-time leaderboard (wins, matches, kills and deaths by player name, at most 200 names), so the leaderboard survives restarts and updates; delete that file with the app stopped to reset it. Rooms and matches in progress are not persisted: app restarts/updates end active matches.
+The app has no HA configuration/media mappings. It uses the Home Assistant API only to send the optional notifications. `/data` holds Supervisor options and `leaderboard.json`: all-time totals (wins, matches, kills, deaths and country by player name, at most 200 names) plus the last 62 days of match results, which power the Today, This week and This month views. It is saved about a second after every finished match and again when the app stops, written to a temporary file first so a power cut cannot corrupt it. It survives app restarts, updates and Pi reboots, and is included in Home Assistant backups of the app; uninstalling the app deletes it. Delete the file with the app stopped to reset the leaderboard. Days and weeks (Monday to Sunday) follow Home Assistant's time zone. Rooms and matches in progress are not persisted: app restarts/updates end active matches.
 
 ## Verify after starting
 
 1. The app log should show listeners on game port `8765` and internal ingress port `8099`.
 2. Open **Web UI**: the lobby, banner and room list should load.
 3. Open `http://YOUR_PI_IP:8765` on two devices. Create and join one room, start a round, move, shoot, and confirm sound after interacting.
-4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `1.13.0`.
+4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `1.14.0`.
 5. Test an invitation generated from the sidebar after setting `public_url`.
 
 ## Updates

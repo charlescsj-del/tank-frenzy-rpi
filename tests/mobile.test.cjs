@@ -452,13 +452,34 @@ test('the room starter sees bot controls that send add, remove and skill command
 
 test('the leaderboard pop-up lists the top players and closes with Escape',async()=>{
   const c=client(false);c.sandbox.HTMLInputElement=class{};
-  c.sandbox.fetch=async url=>{assert.match(url,/\/leaderboard$/);return {ok:true,json:async()=>({persistent:true,players:[{name:'Ann',wins:3,matches:4,kills:30,deaths:10},{name:'Bo',wins:1,matches:4,kills:12,deaths:0}]})};};
+  const urls=[];c.sandbox.fetch=async url=>{urls.push(url);return {ok:true,json:async()=>({persistent:true,countries:[{code:'MY',players:2}],players:[{name:'Ann',wins:3,matches:4,kills:30,deaths:10},{name:'Bo',wins:1,matches:4,kills:12,deaths:0}]})};};
   await c.run('openLeaderboard()');
   assert.equal(c.elements.get('leaderboard').hidden,false);
   const rows=c.elements.get('leaderboardRows').children.map(r=>r.children.map(cell=>String(cell.textContent)));
   assert.deepEqual(rows,[['🥇','Ann','3','4','30','3.0'],['🥈','Bo','1','4','12','12.0']]);
   assert.match(c.elements.get('leaderboardNote').textContent,/Saved on the Pi/);
+  assert.match(urls.at(-1),/\/leaderboard\?period=all&country=$/);
+  assert.equal(c.elements.get('leaderboardRegion').children.length,2,'All regions plus each country seen');
+  c.elements.get('leaderboardPeriods').events.click({target:{closest:()=>({dataset:{period:'week'}})}});await Promise.resolve();
+  assert.match(urls.at(-1),/period=week/);
+  c.elements.get('leaderboardRegion').value='MY';c.elements.get('leaderboardRegion').events.change();assert.match(urls.at(-1),/period=week&country=MY/);
   c.windowEvents.keydown({code:'KeyW',preventDefault(){},target:{}});assert.equal(c.run('keys.size'),0);
   c.windowEvents.keydown({code:'Escape',preventDefault(){},target:{}});assert.equal(c.elements.get('leaderboard').hidden,true);
   c.sandbox.fetch=async()=>{throw Error('offline');};await c.run('openLeaderboard()');assert.match(c.elements.get('leaderboardNote').textContent,/Could not load/);
+});
+
+test('a watch link opens the match as a hidden spectator with a Stop watching button',()=>{
+  const sockets=[];
+  class FakeSocket{static OPEN=1;constructor(url){this.url=url;this.listeners={};this.sent=[];this.readyState=1;sockets.push(this);}addEventListener(n,f){this.listeners[n]=f;}send(d){this.sent.push(JSON.parse(d));}close(){}}
+  const c=client(false);
+  c.sandbox.WebSocket=FakeSocket;c.sandbox.history={replaceState(){}};c.sandbox.clearTimeout=()=>{};c.sandbox.setTimeout=()=>0;
+  c.run("joined=false;spectate('ALPHA','abc123')");
+  const ws=sockets.at(-1);ws.listeners.open();assert.equal(JSON.stringify(ws.sent[0]),JSON.stringify({type:'spectate',room:'ALPHA',pass:'abc123'}));
+  ws.listeners.message({data:JSON.stringify({type:'spectating',room:'ALPHA'})});
+  assert.equal(c.run('spectating'),true);assert(c.sandbox.document.body.classList.contains('spectating'));
+  assert.equal(c.elements.get('leave').textContent,'STOP WATCHING');assert.equal(c.elements.get('thumbControls').hidden,true,'no controls for spectators');
+  c.run("status('LIVE BATTLE')");assert.match(c.elements.get('status').textContent,/^👁 WATCHING \(HIDDEN\) · LIVE BATTLE/);
+  const before=c.sent.length;c.run('sendInput()');assert.equal(c.sent.length,before,'spectators never send input');
+  c.run('socket.close=()=>{}');c.elements.get('leave').events.click();
+  assert.equal(c.run('spectating'),false);assert.equal(c.elements.get('leave').textContent,'LEAVE ROOM');assert(c.sandbox.document.body.classList.contains('in-lobby'));
 });

@@ -2,7 +2,7 @@
 
 A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarry, rounded menus and bold lettering. Choose Free-for-All or 2 vs 2 and invite your friends.
 
-Current release: **v1.13.0**, also shown in the top-left corner of the room browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. Keep the version in `shared.js`, `package.json`, and `package-lock.json` synchronized when releasing changes.
+Current release: **v1.14.0**, also shown in the top-left corner of the room browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. Keep the version in `shared.js`, `package.json`, and `package-lock.json` synchronized when releasing changes.
 
 See [SOUND_DESIGN.md](SOUND_DESIGN.md) for the approved cartoon arcade audio direction and implementation notes.
 
@@ -20,7 +20,11 @@ The room browser fits on one screen without scrolling: the quarry artwork with �
 
 **How to Play** is an eight-page guide with game screenshots: how to win, PC controls, phone controls, finding your tank, getting hit, bouncing bullets, power-up tokens and power-up effects. Turn pages with the **Back**/**Next** buttons, the page dots, the ← → keys or a horizontal swipe; the last page's button closes it. Escape, Close or a tap outside also closes it. Each page fits without scrolling.
 
-**Leaderboard:** the 🏆 button beside How to Play shows the top ten players by wins, then kills: wins, matches, kills and kills per death. Every finished match counts once for each person in it (bots are not ranked); in 2 vs 2 the whole winning team gets the win. Names are matched regardless of capitals. The Home Assistant app saves it on the Pi; the standalone server keeps it until it restarts.
+**Leaderboard:** the 🏆 button beside How to Play shows the top ten by wins, then kills, for **Today**, **This week** (Monday to Sunday), **This month** or **All time**, with wins, matches, kills and kills per death. The **Region** menu filters by the country Cloudflare reports for each player (shown as a flag); players reached without Cloudflare, or whose country is unknown, appear only under All regions. Every finished match counts once for each person in it (bots are not ranked); in 2 vs 2 the whole winning team gets the win. Names are matched regardless of capitals. The Home Assistant app saves it on the Pi (see DOCS.md); the standalone server keeps it until it restarts.
+
+**Admin:** a private admin page (at `/admin`, or the address you set with `admin_path`) shows every room at once: a live mini-map, phase, mode, time, each player's kills, deaths, health and country, plus server CPU, memory, load and uptime, refreshed twice a second (about 9 KB and under 1 ms of server time per refresh with five busy rooms, and nothing when the page is closed). Nothing in the game links to it. **👁 Watch live** opens the real match view in a new tab as a hidden spectator: spectators are never added to the room, its player count, the room list or the snapshots players receive, cannot send input or join, and see "👁 WATCHING (HIDDEN)" with a **Stop watching** button. Watch passes last ten minutes and are removed from the address bar once used. **End room** sends everyone in it, spectators included, back to the room browser.
+
+**Network:** each snapshot is encoded once per room and sent to its players 30 times a second, with positions rounded to a tenth of a unit, only the shell fields the browser draws, and the map resent once a second or when it changes. In a 19-player test with everyone firing constantly this cut traffic from about 2.4 to 0.7 Mbit/s per player.
 
 **Bots:** in the waiting room the room starter can **Add bot** (up to four tanks in total), **Remove bot**, and set **Bot skill** to Easy, Normal or Hard. Bots are named with 🤖, drive and aim through the same controls and rules as players, pick up nearby power-ups, steer around cover and shoot at the nearest enemy they can see. Harder bots react faster, aim more precisely and lead moving targets. A person joining a full room takes a bot's seat, so rooms list open seats by people only. Bots never start games, vote on rematches or keep a room open: they leave when the last person does.
 
