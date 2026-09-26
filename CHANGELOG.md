@@ -2,6 +2,13 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 1.10.0 — Tank Frenzy v1.10.0
+
+- Redesign the room browser to fit one screen without scrolling: artwork beside the room panel on wide screens, above it on phones. Only the room list scrolls.
+- Turn How to Play into eight pages with Back/Next buttons, page dots, arrow keys and swipes; add a Getting Hit page and split power-ups into tokens and effects.
+- Add hit effects: flames around the screen edges, a stronger shake, rising damage numbers, smoke and a shockwave on destruction, vibration on Android and a low-health smoulder.
+- Improve touch use: no double-tap zoom on buttons, 40px+ touch targets in the room browser and tutorial.
+
 ## App 1.9.0 — Tank Frenzy v1.9.0
 
 - Show the quarry artwork as a large header in the room browser. Forms, waiting rooms and battles now share one compact tagline instead of switching between large and small headers.
@@ -42,6 +49,11 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 - Keep assets, sound, room discovery and WebSockets under the ingress prefix; support a configured invitation URL.
 - Include installation/update instructions and CI container builds for both architectures.
 - Verify 88 automated checks, including mixed ingress/LAN multiplayer. Physical Pi play still requires target-device verification.
+
+## 1.10.0
+
+- One-screen room browser; paged How to Play guide with swipe and arrow keys.
+- Fiery screen-edge hit flash, damage numbers, destruction shockwave, Android vibration and low-health smoulder. Hit events now carry their damage.
 
 ## 1.9.0
 

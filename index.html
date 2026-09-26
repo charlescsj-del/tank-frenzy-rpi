@@ -160,7 +160,6 @@ button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visi
 .room-choice[aria-pressed=true]{border-color:#c78145;background:#ffebbc}.room-details{border-top:2px dashed #c8d5ac;margin-top:15px;padding-top:14px}#selectedRoomName{color:#a65328}#roomPlayers{padding-left:22px;list-style:'★  ';color:#496847;font-weight:800}#roomCapacity,#roomListStatus{color:#607454;font-size:12px;font-weight:700}
 .join-fields{gap:12px}.join-fields label{font-size:10px;font-weight:900}.join-fields input{border:2px solid #b6c799;border-radius:11px;background:#fffef6;padding:11px;font-family:var(--round-font)}
 .room-settings{border:2px dashed #bfcea3;border-radius:14px;padding:12px;background:#f2f5df}.room-settings legend{font-weight:900;padding:0 7px}.room-settings label{font-weight:800;min-height:40px}.room-settings select{color:#385740;border:1px solid #b6c799;border-radius:8px;padding:6px;background:#fffdf0}.room-settings input{accent-color:#55845b}
-.power-guide{border:1px dashed #bdcba2;border-radius:12px;padding:9px 12px;background:#f8f7e5;margin:8px 0 16px}.power-guide summary{font-size:12px;font-weight:900;color:#657954;cursor:pointer}.power-legend{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;margin:12px 0 3px}.power-legend span{display:grid;justify-items:center;gap:5px}.power-legend svg{width:36px;height:36px;border-radius:10px;padding:5px;background:var(--power-color);color:#fffdf1;box-shadow:0 3px 0 #52664e33}.power-legend b{font-size:10px}.power-legend small{font-size:10px;color:#758565;line-height:1.3}
 #powerStatus{display:flex;align-items:center;gap:8px;z-index:1;background:#fffbecf5;border:2px solid var(--power-color);border-radius:14px;padding:5px 10px 9px 5px;box-shadow:0 3px 0 #49694033;min-width:78px;overflow:hidden}
 #powerStatus svg{display:block;width:32px;height:32px;padding:4px;background:var(--power-color);border-radius:9px;color:#fffdf1;animation:power-bob 1.4s ease-in-out infinite}
 #powerTime{font:900 15px var(--round-font);color:#365c4c;min-width:22px;text-align:center;font-variant-numeric:tabular-nums}
@@ -171,14 +170,13 @@ button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visi
 .battlebar{font-weight:800;background:#e9efcd;color:#5c744d;border-top:2px solid #b2c88e}.battlebar b{font-weight:900;color:#4a6940}.live-dot{background:#7caf4c;box-shadow:0 0 0 3px #7caf4c22}
 .thumb-control{font-weight:900;color:#385e49;letter-spacing:.6px;text-shadow:0 1px #fffbe3}.thumb-pad{border:3px solid #587e568c;background:#fff7d755;box-shadow:inset 0 0 0 8px #fffbd233}.thumb-pad span{border:3px solid #4d714f;background:#8ab96ddb;box-shadow:inset 0 4px 0 #d0e4a888,0 3px 0 #4d714f55}#aimStick{border:3px solid #b9704399;background:#ffe3ad55}#aimStick span{border:3px solid #b25d33;background:#ef9557e6;box-shadow:inset 0 4px 0 #ffe7b588,0 3px 0 #a85c3055}
 .control-card h3{color:#416649;font-weight:900}.keys kbd{border-radius:7px;background:#fffbea;font-weight:800}.mobile-help{border:2px solid #cad8ad;border-radius:15px;background:#fffbea}footer{font-weight:700;letter-spacing:.4px;color:#80916f}
-@media(max-width:570px){.edition{display:none}.masthead{justify-content:center;padding:6px 0 17px}.brand{font-size:33px}.page{padding:14px 10px}.game{border-radius:18px}.game.lobby-open .overlay{padding:13px 9px 19px}.game.lobby-open .dialog,.dialog{padding:17px 15px}.dialog h2{font-size:27px}.dialog p{font-size:12px}.mode-card{font-size:12px}.mode-card small{font-size:10px}.power-legend{gap:5px}.tool{font-size:10px}.primary,#createRoom{padding:10px 14px}.join-fields{grid-template-columns:1fr 1fr}#respawn{font-size:12px}}
+@media(max-width:570px){.edition{display:none}.masthead{justify-content:center;padding:6px 0 17px}.brand{font-size:33px}.page{padding:14px 10px}.game{border-radius:18px}.game.lobby-open .overlay{padding:13px 9px 19px}.game.lobby-open .dialog,.dialog{padding:17px 15px}.dialog h2{font-size:27px}.dialog p{font-size:12px}.mode-card{font-size:12px}.mode-card small{font-size:10px}.tool{font-size:10px}.primary,#createRoom{padding:10px 14px}.join-fields{grid-template-columns:1fr 1fr}#respawn{font-size:12px}}
 @media(pointer:coarse) and (hover:none){.game.mobile-active .arena-header{background:#fff9e8;border-bottom:2px solid #c6d7a6}.game.mobile-active .room-actions{background:#fff9e8;border:2px solid #b2c693;border-radius:0 0 14px 14px}.game.mobile-active .arena-menu-button{border:0;border-radius:8px;box-shadow:none;background:#f6e8b9}.game.mobile-active .pip{height:6px}.game.mobile-active .thumb-pad{background:#fff7d73d}.game.mobile-active .battlebar{border-top:1px solid #b2c88e}.game.mobile-active #powerStatus{top:8px;left:10px}.game.mobile-active .roster-name{font-weight:900}}
 @media(prefers-reduced-motion:reduce){#powerStatus svg{animation:none}#powerMeter{transition:none}}
 /* Health retains five compact pips: each full pip now represents two hits. */
 .health .pip.half{background:linear-gradient(90deg,var(--tank) 50%,transparent 50%);box-shadow:inset 0 0 0 1px var(--tank)}
 #versionBadge{display:none;position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));z-index:5;border:1px solid #b9c89b;border-radius:9px;padding:5px 9px;background:#fff9e9ed;color:#5f7551;font:800 11px var(--round-font);pointer-events:none}
 .in-lobby #versionBadge{display:block}.in-lobby.arena-expanded #versionBadge{display:none}
-.power-legend{grid-template-columns:repeat(3,1fr);row-gap:14px}
 
 /* Waiting room and audio controls share the existing compact top menu. */
 .room-actions{flex-wrap:wrap}
@@ -258,31 +256,100 @@ button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visi
 .results-screen .results-actions .primary{min-width:min(220px,100%)}
 #resultsLeave{min-height:48px;padding:10px 20px;font-size:14px;border-radius:14px}
 @media(max-height:440px){#resultsLeave{min-height:40px}}
-/* How to play: a scrollable lesson sheet over the page. */
+/* How to play: one page at a time, turned by arrows, dots, arrow keys or a swipe. */
 .tutorial-open{overflow:hidden}
-.tutorial{position:fixed;inset:0;z-index:1500;display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));background:#1c3320a6}
-.tutorial-card{display:flex;flex-direction:column;width:min(1000px,100%);max-height:100%;overflow:hidden;border:3px solid #fbe9a9;border-radius:26px;background:#fffbeb;box-shadow:0 8px 0 #82995f,0 24px 50px #1c351088}
-.tutorial-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 24px 8px}
-.tutorial-head .eyebrow{margin:0 0 4px;color:#a96637}
-.tutorial-head h2{margin:0;font:1000 clamp(26px,4vw,38px)/1.05 var(--round-font);color:#365c4c;letter-spacing:-1px}
-.tutorial-nav{display:flex;gap:8px;flex-shrink:0;overflow-x:auto;padding:6px 24px 14px;border-bottom:2px dashed #d8dfb9}
-.tutorial-nav button{flex-shrink:0;border:2px solid #becda3;border-radius:999px;background:#f3f5df;color:#47634e;padding:7px 13px;font-size:12px}
-.tutorial-body{display:grid;gap:18px;overflow-y:auto;overscroll-behavior:contain;padding:18px 24px 24px}
-.lesson{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;align-items:center;padding:16px;border:2px solid #d3deb8;border-radius:20px;background:#fffdf0;scroll-margin-top:12px}
-.lesson:nth-child(even)>img{order:2}
-.lesson>img{display:block;width:100%;height:auto;border:3px solid #fff7d4;border-radius:14px;background:#badc91;box-shadow:0 3px 0 #c9d6a9}
+.tutorial{position:fixed;inset:0;z-index:1500;display:grid;place-items:center;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:#1c3320a6}
+.tutorial-card{display:flex;flex-direction:column;width:min(1000px,100%);height:min(620px,100%);overflow:hidden;border:3px solid #fbe9a9;border-radius:26px;background:#fffbeb;box-shadow:0 8px 0 #82995f,0 24px 50px #1c351088}
+.tutorial-head{display:flex;flex-shrink:0;justify-content:space-between;align-items:center;gap:12px;padding:14px 20px 10px;border-bottom:2px dashed #d8dfb9}
+.tutorial-head .eyebrow{margin:0 0 3px;color:#a96637}
+.tutorial-head h2{margin:0;font:1000 clamp(22px,3.4vw,32px)/1.05 var(--round-font);color:#365c4c;letter-spacing:-1px}
+.tutorial-body{flex:1;min-height:0;padding:16px 22px;overflow:hidden;touch-action:pan-y}
+.lesson{display:grid;height:100%;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:24px;align-items:center;animation:lesson-in .28s ease-out}
+.tutorial-body[data-dir=back] .lesson{animation-name:lesson-back}
+.lesson>img{display:block;justify-self:center;width:auto;max-width:100%;height:auto;max-height:100%;border:3px solid #fff7d4;border-radius:14px;background:#badc91;box-shadow:0 3px 0 #c9d6a9}
+.lesson>div{max-height:100%;overflow-y:auto}
 .lesson .eyebrow{margin:0;color:#a96637}
-.lesson h3{margin:4px 0 8px;font:1000 23px/1.15 var(--round-font);color:#365c4c;letter-spacing:-.4px}
-.lesson ul{margin:0;padding-left:20px;font-size:14px;line-height:1.6;color:#4f6352}.lesson li+li{margin-top:5px}.lesson b{color:#365c4c}
+.lesson h3{margin:4px 0 8px;font:1000 clamp(20px,2.6vw,26px)/1.15 var(--round-font);color:#365c4c;letter-spacing:-.4px}
+.lesson ul{margin:0;padding-left:20px;font-size:15px;line-height:1.5;color:#4f6352}.lesson li+li{margin-top:6px}.lesson b{color:#365c4c}
 .lesson kbd{display:inline-block;min-width:24px;padding:1px 6px;border:2px solid #c6cbbc;border-bottom-width:4px;border-radius:7px;background:#fffbea;font:800 12px var(--round-font);text-align:center;color:#365c4c}
-.lesson-powers{grid-template-columns:1fr}.lesson-powers>img{max-width:640px;margin:auto}
-.power-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.lesson-powers{grid-template-columns:1fr}
+.power-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
 .power-card{display:grid;grid-template-columns:42px 1fr;gap:10px;align-items:start;padding:10px;border:2px solid #e3e3bd;border-radius:14px;background:#fff9e8}
 .power-card svg{width:42px;height:42px;padding:6px;border-radius:11px;background:var(--power-color);color:#fffdf1;box-shadow:0 3px 0 #52664e33}
-.power-card b{display:block;font-size:14px;color:#365c4c}.power-card small{display:block;margin-top:2px;font-size:12px;line-height:1.45;color:#607454}
-.tutorial-foot{display:flex;justify-content:center;padding:4px 0 2px}
-@media(max-width:760px){.lesson{grid-template-columns:1fr;gap:14px}.lesson:nth-child(even)>img{order:0}.power-cards{grid-template-columns:1fr 1fr}}
-@media(max-width:480px){.tutorial{padding:8px}.tutorial-head,.tutorial-body{padding-left:12px;padding-right:12px}.tutorial-nav{padding:6px 12px 12px}.lesson{padding:12px}.lesson h3{font-size:20px}.lesson ul{font-size:13px}.power-cards{grid-template-columns:1fr}}
+.power-card b{display:block;font-size:14px;color:#365c4c}.power-card small{display:block;margin-top:2px;font-size:12px;line-height:1.4;color:#607454}
+.tutorial-pager{display:flex;flex-shrink:0;justify-content:space-between;align-items:center;gap:10px;padding:10px 16px 14px;border-top:2px dashed #d8dfb9}
+.tutorial-arrow{min-width:110px;min-height:48px;padding:0 18px;border:2px solid #bdcda4;border-radius:999px;background:#fffcdf;color:#47634e;font-size:14px;box-shadow:0 3px 0 #bdcda4;touch-action:manipulation}
+.tutorial-arrow.next{border-color:#ae582d;background:#f59a50;color:#3d3926;box-shadow:0 3px 0 #ae582d}
+.tutorial-arrow:disabled{opacity:.35;cursor:default;box-shadow:none}
+.tutorial-progress{display:grid;justify-items:center;gap:2px;min-width:0}
+.tutorial-dots{display:flex;flex-wrap:wrap;justify-content:center}
+.tutorial-dots button{width:26px;height:26px;padding:0;border:0;background:radial-gradient(circle,#c9d6a9 0 5px,transparent 6px);box-shadow:none}
+.tutorial-dots button[aria-current=step]{background:radial-gradient(circle,#e8702f 0 7px,transparent 8px)}
+.tutorial-count{font-size:12px;font-weight:900;color:#657661}
+@keyframes lesson-in{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes lesson-back{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
+@media(orientation:portrait),(max-width:640px){
+  .lesson{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);gap:12px;align-items:start}
+  .tutorial-card{height:min(920px,100%)}
+  .lesson>img{max-height:32dvh}
+  .lesson-powers{grid-template-rows:minmax(0,1fr)}
+  .power-cards{grid-template-columns:1fr 1fr;gap:8px}
+}
+@media(max-width:480px){
+  .tutorial{padding:8px}.tutorial-card{border-radius:20px}.tutorial-head{padding:8px 12px 8px 14px}.tutorial-head .eyebrow{display:none}.tutorial-head h2{font-size:24px}.tutorial-head .tool{min-height:40px;padding:6px 12px}
+  .tutorial-body{padding:10px 14px}.lesson{gap:10px}.lesson>img{max-height:27dvh}.lesson .eyebrow{font-size:9px}.tutorial-dots button{width:19px}
+  .lesson h3{font-size:20px}.lesson ul{font-size:14px}.lesson li+li{margin-top:4px}
+  .power-card{grid-template-columns:34px 1fr;gap:7px;padding:8px}.power-card svg{width:34px;height:34px;padding:5px}.power-card small{font-size:11px}
+  .tutorial-pager{padding:8px 10px 10px}.tutorial-arrow{min-width:84px;padding:0 12px;font-size:13px}.tutorial-count{display:none}
+}
+@media(max-height:480px){
+  .tutorial{padding:6px}.tutorial-head{padding:6px 14px}.tutorial-head .eyebrow{display:none}.tutorial-head h2{font-size:20px}.tutorial-head .tool{min-height:36px;padding:6px 12px}
+  .tutorial-body{padding:8px 16px}.lesson{gap:16px}.lesson h3{font-size:18px;margin:2px 0 4px}.lesson ul{font-size:13px;line-height:1.4}.lesson li+li{margin-top:3px}
+  .power-cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:6px}.power-card{padding:6px}.power-card small{font-size:11px}
+  .tutorial-pager{padding:6px 12px}.tutorial-arrow{min-height:40px}
+}
+/* The room browser fits one screen: artwork and room panel side by side when wide, stacked on phones. */
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.in-lobby .page{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(340px,1fr);grid-template-rows:auto minmax(0,1fr);column-gap:18px;height:100vh;height:100dvh;max-width:1500px;padding:10px clamp(10px,2vw,26px) max(14px,env(safe-area-inset-bottom))}
+.in-lobby .page{animation-name:arrive-fade}@keyframes arrive-fade{from{opacity:0}}
+.in-lobby .masthead{grid-column:1/-1;padding:0 0 10px}
+.in-lobby .brand{font-size:clamp(24px,3vw,38px)}
+.in-lobby .intro{height:100%;margin:0;min-height:0}
+.in-lobby .hero-art{height:100%}
+.in-lobby #versionBadge{display:block;position:absolute;top:12px;left:12px;right:auto;bottom:auto;z-index:1}
+.game.lobby-open{display:flex;flex-direction:column;min-height:0;margin:0}
+.game.lobby-open .arena-header{flex-shrink:0}.game.lobby-open .room-strip{padding:8px 12px;justify-content:flex-end}
+.game.lobby-open .stage{display:flex;flex:1;min-height:0;background:none}
+.game.lobby-open .overlay{position:relative;inset:auto;display:flex;flex:1;align-items:stretch;min-height:0;padding:12px;overflow:hidden}
+.game.lobby-open .dialog{display:flex;flex-direction:column;width:100%;max-height:100%;margin:0;padding:16px 18px;overflow-y:auto}
+.game.lobby-open #dialogTag,.game.lobby-open #networkNote{display:none}
+.game.lobby-open .dialog h2{margin:0 0 2px;font-size:clamp(22px,2.4vw,30px)}
+.game.lobby-open #dialogText{margin:0;font-size:12px}
+.game.lobby-open #roomBrowser{display:flex;flex-direction:column;flex:1;min-height:0;margin:8px 0 0}
+.game.lobby-open .mode-choices,.game.lobby-open .lobby-actions,.game.lobby-open .room-details,.game.lobby-open #roomListStatus{flex-shrink:0}
+.game.lobby-open .mode-choices{margin:4px 0 12px}.game.lobby-open .lobby-actions{margin:0 0 8px}
+.game.lobby-open .room-list{flex:1 1 100px;min-height:64px;max-height:none;overflow-y:auto}
+.game.lobby-open .room-details{margin-top:8px;padding-top:8px}
+@media(max-height:760px){.game.lobby-open .mode-card{min-height:0;padding:10px 6px 8px}.game.lobby-open .mode-emblem{font-size:18px;margin-bottom:3px}.game.lobby-open .dialog{padding:12px 14px}}
+@media(max-height:500px){
+  .in-lobby .page{padding-top:6px}.in-lobby .masthead{padding-bottom:6px}.in-lobby .brand{font-size:22px}.in-lobby .edition{display:none}
+  .in-lobby .intro-side p,.in-lobby .intro .eyebrow,.game.lobby-open #dialogText{display:none}.in-lobby .intro h1{font-size:30px}
+  .game.lobby-open .room-strip{padding:4px 8px}.game.lobby-open .room-strip .tool{min-height:36px;padding:5px 10px}
+  .in-lobby .page{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .in-lobby .intro-side{top:10px;right:10px;bottom:auto}.in-lobby #howToPlay{min-height:40px;padding:8px 14px;font-size:12px}
+  .game.lobby-open .overlay{padding:8px}.game.lobby-open .dialog h2,.game.lobby-open .mode-emblem,.game.lobby-open .mode-card small{display:none}
+  .game.lobby-open .mode-choices{margin:0 0 8px}.game.lobby-open .mode-card{padding:10px 4px;font-size:12px}.game.lobby-open .lobby-actions .tool{min-height:40px;padding:6px 12px}
+}
+@media(orientation:portrait) and (max-width:900px),(max-width:640px){
+  .in-lobby .page{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);row-gap:10px}
+  .in-lobby .masthead{justify-content:center;padding:2px 0 0;border:0}.in-lobby .edition{display:none}.in-lobby .brand{font-size:28px}
+  .in-lobby .intro{height:auto;border-radius:20px}.in-lobby .hero-art{height:clamp(140px,26dvh,280px)}
+  .in-lobby .intro .eyebrow,.in-lobby .intro-side p{display:none}.in-lobby .intro-copy{padding:40px 16px 12px}.in-lobby .intro h1{font-size:clamp(26px,7vw,40px)}
+  .in-lobby .intro-side{top:10px;right:10px;bottom:auto}.in-lobby #howToPlay{min-height:40px;padding:8px 14px;font-size:12px}
+  .game.lobby-open{border-radius:20px}.game.lobby-open .overlay{padding:8px}.game.lobby-open .dialog{padding:12px}
+  .game.lobby-open #dialogText{display:none}.game.lobby-open .dialog h2{font-size:22px}.game.lobby-open .room-strip{padding:6px 10px}.game.lobby-open .room-strip .tool{min-height:40px;padding:6px 12px}
+  .game.lobby-open .mode-choices{gap:8px}.game.lobby-open .mode-card{min-height:0;padding:10px 6px 8px;font-size:13px}.game.lobby-open .mode-emblem{font-size:17px;margin-bottom:3px}
+}
 </style>
 </head>
 <body>
@@ -296,7 +363,7 @@ button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visi
 </defs></svg>
 <main class="page">
 <header class="masthead"><div class="brand" aria-label="Tank Frenzy"><span>TANK</span> FRENZY</div><div class="edition"><span><i class="live-dot"></i>PLAY WITH FRIENDS</span><span>2–4 PLAYERS · ZERO DOWNLOADS</span></div></header>
-<section class="intro"><img class="hero-art" src="./mode-banner.webp" alt="Cartoon tanks facing off in a sunny quarry" width="2048" height="768"><div class="intro-copy"><p class="eyebrow">YOUR TANK. YOUR BROWSER. ONE BATTLEFIELD.</p><h1>Small tanks.<br><span>Big rivalries.</span></h1></div><div class="intro-side"><p>Bring your friends into the field.<br><span id="introControls">Move with WASD. Aim with your mouse. Click to fire.</span></p><button id="howToPlay" class="tool" type="button">HOW TO PLAY</button></div></section>
+<section class="intro"><small id="versionBadge" aria-label="Game version"></small><img class="hero-art" src="./mode-banner.webp" alt="Cartoon tanks facing off in a sunny quarry" width="2048" height="768"><div class="intro-copy"><p class="eyebrow">YOUR TANK. YOUR BROWSER. ONE BATTLEFIELD.</p><h1>Small tanks.<br><span>Big rivalries.</span></h1></div><div class="intro-side"><p>Bring your friends into the field.<br><span id="introControls">Move with WASD. Aim with your mouse. Click to fire.</span></p><button id="howToPlay" class="tool" type="button">HOW TO PLAY</button></div></section>
 <section id="arena" class="game" aria-label="Network tank arena">
 <div id="arenaHeader" class="arena-header">
 <div class="room-strip"><span class="room-title">ROOM <b id="roomCode">QUARRY</b> &nbsp; / &nbsp; <span id="roomCount">0 / 4 PLAYERS</span></span><button id="arenaMenu" class="tool arena-menu-button" aria-expanded="false" aria-controls="arenaActions" aria-label="Arena menu">MENU</button><div id="arenaActions" class="room-actions"><button id="fullscreen" class="tool" aria-pressed="false">FULL SCREEN</button><button id="copy" class="tool">COPY INVITE</button><button id="leave" class="tool" hidden>LEAVE ROOM</button><button id="viewMode" class="tool" aria-pressed="false" hidden>FULL MAP</button><button id="sound" class="tool" aria-pressed="true">EFFECTS ON</button><button id="music" class="tool" aria-pressed="true" aria-label="Background music">MUSIC ON</button><span class="tool" id="latency">OFFLINE</span></div></div>
@@ -323,14 +390,6 @@ button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visi
 <div id="dialogTag" class="eyebrow">ASSEMBLE YOUR RIVALS</div><h2 id="dialogTitle">Join the field.</h2><p id="dialogText">For 2-4 players, each in their own browser. Share a room code and explore a new random battlefield each match.</p>
 <section id="roomBrowser" class="room-browser" hidden aria-label="Available rooms">
 <div class="mode-choices" role="group" aria-label="Game mode"><button id="ffaMode" class="mode-card" type="button" aria-pressed="true"><span class="mode-emblem" aria-hidden="true">✦</span>FREE-FOR-ALL<small>Every tank for itself</small></button><button id="teamMode" class="mode-card" type="button" aria-pressed="false"><span class="mode-emblem" aria-hidden="true">★ ★</span>2 VS 2<small>Team up. No friendly fire.</small></button></div>
-<details class="power-guide"><summary>Power-up guide</summary><div class="power-legend">
-<span style="--power-color:#ef628b"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-laser" x="0" y="0" width="32" height="32"/></svg><b>Laser</b><small>4 damage · clears bullets</small></span>
-<span style="--power-color:#a279f5"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-double" x="0" y="0" width="32" height="32"/></svg><b>Double cannon</b><small>Two parallel shots</small></span>
-<span style="--power-color:#f2b931"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-speed" x="0" y="0" width="32" height="32"/></svg><b>Speed</b><small>Move faster</small></span>
-<span style="--power-color:#3fb5cc"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-machine" x="0" y="0" width="32" height="32"/></svg><b>Machine gun</b><small>Rapid fire</small></span>
-<span style="--power-color:#e8b933"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-immortal" x="0" y="0" width="32" height="32"/></svg><b>Immortal</b><small>No damage for 10s</small></span>
-<span style="--power-color:#ffe0e4"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-restore" x="0" y="0" width="32" height="32"/></svg><b>Restore</b><small>Full health instantly</small></span>
-</div></details>
 <div class="lobby-actions"><button id="refreshRooms" class="tool" type="button">REFRESH</button><button id="createRoom" class="tool" type="button">CREATE ROOM</button></div>
 <div id="roomListStatus" role="status"></div><div id="roomList" class="room-list"></div>
 <div id="roomDetails" class="room-details" hidden><strong id="selectedRoomName"></strong><p id="roomRules"></p><ul id="roomPlayers" aria-label="Players in selected room"></ul><div id="roomCapacity"></div><button id="joinSelected" class="primary" type="button" disabled>JOIN THIS ROOM</button></div>
@@ -355,55 +414,62 @@ button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visi
 </main>
 <section id="tutorial" class="tutorial" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" hidden><div class="tutorial-card">
 <header class="tutorial-head"><div><p class="eyebrow">BOOT CAMP</p><h2 id="tutorialTitle">How to play</h2></div><button id="closeTutorial" class="tool" type="button" aria-label="Close how to play">CLOSE ✕</button></header>
-<nav id="tutorialNav" class="tutorial-nav" aria-label="Tutorial topics"><button type="button" data-lesson="lessonWin">How to win</button><button type="button" data-lesson="lessonPc">PC controls</button><button type="button" data-lesson="lessonMobile">Phone controls</button><button type="button" data-lesson="lessonFind">Find your tank</button><button type="button" data-lesson="lessonBounce">Bouncing bullets</button><button type="button" data-lesson="lessonPowers">Power-ups</button></nav>
-<div id="tutorialBody" class="tutorial-body">
-<article id="lessonWin" class="lesson"><img src="./tutorial/win.webp" alt="Winner card: Alice wins, with Rematch and Leave Room buttons" width="1156" height="814" loading="lazy"><div><p class="eyebrow">1 · HOW TO WIN</p><h3>First to 10 kills.</h3><ul>
-<li><b>Free-for-All:</b> every tank for itself. The first player to <b>10 kills</b> wins.</li>
-<li><b>2 vs 2:</b> teams are balanced automatically. Kills add to your team score; the first team to <b>10</b> wins. Teammates cannot hurt each other.</li>
-<li>Every tank has <b>10 health</b>, shown as five pips (one pip = two hits). A shell does 1 damage; a laser does 4.</li>
-<li>Destroyed tanks respawn after <b>3 seconds</b> with 3 seconds of protection (the tank blinks).</li>
-<li>After the win, everyone has <b>20 seconds</b> to press <b>Rematch</b>. All players must agree, or press <b>Leave Room</b> to pick another battle.</li>
+<div id="tutorialBody" class="tutorial-body" aria-live="polite">
+<article id="lessonWin" class="lesson"><img src="./tutorial/win.webp" alt="Winner card: Alice wins, with Rematch and Leave Room buttons" width="1156" height="814" loading="lazy"><div><p class="eyebrow">HOW TO WIN</p><h3>First to 10 kills.</h3><ul>
+<li><b>Free-for-All:</b> the first player to 10 kills wins.</li>
+<li><b>2 vs 2:</b> the first team to 10 kills wins. No friendly fire.</li>
+<li>Every tank has <b>10 health</b> (five pips). A shell does 1 damage, a laser 4.</li>
+<li>Destroyed tanks respawn after 3 seconds, protected for 3 more.</li>
+<li>After a win, everyone presses <b>Rematch</b> within 20 seconds, or <b>Leave Room</b>.</li>
 </ul></div></article>
-<article id="lessonPc" class="lesson"><img src="./tutorial/pc-controls.webp" alt="Desktop battle: a tank driving with a dashed aim line toward the mouse pointer" width="1156" height="814" loading="lazy"><div><p class="eyebrow">2 · PC CONTROLS</p><h3>Drive, point, click.</h3><ul>
-<li><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> drive up, left, down and right. Hold two keys to move diagonally.</li>
-<li>The turret follows your <b>mouse</b>, separate from the direction you drive.</li>
-<li><b>Hold left click</b> to keep firing: one shell every 0.42 seconds.</li>
-<li>The dashed line shows where your next shot heads, up to the first wall.</li>
-<li>The game goes full screen when you join. Press <kbd>Esc</kbd> to exit.</li>
+<article id="lessonPc" class="lesson" hidden><img src="./tutorial/pc-controls.webp" alt="Desktop battle: a tank with a dashed aim line toward the mouse pointer" width="1156" height="814" loading="lazy"><div><p class="eyebrow">PC CONTROLS</p><h3>Drive, point, click.</h3><ul>
+<li><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> drive. Hold two keys to go diagonally.</li>
+<li>Your <b>mouse</b> aims the turret, separately from driving.</li>
+<li><b>Hold left click</b> to keep firing, one shell every 0.42 seconds.</li>
+<li>The dashed line shows where your shot heads.</li>
+<li>Joining goes full screen. <kbd>Esc</kbd> exits.</li>
 </ul></div></article>
-<article id="lessonMobile" class="lesson"><img src="./tutorial/mobile-controls.webp" alt="Phone in landscape with the left move stick and right aim-and-fire stick" width="1295" height="540" loading="lazy"><div><p class="eyebrow">3 · PHONE &amp; TABLET</p><h3>Two thumbs. Full control.</h3><ul>
-<li><b>Left stick:</b> drag to drive. Let go to stop.</li>
-<li><b>Right stick:</b> drag toward a target to aim. Your tank keeps firing while you hold it; let go to stop.</li>
-<li>The camera follows your tank. Open <b>Menu</b> for <b>Full Map</b>, sound, invites and Leave Room.</li>
+<article id="lessonMobile" class="lesson" hidden><img src="./tutorial/mobile-controls.webp" alt="Phone in landscape with the left move stick and right aim-and-fire stick" width="1295" height="540" loading="lazy"><div><p class="eyebrow">PHONE &amp; TABLET</p><h3>Two thumbs. Full control.</h3><ul>
+<li><b>Left stick:</b> drag to drive.</li>
+<li><b>Right stick:</b> drag to aim. You keep firing until you let go.</li>
+<li><b>Menu</b> (top right): Full Map, sound, invite and Leave Room.</li>
 <li>Turn your phone sideways for a wider battlefield.</li>
 </ul></div></article>
-<article id="lessonFind" class="lesson"><img src="./tutorial/find-tank.webp" alt="Close-up: your tank has a thick glowing ring and a star after its name" width="1152" height="628" loading="lazy"><div><p class="eyebrow">4 · FIND YOUR TANK</p><h3>Look for the glowing ring.</h3><ul>
-<li>Your tank has a <b>thick glowing ring</b> in your color. Other tanks don't.</li>
-<li>Your name tag ends with a <b>★</b>, and your score card has a colored edge.</li>
-<li>After you respawn, the ring shows where you came back.</li>
+<article id="lessonFind" class="lesson" hidden><img src="./tutorial/find-tank.webp" alt="Close-up: your tank has a thick glowing ring and a star after its name" width="1152" height="628" loading="lazy"><div><p class="eyebrow">FIND YOUR TANK</p><h3>Look for the glowing ring.</h3><ul>
+<li>Your tank wears a <b>thick glowing ring</b> in your color.</li>
+<li>Your name tag ends with a <b>★</b>.</li>
+<li>Your score card has a colored edge.</li>
 </ul></div></article>
-<article id="lessonBounce" class="lesson"><img src="./tutorial/bouncing.webp" alt="A shell ricochets off two walls to hit a tank behind cover" width="1152" height="628" loading="lazy"><div><p class="eyebrow">5 · BOUNCING BULLETS</p><h3>Bank shots around cover.</h3><ul>
-<li>Shells bounce off walls and arena edges, up to <b>6 times</b>. Use bounces to hit tanks hiding behind cover.</li>
-<li>Your own shells never hurt you. In 2 vs 2, shells pass through teammates.</li>
-<li>Enemy shells that touch yours destroy each other, so you can shoot down incoming fire.</li>
-<li>The room creator can turn <b>Bullet bouncing</b> off; shells then disappear when they hit a wall.</li>
+<article id="lessonHit" class="lesson" hidden><img src="./tutorial/getting-hit.webp" alt="Flames flare around the screen edges as your tank takes a hit" width="1152" height="628" loading="lazy"><div><p class="eyebrow">GETTING HIT</p><h3>Feel the heat.</h3><ul>
+<li>When you're hit, <b>flames flare</b> around the screen edges and the screen shakes.</li>
+<li><b>−1</b> or <b>−4</b> pops up above any tank that takes damage.</li>
+<li>Android phones buzz on every hit.</li>
+<li>At 3 health or less the edges keep smouldering. Find cover or a <b>Restore</b> heart.</li>
 </ul></div></article>
-<article id="lessonPowers" class="lesson lesson-powers"><img src="./tutorial/power-ups.webp" alt="Power-up tokens on the field, a laser beam and an Immortal tank with orbiting stars" width="1152" height="628" loading="lazy"><div><p class="eyebrow">6 · POWER-UPS</p><h3>Drive over a token to grab it.</h3><ul>
-<li>Tokens appear every 12 seconds (two at most) and vanish after 20 seconds. A wall between you and a token blocks it.</li>
-<li>Timed powers last <b>10 seconds</b>. A new one replaces your current power, and dying ends it. The badge in the top-left corner shows the time left.</li>
-<li>The room creator can turn <b>Super powers</b> off.</li>
-</ul>
-<div class="power-cards">
-<span class="power-card" style="--power-color:#ef628b"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-laser" x="0" y="0" width="32" height="32"/></svg><span><b>Laser</b><small>An instant beam that does 4 damage, wipes out enemy shells in its path and stops at the first tank or wall.</small></span></span>
-<span class="power-card" style="--power-color:#a279f5"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-double" x="0" y="0" width="32" height="32"/></svg><span><b>Double cannon</b><small>Each shot fires two shells side by side.</small></span></span>
+<article id="lessonBounce" class="lesson" hidden><img src="./tutorial/bouncing.webp" alt="A shell ricochets off a wall to hit a tank behind cover" width="1152" height="628" loading="lazy"><div><p class="eyebrow">BOUNCING BULLETS</p><h3>Bank shots around cover.</h3><ul>
+<li>Shells bounce off walls and edges up to <b>6 times</b>.</li>
+<li>Bounce shots to hit tanks hiding behind cover.</li>
+<li>Your own shells never hurt you.</li>
+<li>Enemy shells that touch yours destroy each other.</li>
+<li>The room creator can turn bouncing off.</li>
+</ul></div></article>
+<article id="lessonTokens" class="lesson" hidden><img src="./tutorial/power-ups.webp" alt="Power-up tokens on the field, a laser beam and an Immortal tank" width="1152" height="628" loading="lazy"><div><p class="eyebrow">POWER-UPS</p><h3>Drive over a token.</h3><ul>
+<li>A token appears every 12 seconds (two at most) and vanishes after 20.</li>
+<li>Timed powers last <b>10 seconds</b>. The top-left badge counts down.</li>
+<li>A new power replaces your old one; dying ends it.</li>
+<li>The room creator can turn powers off.</li>
+</ul></div></article>
+<article id="lessonPowers" class="lesson lesson-powers" hidden><div><p class="eyebrow">POWER-UP EFFECTS</p><h3>What each token does.</h3><div class="power-cards">
+<span class="power-card" style="--power-color:#ef628b"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-laser" x="0" y="0" width="32" height="32"/></svg><span><b>Laser</b><small>Instant beam: 4 damage. Wipes out enemy shells in its path; stops at the first tank or wall.</small></span></span>
+<span class="power-card" style="--power-color:#a279f5"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-double" x="0" y="0" width="32" height="32"/></svg><span><b>Double cannon</b><small>Every shot fires two shells side by side.</small></span></span>
 <span class="power-card" style="--power-color:#f2b931"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-speed" x="0" y="0" width="32" height="32"/></svg><span><b>Speed</b><small>Drive 60% faster to dodge, chase or grab tokens first.</small></span></span>
-<span class="power-card" style="--power-color:#3fb5cc"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-machine" x="0" y="0" width="32" height="32"/></svg><span><b>Machine gun</b><small>Rapid fire: a shell every 0.12 seconds instead of 0.42.</small></span></span>
-<span class="power-card" style="--power-color:#e8b933"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-immortal" x="0" y="0" width="32" height="32"/></svg><span><b>Immortal</b><small>Shells and lasers can't damage you for 10 seconds. You can still drive and fire.</small></span></span>
-<span class="power-card" style="--power-color:#ffe0e4"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-restore" x="0" y="0" width="32" height="32"/></svg><span><b>Restore</b><small>Instantly refills your health to 10 and keeps any power you already have.</small></span></span>
+<span class="power-card" style="--power-color:#3fb5cc"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-machine" x="0" y="0" width="32" height="32"/></svg><span><b>Machine gun</b><small>Rapid fire: a shell every 0.12 seconds.</small></span></span>
+<span class="power-card" style="--power-color:#e8b933"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-immortal" x="0" y="0" width="32" height="32"/></svg><span><b>Immortal</b><small>No damage for 10 seconds. You can still drive and fire.</small></span></span>
+<span class="power-card" style="--power-color:#ffe0e4"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-restore" x="0" y="0" width="32" height="32"/></svg><span><b>Restore</b><small>Refills your health to 10 at once. Keeps any power you have.</small></span></span>
 </div></div></article>
-<div class="tutorial-foot"><button id="tutorialDone" class="primary" type="button">GOT IT, LET'S PLAY</button></div>
-</div></div></section>
-<small id="versionBadge" aria-label="Game version"></small>
+</div>
+<nav class="tutorial-pager" aria-label="How to play pages"><button id="tutorialPrev" class="tutorial-arrow" type="button" aria-label="Previous page">‹ BACK</button><div class="tutorial-progress"><div id="tutorialDots" class="tutorial-dots"></div><span id="tutorialCount" class="tutorial-count"></span></div><button id="tutorialNext" class="tutorial-arrow next" type="button" aria-label="Next page">NEXT ›</button></nav>
+</div></section>
 <script src="./shared.js"></script>
 <script src="./sound-bank.js"></script>
 <script src="./music.js"></script>

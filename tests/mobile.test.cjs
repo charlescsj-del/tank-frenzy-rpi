@@ -364,17 +364,40 @@ test('Create/Join and Start Game go fullscreen; the result card leaves directly 
   assert.equal(doc.fullscreenElement,null);assert(doc.body.classList.contains('in-lobby'));
 });
 
-test('how to play opens over the page, jumps between topics, blocks driving keys and closes',()=>{
+test('how to play turns pages with arrows, dots, keys and swipes, blocks driving and closes',()=>{
   const c=client(false),body=c.sandbox.document.body,key=code=>c.windowEvents.keydown({code,preventDefault(){},target:{}});
+  const page=()=>['lessonWin','lessonPc','lessonMobile','lessonFind','lessonHit','lessonBounce','lessonTokens','lessonPowers'].filter(id=>!c.elements.get(id).hidden);
   c.sandbox.HTMLInputElement=class{};
   c.elements.get('howToPlay').events.click();
   assert.equal(c.elements.get('tutorial').hidden,false);assert(body.classList.contains('tutorial-open'));
+  assert.deepEqual(page(),['lessonWin']);assert.equal(c.elements.get('tutorialPrev').disabled,true);
+  assert.equal(c.elements.get('tutorialCount').textContent,'1 / 8');assert.equal(c.elements.get('tutorialDots').children.length,8);
   key('KeyW');assert.equal(c.run('keys.size'),0,'tank does not drive behind the tutorial');
-  let scrolled=null;c.sandbox.document.getElementById('lessonBounce').scrollIntoView=options=>{scrolled=options;};
-  c.elements.get('tutorialNav').events.click({target:{closest:()=>({dataset:{lesson:'lessonBounce'}})}});
-  assert.equal(scrolled.block,'start');
-  key('Escape');assert.equal(c.elements.get('tutorial').hidden,true);assert(!body.classList.contains('tutorial-open'));
+  c.elements.get('tutorialNext').events.click();assert.deepEqual(page(),['lessonPc']);assert.equal(c.elements.get('tutorialPrev').disabled,false);
+  key('ArrowRight');assert.deepEqual(page(),['lessonMobile']);
+  key('ArrowLeft');c.elements.get('tutorialPrev').events.click();assert.deepEqual(page(),['lessonWin']);
+  key('ArrowLeft');assert.deepEqual(page(),['lessonWin'],'the first page stays put');
+  const swipe=(from,to)=>{c.elements.get('tutorialBody').events.pointerdown({pointerType:'touch',clientX:from,clientY:100});c.elements.get('tutorialBody').events.pointerup({clientX:to,clientY:110});};
+  swipe(300,120);assert.deepEqual(page(),['lessonPc']);swipe(120,300);assert.deepEqual(page(),['lessonWin']);swipe(300,280);assert.deepEqual(page(),['lessonWin'],'short drags do not turn');
+  c.elements.get('tutorialDots').children[7].events.click();assert.deepEqual(page(),['lessonPowers']);
+  assert.match(c.elements.get('tutorialNext').textContent,/LET'S PLAY/);
+  c.elements.get('tutorialNext').events.click();assert.equal(c.elements.get('tutorial').hidden,true);assert(!body.classList.contains('tutorial-open'));
   key('KeyW');assert.equal(c.run('keys.has("KeyW")'),true);
-  c.elements.get('howToPlay').events.click();c.elements.get('closeTutorial').events.click();
-  assert.equal(c.elements.get('tutorial').hidden,true);
+  c.elements.get('howToPlay').events.click();assert.deepEqual(page(),['lessonWin'],'reopening starts at page one');
+  key('Escape');assert.equal(c.elements.get('tutorial').hidden,true);
+  c.elements.get('howToPlay').events.click();c.elements.get('closeTutorial').events.click();assert.equal(c.elements.get('tutorial').hidden,true);
+});
+
+test('your own hits flare the screen edges, shake, buzz and show damage numbers',()=>{
+  const c=client(false),buzz=[];c.sandbox.clearTimeout=()=>{};c.sandbox.history={replaceState(){}};c.sandbox.window.navigator={vibrate:pattern=>buzz.push(pattern)};
+  c.run("sound=true;playEffect=()=>true;tanks=[{id:'me',x:100,y:100,hp:9},{id:'other',x:400,y:100,hp:6}]");
+  c.run("applySnapshot({phase:'playing',players:[{id:'me',slot:0,x:100,y:100,hp:9,life:1,connected:true},{id:'other',slot:1,x:400,y:100,hp:6,life:1,connected:true}],shells:[],events:[{id:1,type:'hit',player:'other',x:400,y:100,slot:1,damage:4}]})");
+  assert.equal(c.run('hurt'),0,'hits on other tanks do not flare your screen');assert.equal(c.run('floaters.at(-1).text'),'-4');assert.equal(buzz.length,0);
+  c.run("applySnapshot({phase:'playing',players:[{id:'me',slot:0,x:100,y:100,hp:8,life:1,connected:true}],shells:[],events:[{id:2,type:'hit',player:'me',x:100,y:100,slot:0,damage:1}]})");
+  const shellHeat=c.run('hurt');assert(shellHeat>0);assert(c.run('shake')>0);assert.deepEqual(buzz,[35]);assert.equal(c.run('floaters.at(-1).text'),'-1');
+  c.run("applySnapshot({phase:'playing',players:[{id:'me',slot:0,x:100,y:100,hp:0,life:1,connected:true}],shells:[],events:[{id:3,type:'destroyed',player:'me',x:100,y:100,slot:0,damage:4}]})");
+  assert.equal(c.run('hurt'),1);assert.equal(c.run('rings.length'),1);assert.equal(buzz.length,2);
+  c.run('sound=false;feelHit(false,1)');assert.equal(buzz.length,2,'Effects Off also silences vibration');
+  c.run('draw=()=>{};frame(0);frame(2000)');assert(c.run('hurt')<1,'the flare fades');
+  c.run("socket.close=()=>{};leave()");assert.equal(c.run('hurt'),0);assert.equal(c.run('floaters.length'),0);
 });

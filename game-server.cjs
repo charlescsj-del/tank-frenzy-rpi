@@ -83,7 +83,7 @@ class Room {
     const attacker=this.players.get(owner);
     if(p.hp<=0||this.invulnerable(p)||(attacker&&this.friendly(attacker,p)))return;
     p.hp=Math.max(0,p.hp-amount);const dead=p.hp===0;
-    this.emit(dead?'destroyed':'hit',{x:p.x,y:p.y,slot:p.slot,player:p.id});
+    this.emit(dead?'destroyed':'hit',{x:p.x,y:p.y,slot:p.slot,player:p.id,damage:amount});
     if(!dead)return;
     p.deaths++;p.respawnAt=this.time+3;p.input=neutral();p.pendingShot=false;p.power=null;p.powerUntil=0;
     if(!attacker)return;
