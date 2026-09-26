@@ -23,6 +23,7 @@ function createGameServer({ingress=false,publicUrl=''}={}){
   for(const name of ['iron-advance','overdrive','steel-pressure'])files[`/audio/music-${name}-v1.mp3`]=[`audio/music-${name}-v1.mp3`,'audio/mpeg'];
   for(const name of ['fire-a','ricochet-c','pickup-a','explosion-c'])files[`/audio/effects-${name}-v1.mp3`]=[`audio/effects-${name}-v1.mp3`,'audio/mpeg'];
   for(const name of ['countdown','battle-start'])files[`/audio/${name}-v1.mp3`]=[`audio/${name}-v1.mp3`,'audio/mpeg'];
+  for(const name of ['win','pc-controls','mobile-controls','find-tank','bouncing','power-ups'])files[`/tutorial/${name}.webp`]=[`tutorial/${name}.webp`,'image/webp'];
   const server=http.createServer((req,res)=>{
     const url=new URL(req.url,'http://localhost');
     res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
@@ -49,7 +50,7 @@ function createGameServer({ingress=false,publicUrl=''}={}){
       res.setHeader('Content-Type','text/html; charset=utf-8');
       res.end(fs.readFileSync(path.join(__dirname,'index.html'),'utf8').replace('<head>','<head>\n<base href="'+base+'">'));return;
     }
-    if(url.pathname==='/mode-banner.webp')res.setHeader('Cache-Control','public, max-age=86400');
+    if(file[1]==='image/webp')res.setHeader('Cache-Control','public, max-age=86400');
     if(file[1]==='audio/mpeg')res.setHeader('Cache-Control','public, max-age=31536000, immutable');
     res.setHeader('Content-Type',file[1]+(file[1].startsWith('text/')?'; charset=utf-8':''));fs.createReadStream(path.join(__dirname,file[0])).pipe(res);
   });

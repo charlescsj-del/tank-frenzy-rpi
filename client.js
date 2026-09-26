@@ -16,7 +16,7 @@ let socket=null,myId=null,token=null,joined=false,connecting=false,intentional=f
 let latest=null,lastEvent=0,seq=0,rosterSignature='',pointer={x:500,y:330,active:false},firing=false,lastSnapshot=0;
 let roomCode=(new URL(location.href).searchParams.get('room')||'').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,16),networkBase=appBase.href.replace(/\/$/,'');
 let lobbyVisible=false,lobbyRooms=[],selectedRoom=null,joinMode=null,roomRequest=0;
-let selectedGameMode='ffa',leaveDialogOpen=false;
+let selectedGameMode='ffa',leaveDialogOpen=false,tutorialOpen=false,tutorialReturn=null;
 let roundAudioMap=null,resultAudioKey=null,countdownAudioKey=null,activePower=null,lastMenuSound=-Infinity;
 let music=true,musicPlayer,waitingSignature='',roomPhase=null;
 try{sound=localStorage.getItem('tank-frenzy-sfx')!=='off';music=localStorage.getItem('tank-frenzy-music')!=='off';}catch{/* Storage can be unavailable in private browsing. */}
@@ -26,6 +26,7 @@ $('versionBadge').textContent='v'+FIELD.version;
 $('versionBadge').setAttribute('aria-label','Tank Frenzy version '+FIELD.version);
 function status(text){$('status').textContent=text;}
 function networkMessage(title,text,form=false){
+  if(form)leaveFullscreen();
   $('waitingRoom').hidden=true;$('countdown').hidden=true;$('results').hidden=true;$('arena').classList.toggle('waiting-room',false);
   document.body.classList.toggle('in-lobby',false);document.body.classList.toggle('in-room-form',form);
   $('arena').classList.toggle('lobby-open',false);$('arena').classList.toggle('room-form-open',form);
@@ -137,7 +138,7 @@ function leave(){
   latest=null;tanks=[];shells=[];tracks=[];pickups=[];beams=[];pickupFlashes=[];$('leave').hidden=true;$('respawn').textContent='';$('latency').textContent='OFFLINE';$('roster').replaceChildren();
   touchAim=null;updateTouchControls();
   roundAudioMap=null;resultAudioKey=null;countdownAudioKey=null;activePower=null;roomPhase=null;waitingSignature='';stopCueSounds();syncMusic();
-  roomCode='';$('roomCode').textContent='—';$('roomCount').textContent='0 / 4 PLAYERS';$('powerStatus').hidden=true;history.replaceState(null,'',location.pathname);showLobby();status('READY TO CONNECT');
+  roomCode='';$('roomCode').textContent='—';$('roomCount').textContent='0 / 4 PLAYERS';$('powerStatus').hidden=true;history.replaceState(null,'',location.pathname);leaveFullscreen();showLobby();status('READY TO CONNECT');
 }
 function applySnapshot(data){
   latest=data;lastSnapshot=performance.now();
@@ -202,8 +203,10 @@ function updateRoomPhase(data){
   }
   if(roomPhase!==data.phase){roomPhase=data.phase;release();updateTouchControls();resize();syncMusic();}
 }
-$('startGame').addEventListener('click',()=>{if(joined&&latest?.phase==='waiting'&&latest.ownerId===myId){release();send({type:'start'});}});
+$('startGame').addEventListener('click',()=>{if(joined&&latest?.phase==='waiting'&&latest.ownerId===myId){enterFullscreen();release();send({type:'start'});}});
 $('rematch').addEventListener('click',()=>{if(joined&&latest?.phase==='results'&&latest.rematchIn>0&&!latest.rematchVotes?.includes(myId)){send({type:'rematch'});$('rematch').disabled=true;}});
+// The round is over, so leaving from the result card needs no extra confirmation.
+$('resultsLeave').addEventListener('click',leave);
 function updateHud(data){
   const count=data.players.filter(p=>p.connected).length;
   $('roomCount').textContent=count+' / 4 PLAYERS';
@@ -252,7 +255,7 @@ fetch(appUrl('network-info')).then(r=>{if(!r.ok)throw Error();return r.json();})
   updateInvite();
 }).catch(()=>{$('networkLinks').textContent='Start the network server with npm start, then open its address in each browser.';});
 $('copy').addEventListener('click',async()=>{const invite=updateInvite();try{await navigator.clipboard.writeText(invite);$('copy').textContent='LINK COPIED';setTimeout(()=>$('copy').textContent='COPY INVITE',1800);}catch{$('networkNote').textContent='Invite link: '+invite;status('INVITE LINK SHOWN BELOW THE ARENA');}});
-$('joinForm').addEventListener('submit',e=>{e.preventDefault();audioReady=true;playCue('menu');connect();});
+$('joinForm').addEventListener('submit',e=>{e.preventDefault();enterFullscreen();audioReady=true;playCue('menu');connect();});
 function closeLeaveDialog(){leaveDialogOpen=false;$('leaveDialog').hidden=true;}
 function requestLeave(){if(!joined)return;release();leaveDialogOpen=true;$('leaveDialog').hidden=false;$('cancelLeave').focus();}
 $('leave').addEventListener('click',requestLeave);
@@ -262,6 +265,20 @@ $('leaveDialog').addEventListener('keydown',e=>{
   if(e.code==='Escape'){e.preventDefault();e.stopPropagation();closeLeaveDialog();canvas.focus({preventScroll:true});}
   if(e.code==='Tab'){e.preventDefault();(document.activeElement===$('cancelLeave')?$('confirmLeave'):$('cancelLeave')).focus();}
 });
+function openTutorial(){
+  release();tutorialOpen=true;tutorialReturn=document.activeElement;
+  $('tutorial').hidden=false;document.body.classList.add('tutorial-open');$('tutorialBody').scrollTop=0;$('closeTutorial').focus();
+}
+function closeTutorial(){
+  tutorialOpen=false;$('tutorial').hidden=true;document.body.classList.remove('tutorial-open');
+  tutorialReturn?.focus?.({preventScroll:true});tutorialReturn=null;
+}
+$('howToPlay').addEventListener('click',openTutorial);
+$('closeTutorial').addEventListener('click',closeTutorial);
+$('tutorialDone').addEventListener('click',closeTutorial);
+$('tutorial').addEventListener('click',e=>{if(e.target===$('tutorial'))closeTutorial();});
+// Topic chips scroll within the tutorial; fragment links would break under an ingress <base>.
+$('tutorialNav').addEventListener('click',e=>{const topic=e.target.closest?.('[data-lesson]');if(topic)$(topic.dataset.lesson).scrollIntoView({behavior:reducedMotion?'auto':'smooth',block:'start'});});
 function updateAudioButtons(){
   $('sound').textContent=sound?'EFFECTS ON':'EFFECTS OFF';$('sound').setAttribute('aria-pressed',String(sound));
   $('music').textContent=music?'MUSIC ON':'MUSIC OFF';$('music').setAttribute('aria-pressed',String(music));
@@ -301,7 +318,7 @@ canvas.addEventListener('pointermove',aimAt);
 canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.button!==0||!joined)return;e.preventDefault();canvas.focus({preventScroll:true});canvas.setPointerCapture(e.pointerId);aimAt(e);audioReady=true;firing=true;sendInput();});
 for(const type of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(type,()=>{firing=false;sendInput();});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-window.addEventListener('keydown',e=>{if(e.code==='Escape'){release();if(leaveDialogOpen){closeLeaveDialog();return;}if(expanded)setExpanded(false);}if(leaveDialogOpen||!joined||e.target instanceof HTMLInputElement)return;if(moveKeys.has(e.code)){e.preventDefault();keys.add(e.code);if(!e.repeat)sendInput();}});
+window.addEventListener('keydown',e=>{if(e.code==='Escape'){release();if(tutorialOpen){closeTutorial();return;}if(leaveDialogOpen){closeLeaveDialog();return;}if(expanded)setExpanded(false);}if(tutorialOpen||leaveDialogOpen||!joined||e.target instanceof HTMLInputElement)return;if(moveKeys.has(e.code)){e.preventDefault();keys.add(e.code);if(!e.repeat)sendInput();}});
 window.addEventListener('keyup',e=>{if(moveKeys.has(e.code)){keys.delete(e.code);sendInput();}});
 window.addEventListener('blur',release);
 document.addEventListener('visibilitychange',()=>{if(document.hidden){release();stopCueSounds();}syncMusic();});
@@ -380,6 +397,17 @@ function setExpanded(value){
   document.body.classList.toggle('arena-expanded',value);
   $('viewNote').textContent=value?'Expanded view. Your browser does not allow true fullscreen here. Rotate your phone for a wider field.':'';
   updateFullscreen();
+}
+// Create/Join and Start Game go fullscreen from the same tap. Without element
+// fullscreen (iPhone Safari), touch play already fills the browser view.
+function enterFullscreen(){
+  if(expanded||fullscreenElement())return;
+  const arena=$('arena'),request=arena.requestFullscreen||arena.webkitRequestFullscreen;
+  try{Promise.resolve(request?.call(arena)).catch(()=>{});}catch{/* Fullscreen was refused; keep the page layout. */}
+}
+function leaveFullscreen(){
+  if(expanded)setExpanded(false);
+  if(fullscreenElement()===$('arena')){try{Promise.resolve((document.exitFullscreen||document.webkitExitFullscreen).call(document)).catch(()=>{});}catch{}}
 }
 $('fullscreen').addEventListener('click',async()=>{
   release();
@@ -654,6 +682,13 @@ function draw(){const dpr=Math.min(devicePixelRatio||1,2);ctx.setTransform(dpr,0
 function drawTank(t){
   const p=project(t.x,t.y),ink='#354e4b';
   const protectedTank=t.hp>0&&(t.shield||(t.power==='immortal'&&t.powerRemaining>0));
+  if(t.id===myId&&t.hp>0){
+    // A thick translucent halo, outside the spawn fade, so players spot their own tank at once.
+    const pulse=reducedMotion?0:Math.sin(last/300)*.08;
+    ctx.save();ctx.beginPath();ctx.arc(p.x,p.y,48*boardScale,0,Math.PI*2);
+    ctx.globalAlpha=.62+pulse;ctx.strokeStyle='#fffbe6';ctx.lineWidth=20*boardScale;ctx.stroke();
+    ctx.globalAlpha=.72+pulse;ctx.strokeStyle=colors[t.slot];ctx.lineWidth=12*boardScale;ctx.stroke();ctx.restore();
+  }
   ctx.save();if(protectedTank)ctx.globalAlpha=reducedMotion?.6:.25+.75*(.5+.5*Math.cos(last*Math.PI*2/1400));
   shadow(t.x,t.y,32,27,t.hp<=0?.2:.25);
   if(t.hp<=0){ctx.save();ctx.translate(p.x,p.y);ctx.scale(boardScale,boardScale);ctx.rotate(t.a);roundedRect(ctx,-22,-18,44,36,9,'#788378',ink,3);roundedRect(ctx,-10,-10,20,20,7,'#4a5f55');ctx.restore();ctx.restore();return;}

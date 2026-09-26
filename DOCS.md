@@ -15,7 +15,7 @@ cd /addons
 git clone https://github.com/charlescsj-del/tank-frenzy-rpi.git tank_frenzy
 ```
 
-The complete repository must be inside `/addons/tank_frenzy`, with `config.yaml`, `Dockerfile`, `addon.cjs`, game files and `audio/` together. In the App store, choose **Check for updates** and find **Tank Frenzy** under **Local apps**. Choose either repository installation or local installation, not both, to avoid duplicate apps/port conflicts.
+The complete repository must be inside `/addons/tank_frenzy`, with `config.yaml`, `Dockerfile`, `addon.cjs`, game files, `audio/` and `tutorial/` together. In the App store, choose **Check for updates** and find **Tank Frenzy** under **Local apps**. Choose either repository installation or local installation, not both, to avoid duplicate apps/port conflicts.
 
 ## Configuration
 
@@ -30,7 +30,7 @@ The app has no HA configuration/media mappings. `/data` is reserved for Supervis
 1. The app log should show listeners on game port `8765` and internal ingress port `8099`.
 2. Open **Web UI**: the lobby, banner and room list should load.
 3. Open `http://YOUR_PI_IP:8765` on two devices. Create and join one room, start a round, move, shoot, and confirm sound after interacting.
-4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `1.8.0`.
+4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `1.9.0`.
 5. Test an invitation generated from the sidebar after setting `public_url`.
 
 ## Updates

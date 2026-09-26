@@ -2,6 +2,15 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 1.9.0 — Tank Frenzy v1.9.0
+
+- Show the quarry artwork as a large header in the room browser. Forms, waiting rooms and battles now share one compact tagline instead of switching between large and small headers.
+- Add a How to Play guide with game screenshots: how to win, PC and phone controls, finding your tank, bouncing bullets and each power-up.
+- Draw a thick translucent halo in your color around your own tank.
+- Place Leave Room beside Rematch on the result card.
+- Enter fullscreen automatically on Create & Join, Join Arena and Start Game where the browser allows it; leaving the room exits fullscreen.
+- Serve the six tutorial WebP images through the sidebar and LAN listeners.
+
 ## App 1.8.0 — Tank Frenzy v1.8.0
 
 - Show the animated winner card in the arena and require every connected player to vote within 20 seconds for a rematch.
@@ -33,6 +42,12 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 - Keep assets, sound, room discovery and WebSockets under the ingress prefix; support a configured invitation URL.
 - Include installation/update instructions and CI container builds for both architectures.
 - Verify 88 automated checks, including mixed ingress/LAN multiplayer. Physical Pi play still requires target-device verification.
+
+## 1.9.0
+
+- Large illustrated room-browser header; one compact tagline on every other screen.
+- How to Play guide with screenshots of controls, bouncing bullets, power-ups and the win screen.
+- Own-tank halo, Leave Room on the result card and automatic fullscreen when joining or starting.
 
 ## 1.8.0
 

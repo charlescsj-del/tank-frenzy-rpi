@@ -344,3 +344,37 @@ test('Home Assistant prefix is retained for room fetches, WebSockets and invitat
   c.run("networkBase='http://pi.local:8765'");
   assert.equal(c.run('updateInvite()'),'http://pi.local:8765/?room=TEST');
 });
+
+test('Create/Join and Start Game go fullscreen; the result card leaves directly and restores the page',()=>{
+  const c=client(false),doc=c.sandbox.document,arena=doc.getElementById('arena');let requests=0;
+  c.sandbox.history={replaceState(){}};c.sandbox.clearTimeout=()=>{};
+  arena.requestFullscreen=async()=>{requests++;doc.fullscreenElement=arena;};
+  doc.exitFullscreen=async()=>{doc.fullscreenElement=null;};
+  c.run("joined=false;connecting=true");
+  c.elements.get('joinForm').events.submit({preventDefault(){}});assert.equal(requests,1);
+  c.run("joined=true;connecting=false;latest={room:'TEST',phase:'waiting',ownerId:'me',players:[{id:'me',name:'Me',connected:true,slot:0}]}");
+  c.elements.get('startGame').events.click();assert.equal(c.sent.at(-1).type,'start');
+  assert.equal(requests,1,'an arena already in fullscreen is not requested again');
+  doc.fullscreenElement=null;c.elements.get('startGame').events.click();assert.equal(requests,2);
+  c.run(`latest={room:'TEST',phase:'postgame',winner:{id:'me',team:null,name:'Me'},rematchIn:0,rematchVotes:[],settings:{mode:'ffa'},players:[{id:'me',name:'Me',connected:true,slot:0}]};updateRoomPhase(latest)`);
+  assert.equal(c.elements.get('results').hidden,false);
+  c.run('socket.close=()=>{}');c.elements.get('resultsLeave').events.click();
+  assert.equal(c.elements.get('leaveDialog').hidden,true,'no confirmation after the round has ended');
+  assert(c.sent.some(m=>m.type==='leave'));assert.equal(c.run('joined'),false);
+  assert.equal(doc.fullscreenElement,null);assert(doc.body.classList.contains('in-lobby'));
+});
+
+test('how to play opens over the page, jumps between topics, blocks driving keys and closes',()=>{
+  const c=client(false),body=c.sandbox.document.body,key=code=>c.windowEvents.keydown({code,preventDefault(){},target:{}});
+  c.sandbox.HTMLInputElement=class{};
+  c.elements.get('howToPlay').events.click();
+  assert.equal(c.elements.get('tutorial').hidden,false);assert(body.classList.contains('tutorial-open'));
+  key('KeyW');assert.equal(c.run('keys.size'),0,'tank does not drive behind the tutorial');
+  let scrolled=null;c.sandbox.document.getElementById('lessonBounce').scrollIntoView=options=>{scrolled=options;};
+  c.elements.get('tutorialNav').events.click({target:{closest:()=>({dataset:{lesson:'lessonBounce'}})}});
+  assert.equal(scrolled.block,'start');
+  key('Escape');assert.equal(c.elements.get('tutorial').hidden,true);assert(!body.classList.contains('tutorial-open'));
+  key('KeyW');assert.equal(c.run('keys.has("KeyW")'),true);
+  c.elements.get('howToPlay').events.click();c.elements.get('closeTutorial').events.click();
+  assert.equal(c.elements.get('tutorial').hidden,true);
+});

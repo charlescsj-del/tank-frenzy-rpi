@@ -135,3 +135,16 @@ test('ended rooms stay listed but cannot trap a new joiner after the vote closes
   assert.equal(room.players.size,2);assert.equal(room.phase,'postgame');
   b.emit('message',JSON.stringify({type:'rematch'}));assert.equal(room.phase,'postgame');
 });
+
+test('tutorial screenshots are served as cached WebP images',async()=>{
+  const s=server(),root=require('node:path').join(__dirname,'..');
+  const images=[...fs.readFileSync(require('node:path').join(root,'index.html'),'utf8').matchAll(/src="\.\/(tutorial\/[^"]+\.webp)"/g)].map(m=>m[1]);
+  assert.equal(images.length,6);
+  for(const image of images){
+    const response=await s.read('/'+image);
+    assert.equal(response.status,200);assert.equal(response.headers['Content-Type'],'image/webp');
+    assert.match(response.headers['Cache-Control'],/max-age=86400/);
+    assert.deepEqual(response.body,fs.readFileSync(require('node:path').join(root,image)));
+  }
+  assert.equal((await s.read('/tutorial/missing.webp')).status,404);
+});

@@ -2,7 +2,7 @@
 
 Install Tank Frenzy as a Home Assistant app (formerly called an add-on). The Pi hosts the multiplayer game; players use Safari, Edge, Chrome, or another modern browser on their phones, tablets, or computers. Rendering and sound run on each player's device.
 
-Based on **Tank Frenzy v1.8.0** from the [main game repository](https://github.com/charlescsj-del/tank-frenzy/commit/936d4d743a3ba46f3e7524a93e94da83b9343038). Includes the animated winner screen, 20-second unanimous rematch vote, compact phone Create/Join forms, and approved music and effects. The Pi app provides separate Home Assistant sidebar and LAN listeners.
+Based on **Tank Frenzy v1.8.0** from the [main game repository](https://github.com/charlescsj-del/tank-frenzy/commit/936d4d743a3ba46f3e7524a93e94da83b9343038), with the v1.9.0 interface update made here: a large illustrated room-browser header, a How to Play guide with screenshots, a halo around your own tank, Leave Room on the result card and automatic fullscreen when joining or starting. Includes the animated winner screen, 20-second unanimous rematch vote, compact phone Create/Join forms, and approved music and effects. The Pi app provides separate Home Assistant sidebar and LAN listeners.
 
 ## Install
 
@@ -50,4 +50,4 @@ docker run --rm -p 8765:8765 tank-frenzy-rpi
 
 Run the build on the intended architecture (or use Docker Buildx with `--platform linux/arm64`). The repository includes CI for tests and ARM64/AMD64 container builds. A physical Pi/Home Assistant installation and mobile play must still be checked on the target device; automated tests do not establish Pi performance under load.
 
-App package version: **1.8.0**. Game version: **1.8.0**. Bump `config.yaml` for future app updates and keep the Dockerfile default build version in sync.
+App package version: **1.9.0**. Game version: **1.9.0**. Bump `config.yaml` for future app updates and keep the Dockerfile default build version in sync.

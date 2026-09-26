@@ -57,3 +57,21 @@ test('local movement audio, local and opponent firing, and stop/mute behavior',(
     assert(projected.length>0);assert(projected.every(p=>p.z===0),'pickup art and its shadow use the real ground center');project=originalProject;
   `,sandbox);
 });
+
+test('your own tank has a thick translucent halo; opponents and wrecks do not',()=>{
+  const strokes=[],state={};
+  const context=new Proxy({createLinearGradient:()=>({addColorStop(){}}),measureText:()=>({width:20}),stroke(){strokes.push({...state});}},
+    {get:(target,key)=>key in target?target[key]:key in state?state[key]:()=>{},set:(target,key,value)=>{state[key]=value;return true;}});
+  const element=()=>({style:{setProperty(){}},classList:{add(){},remove(){},toggle(){}},addEventListener(){},setAttribute(){},replaceChildren(){},append(){},focus(){},getBoundingClientRect:()=>({width:1120,height:610}),getContext:()=>context});
+  const elements=new Map();
+  const sandbox={FIELD:require('../shared.js'),URL,performance:{now:()=>100},location:{href:'http://localhost:8765',origin:'http://localhost:8765',hostname:'localhost'},document:{hidden:false,body:element(),getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},createElement:element,addEventListener(){}},window:{addEventListener(){}},matchMedia:()=>({matches:false}),ResizeObserver:class{observe(){}},devicePixelRatio:1,setInterval(){},setTimeout(){},clearTimeout(){},requestAnimationFrame(){},fetch:()=>new Promise(()=>{}),WebSocket:{OPEN:1}};
+  vm.createContext(sandbox);vm.runInContext(fs.readFileSync('client.js','utf8'),sandbox);
+  const halo=tank=>{strokes.length=0;vm.runInContext('drawTank('+JSON.stringify(tank)+')',sandbox);return strokes.filter(s=>s.lineWidth>=6);};
+  vm.runInContext("myId='me'",sandbox);
+  const base={slot:2,x:800,y:500,a:0,aim:0,hp:10,recoil:0,flash:0,life:1,name:'Tank'};
+  const own=halo({...base,id:'me'});
+  assert.equal(own.length,2);assert(own.every(s=>s.globalAlpha>0&&s.globalAlpha<1));
+  assert.equal(own.at(-1).strokeStyle,sandbox.FIELD.palette[2].body);
+  assert.equal(halo({...base,id:'other'}).length,0);
+  assert.equal(halo({...base,id:'me',hp:0}).length,0);
+});

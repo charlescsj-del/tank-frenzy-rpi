@@ -42,13 +42,11 @@
 #roomPlayers{max-height:90px;overflow-y:auto;padding-left:20px;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
 #joinSelected{width:100%}.primary:disabled{cursor:default}
 #browseRooms{margin-top:12px}
-.mode-banner{display:block;width:100%;height:130px;object-fit:cover;border-radius:8px;margin-bottom:10px}
-.in-lobby .intro,.in-lobby .bottom,.in-lobby footer{display:none}
+.in-lobby .bottom,.in-lobby footer{display:none}
 .game.lobby-open{margin-top:16px}
 .game.lobby-open .arena-header,.game.lobby-open .battlebar,.game.lobby-open canvas,.game.lobby-open .stage-label{display:none}
 .game.lobby-open .overlay{position:relative;padding:16px;background:#d9dfca}
 .game.lobby-open .dialog{width:min(560px,100%);max-height:none;overflow:visible}
-.game.lobby-open .mode-banner{height:clamp(130px,25vw,210px)}
 .mode-choices{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
 .mode-card{padding:14px 8px;min-height:70px;border:2px solid #c7ceba;border-radius:8px;background:#f2eedf;color:#344632;font-weight:bold}
 .mode-card small{display:block;margin-top:5px;font-weight:normal;font-size:11px}
@@ -82,7 +80,7 @@
 .overlay{z-index:3;overflow:auto}.dialog{margin:auto}.join-fields input{font-size:16px}
 @media(pointer:coarse) and (hover:none){
   .thumb-controls{display:block}.tool{min-height:44px;min-width:44px}
-  .page{padding:12px}.intro{padding:16px 0}.intro h1{font-size:32px}
+  .page{padding:12px}
   .room-strip{flex-wrap:wrap}.room-actions{margin-left:auto}
   .stage canvas{aspect-ratio:1.05}.stage-label{top:12px;left:12px}.stage-label span{display:none}
   .arena-tools{top:6px;right:8px}.battlebar>span:last-child{display:none}
@@ -154,7 +152,7 @@ button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visi
 .overlay{background:#37543433}.dialog{background:#fffbebf5;border:2px solid #acbc8a;border-radius:22px;box-shadow:0 6px 0 #839860,0 18px 38px #3b572a25;padding:24px 28px;backdrop-filter:blur(8px)}
 .dialog h2{font-weight:1000;letter-spacing:-1px;color:#365c4c;font-size:32px}.dialog p{color:#69795e;font-size:13px;line-height:1.6}.dialog .eyebrow{color:#a96637;font-weight:900;letter-spacing:1.4px}
 .game.lobby-open .overlay{padding:24px 16px 30px;background:radial-gradient(ellipse at 50% 0%,#eaf3c6,#c9e1a4)}
-.game.lobby-open .dialog{width:min(600px,100%)}.game.lobby-open .mode-banner{height:clamp(150px,25vw,210px);border:3px solid #fff7d4;border-radius:17px;box-shadow:0 3px 0 #d1dcb4}
+.game.lobby-open .dialog{width:min(600px,100%)}
 .room-browser{margin-top:16px}.mode-choices{gap:12px;margin:16px 0}.mode-card{position:relative;border:2px solid #aabd91;border-radius:15px;min-height:84px;background:#f0f3dd;font-size:15px;letter-spacing:.2px;box-shadow:0 4px 0 #aabd91;padding:16px 8px 12px}
 .mode-card[aria-pressed=true]{border-color:#bf7537;background:#ffe4a2;box-shadow:0 4px 0 #bf7537}.mode-card[aria-pressed=true]::after{content:'★';position:absolute;right:8px;top:4px;font-size:13px;color:#aa652d}
 .mode-card small{font-size:11px;font-weight:700;opacity:.8}.mode-emblem{font-size:25px;line-height:1;display:block;margin-bottom:7px;color:#df793b;letter-spacing:-6px;padding-right:6px}#teamMode .mode-emblem{color:#3896bd}
@@ -216,15 +214,12 @@ button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visi
 @media(max-height:440px){.results-card{padding:6px 16px}.results-tank{width:52px;height:52px}.results-screen h2{font-size:30px}.results-screen .results-outcome{margin:0}.results-screen .primary{min-height:40px}.results-screen .results-timer{margin:3px 0 0}}
 @media(prefers-reduced-motion:reduce){.results-card,.results-tank,.results-card:before,.results-card:after{animation:none}}
 /* Create/Join uses the available page height without changing the room browser. */
-.in-room-form .intro{padding:12px 0}.in-room-form .intro .eyebrow,.in-room-form .intro p:last-child,.in-room-form .bottom,.in-room-form footer{display:none}
-.in-room-form .intro h1{font-size:clamp(18px,2.8vw,25px);letter-spacing:-.6px;line-height:1.15}
-.in-room-form .intro h1 br{display:none}.in-room-form .intro h1 span{font-weight:900;padding-left:.3em}
+.in-room-form .bottom,.in-room-form footer{display:none}
 .game.room-form-open .arena-header,.game.room-form-open .battlebar,.game.room-form-open canvas,.game.room-form-open .stage-label{display:none}
 .game.room-form-open .overlay{position:relative;padding:12px;background:radial-gradient(ellipse at top,#eaf3c6,#c9e1a4)}
 .game.room-form-open .dialog{width:min(520px,100%);max-height:none;overflow:visible}
 @media(max-width:570px){
   .in-room-form .page{padding-top:6px}.in-room-form .masthead{padding:3px 0 6px}.in-room-form .brand{font-size:23px}
-  .in-room-form .intro{padding:8px 2px}.in-room-form .intro h1{font-size:17px;letter-spacing:-.4px}
   .game.room-form-open .overlay{padding:7px}.game.room-form-open .dialog{padding:12px 12px 10px}
   .game.room-form-open .dialog .eyebrow{display:none}.game.room-form-open .dialog h2{font-size:23px;margin:0 0 3px}
   .game.room-form-open .dialog>p{font-size:11px;line-height:1.35;margin:0 0 8px}
@@ -236,6 +231,58 @@ button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visi
   .game.room-form-open #networkNote{display:none}
 }
 @media(pointer:coarse) and (hover:none){.game.mobile-active .room-actions{width:min(340px,calc(100vw - 16px))}.game.waiting-room .waiting-panel{min-height:100%;padding:18px 12px}.game.waiting-room .arena-header{grid-template-columns:minmax(0,1fr) 44px}.game.waiting-room .arena-menu-button{grid-column:2}}
+/* One header on every screen: the room browser shows it as a large illustrated hero;
+   forms, waiting rooms and battles keep the same tagline on one compact line. */
+.intro{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0}
+.intro .eyebrow,.intro-side p,.hero-art{display:none}
+.intro h1{font-size:clamp(18px,2.8vw,25px);letter-spacing:-.6px;line-height:1.15}
+.intro h1 br{display:none}.intro h1 span{font-weight:900;padding-left:.3em}
+.intro-side{display:flex;align-items:center;gap:18px;flex-shrink:0}#howToPlay{white-space:nowrap}
+.in-lobby .intro{position:relative;display:block;margin-top:18px;padding:0;overflow:hidden;border:3px solid #fff7d4;border-radius:26px;background:#c9e4a4;box-shadow:0 7px 0 #a5b985,0 18px 40px #536f3528}
+.in-lobby .hero-art{display:block;width:100%;height:clamp(250px,36vw,500px);object-fit:cover;object-position:50% 40%}
+.in-lobby .intro-copy{position:absolute;left:0;right:0;bottom:0;padding:100px clamp(18px,3vw,36px) clamp(16px,2.4vw,30px);background:linear-gradient(to top,#1f3a24e0,#1f3a2488 45%,#1f3a2400);pointer-events:none}
+.in-lobby .intro .eyebrow{display:block;margin:0 0 8px;color:#fff1c2;text-shadow:0 1px 3px #10200f}
+.in-lobby .intro h1{font-size:clamp(34px,5.4vw,72px);letter-spacing:-2px;line-height:1;color:#fff9e3;text-shadow:0 4px 0 #2b4a34,0 10px 24px #10200f80}
+.in-lobby .intro h1 br{display:inline}.in-lobby .intro h1 span{padding:0;color:#ffc163}
+.in-lobby .intro-side{position:absolute;right:clamp(16px,3vw,36px);bottom:clamp(16px,2.4vw,30px);flex-direction:column;align-items:flex-end;gap:12px;text-align:right}
+.in-lobby .intro-side p{display:block;margin:0;max-width:300px;color:#fff6dd;font-size:13px;font-weight:700;line-height:1.6;text-shadow:0 1px 3px #10200f}
+.in-lobby #howToPlay{min-height:48px;padding:12px 22px;font-size:14px;border-color:#ae582d;background:#ffe4a2;color:#3d3926;box-shadow:0 4px 0 #ae582d}
+@media(max-width:760px){.in-lobby .intro-side p{display:none}}
+@media(max-width:570px){
+  .intro{padding:8px 2px}.intro h1{font-size:17px;letter-spacing:-.4px}
+  .in-lobby .intro{margin-top:4px;border-radius:20px}.in-lobby .hero-art{height:250px}.in-lobby .intro h1{font-size:36px}
+  .in-lobby .intro-side{top:12px;right:12px;bottom:auto}.in-lobby #howToPlay{min-height:40px;padding:8px 14px;font-size:12px}
+}
+/* Result card: Rematch and Leave Room side by side. */
+.results-actions{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px}
+.results-screen .results-actions .primary{min-width:min(220px,100%)}
+#resultsLeave{min-height:48px;padding:10px 20px;font-size:14px;border-radius:14px}
+@media(max-height:440px){#resultsLeave{min-height:40px}}
+/* How to play: a scrollable lesson sheet over the page. */
+.tutorial-open{overflow:hidden}
+.tutorial{position:fixed;inset:0;z-index:1500;display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));background:#1c3320a6}
+.tutorial-card{display:flex;flex-direction:column;width:min(1000px,100%);max-height:100%;overflow:hidden;border:3px solid #fbe9a9;border-radius:26px;background:#fffbeb;box-shadow:0 8px 0 #82995f,0 24px 50px #1c351088}
+.tutorial-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 24px 8px}
+.tutorial-head .eyebrow{margin:0 0 4px;color:#a96637}
+.tutorial-head h2{margin:0;font:1000 clamp(26px,4vw,38px)/1.05 var(--round-font);color:#365c4c;letter-spacing:-1px}
+.tutorial-nav{display:flex;gap:8px;flex-shrink:0;overflow-x:auto;padding:6px 24px 14px;border-bottom:2px dashed #d8dfb9}
+.tutorial-nav button{flex-shrink:0;border:2px solid #becda3;border-radius:999px;background:#f3f5df;color:#47634e;padding:7px 13px;font-size:12px}
+.tutorial-body{display:grid;gap:18px;overflow-y:auto;overscroll-behavior:contain;padding:18px 24px 24px}
+.lesson{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;align-items:center;padding:16px;border:2px solid #d3deb8;border-radius:20px;background:#fffdf0;scroll-margin-top:12px}
+.lesson:nth-child(even)>img{order:2}
+.lesson>img{display:block;width:100%;height:auto;border:3px solid #fff7d4;border-radius:14px;background:#badc91;box-shadow:0 3px 0 #c9d6a9}
+.lesson .eyebrow{margin:0;color:#a96637}
+.lesson h3{margin:4px 0 8px;font:1000 23px/1.15 var(--round-font);color:#365c4c;letter-spacing:-.4px}
+.lesson ul{margin:0;padding-left:20px;font-size:14px;line-height:1.6;color:#4f6352}.lesson li+li{margin-top:5px}.lesson b{color:#365c4c}
+.lesson kbd{display:inline-block;min-width:24px;padding:1px 6px;border:2px solid #c6cbbc;border-bottom-width:4px;border-radius:7px;background:#fffbea;font:800 12px var(--round-font);text-align:center;color:#365c4c}
+.lesson-powers{grid-template-columns:1fr}.lesson-powers>img{max-width:640px;margin:auto}
+.power-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.power-card{display:grid;grid-template-columns:42px 1fr;gap:10px;align-items:start;padding:10px;border:2px solid #e3e3bd;border-radius:14px;background:#fff9e8}
+.power-card svg{width:42px;height:42px;padding:6px;border-radius:11px;background:var(--power-color);color:#fffdf1;box-shadow:0 3px 0 #52664e33}
+.power-card b{display:block;font-size:14px;color:#365c4c}.power-card small{display:block;margin-top:2px;font-size:12px;line-height:1.45;color:#607454}
+.tutorial-foot{display:flex;justify-content:center;padding:4px 0 2px}
+@media(max-width:760px){.lesson{grid-template-columns:1fr;gap:14px}.lesson:nth-child(even)>img{order:0}.power-cards{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.tutorial{padding:8px}.tutorial-head,.tutorial-body{padding-left:12px;padding-right:12px}.tutorial-nav{padding:6px 12px 12px}.lesson{padding:12px}.lesson h3{font-size:20px}.lesson ul{font-size:13px}.power-cards{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -249,7 +296,7 @@ button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visi
 </defs></svg>
 <main class="page">
 <header class="masthead"><div class="brand" aria-label="Tank Frenzy"><span>TANK</span> FRENZY</div><div class="edition"><span><i class="live-dot"></i>PLAY WITH FRIENDS</span><span>2–4 PLAYERS · ZERO DOWNLOADS</span></div></header>
-<section class="intro"><div><p class="eyebrow">YOUR TANK. YOUR BROWSER. ONE BATTLEFIELD.</p><h1>Small tanks.<br><span>Big rivalries.</span></h1></div><p>Bring your friends into the field.<br><span id="introControls">Move with WASD. Aim with your mouse. Click to fire.</span></p></section>
+<section class="intro"><img class="hero-art" src="./mode-banner.webp" alt="Cartoon tanks facing off in a sunny quarry" width="2048" height="768"><div class="intro-copy"><p class="eyebrow">YOUR TANK. YOUR BROWSER. ONE BATTLEFIELD.</p><h1>Small tanks.<br><span>Big rivalries.</span></h1></div><div class="intro-side"><p>Bring your friends into the field.<br><span id="introControls">Move with WASD. Aim with your mouse. Click to fire.</span></p><button id="howToPlay" class="tool" type="button">HOW TO PLAY</button></div></section>
 <section id="arena" class="game" aria-label="Network tank arena">
 <div id="arenaHeader" class="arena-header">
 <div class="room-strip"><span class="room-title">ROOM <b id="roomCode">QUARRY</b> &nbsp; / &nbsp; <span id="roomCount">0 / 4 PLAYERS</span></span><button id="arenaMenu" class="tool arena-menu-button" aria-expanded="false" aria-controls="arenaActions" aria-label="Arena menu">MENU</button><div id="arenaActions" class="room-actions"><button id="fullscreen" class="tool" aria-pressed="false">FULL SCREEN</button><button id="copy" class="tool">COPY INVITE</button><button id="leave" class="tool" hidden>LEAVE ROOM</button><button id="viewMode" class="tool" aria-pressed="false" hidden>FULL MAP</button><button id="sound" class="tool" aria-pressed="true">EFFECTS ON</button><button id="music" class="tool" aria-pressed="true" aria-label="Background music">MUSIC ON</button><span class="tool" id="latency">OFFLINE</span></div></div>
@@ -262,7 +309,7 @@ button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visi
 <section id="results" class="results-screen" aria-labelledby="resultsTitle" hidden><div class="results-card">
 <svg class="results-tank" viewBox="0 0 120 120" aria-hidden="true"><path d="M60 5 66 20 82 15 77 30 92 40 76 45 78 62 60 54 42 62 44 45 28 40 43 30 38 15 54 20Z" fill="#ffd65a"/><rect x="22" y="73" width="76" height="33" rx="14" fill="#385b43"/><path d="M43 76 55 48h10l12 28" fill="currentColor" stroke="#385b43" stroke-width="5" stroke-linejoin="round"/><rect x="52" y="35" width="16" height="33" rx="5" fill="currentColor" stroke="#385b43" stroke-width="4"/><circle cx="41" cy="90" r="8" fill="#fff3cf"/><circle cx="60" cy="90" r="8" fill="#fff3cf"/><circle cx="79" cy="90" r="8" fill="#fff3cf"/></svg>
 <p class="results-eyebrow">BATTLE COMPLETE!</p><h2 id="resultsTitle">Winner</h2><p id="resultsOutcome" class="results-outcome"></p>
-<p id="resultsVotes" class="results-note"></p><button id="rematch" class="primary" type="button">REMATCH</button><p id="resultsTimer" class="results-timer"></p>
+<p id="resultsVotes" class="results-note"></p><div class="results-actions"><button id="rematch" class="primary" type="button">REMATCH</button><button id="resultsLeave" class="tool" type="button">LEAVE ROOM</button></div><p id="resultsTimer" class="results-timer"></p>
 </div></section>
 <canvas id="game" width="1120" height="610" tabindex="0" aria-label="Tank arena. Use W A S D to move, point the mouse to aim, and hold left click to fire."></canvas>
 <div class="stage-label"><b id="mapLabel">RANDOM MAP / NEW EACH MATCH</b><span>1600 x 1040 / 0.42 SECOND RELOAD</span></div>
@@ -275,7 +322,6 @@ button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visi
 <div id="overlay" class="overlay"><div class="dialog">
 <div id="dialogTag" class="eyebrow">ASSEMBLE YOUR RIVALS</div><h2 id="dialogTitle">Join the field.</h2><p id="dialogText">For 2-4 players, each in their own browser. Share a room code and explore a new random battlefield each match.</p>
 <section id="roomBrowser" class="room-browser" hidden aria-label="Available rooms">
-<img class="mode-banner" src="./mode-banner.webp" alt="Cartoon tanks facing off in a sunny quarry" width="2048" height="768">
 <div class="mode-choices" role="group" aria-label="Game mode"><button id="ffaMode" class="mode-card" type="button" aria-pressed="true"><span class="mode-emblem" aria-hidden="true">✦</span>FREE-FOR-ALL<small>Every tank for itself</small></button><button id="teamMode" class="mode-card" type="button" aria-pressed="false"><span class="mode-emblem" aria-hidden="true">★ ★</span>2 VS 2<small>Team up. No friendly fire.</small></button></div>
 <details class="power-guide"><summary>Power-up guide</summary><div class="power-legend">
 <span style="--power-color:#ef628b"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-laser" x="0" y="0" width="32" height="32"/></svg><b>Laser</b><small>4 damage · clears bullets</small></span>
@@ -307,6 +353,56 @@ button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visi
 </section>
 <footer><span>FIRST TO 10 / 2 - 4 PLAYERS / NO INSTALL FOR FRIENDS</span><span>TANK FRENZY &copy; 2026</span></footer>
 </main>
+<section id="tutorial" class="tutorial" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" hidden><div class="tutorial-card">
+<header class="tutorial-head"><div><p class="eyebrow">BOOT CAMP</p><h2 id="tutorialTitle">How to play</h2></div><button id="closeTutorial" class="tool" type="button" aria-label="Close how to play">CLOSE ✕</button></header>
+<nav id="tutorialNav" class="tutorial-nav" aria-label="Tutorial topics"><button type="button" data-lesson="lessonWin">How to win</button><button type="button" data-lesson="lessonPc">PC controls</button><button type="button" data-lesson="lessonMobile">Phone controls</button><button type="button" data-lesson="lessonFind">Find your tank</button><button type="button" data-lesson="lessonBounce">Bouncing bullets</button><button type="button" data-lesson="lessonPowers">Power-ups</button></nav>
+<div id="tutorialBody" class="tutorial-body">
+<article id="lessonWin" class="lesson"><img src="./tutorial/win.webp" alt="Winner card: Alice wins, with Rematch and Leave Room buttons" width="1156" height="814" loading="lazy"><div><p class="eyebrow">1 · HOW TO WIN</p><h3>First to 10 kills.</h3><ul>
+<li><b>Free-for-All:</b> every tank for itself. The first player to <b>10 kills</b> wins.</li>
+<li><b>2 vs 2:</b> teams are balanced automatically. Kills add to your team score; the first team to <b>10</b> wins. Teammates cannot hurt each other.</li>
+<li>Every tank has <b>10 health</b>, shown as five pips (one pip = two hits). A shell does 1 damage; a laser does 4.</li>
+<li>Destroyed tanks respawn after <b>3 seconds</b> with 3 seconds of protection (the tank blinks).</li>
+<li>After the win, everyone has <b>20 seconds</b> to press <b>Rematch</b>. All players must agree, or press <b>Leave Room</b> to pick another battle.</li>
+</ul></div></article>
+<article id="lessonPc" class="lesson"><img src="./tutorial/pc-controls.webp" alt="Desktop battle: a tank driving with a dashed aim line toward the mouse pointer" width="1156" height="814" loading="lazy"><div><p class="eyebrow">2 · PC CONTROLS</p><h3>Drive, point, click.</h3><ul>
+<li><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> drive up, left, down and right. Hold two keys to move diagonally.</li>
+<li>The turret follows your <b>mouse</b>, separate from the direction you drive.</li>
+<li><b>Hold left click</b> to keep firing: one shell every 0.42 seconds.</li>
+<li>The dashed line shows where your next shot heads, up to the first wall.</li>
+<li>The game goes full screen when you join. Press <kbd>Esc</kbd> to exit.</li>
+</ul></div></article>
+<article id="lessonMobile" class="lesson"><img src="./tutorial/mobile-controls.webp" alt="Phone in landscape with the left move stick and right aim-and-fire stick" width="1295" height="540" loading="lazy"><div><p class="eyebrow">3 · PHONE &amp; TABLET</p><h3>Two thumbs. Full control.</h3><ul>
+<li><b>Left stick:</b> drag to drive. Let go to stop.</li>
+<li><b>Right stick:</b> drag toward a target to aim. Your tank keeps firing while you hold it; let go to stop.</li>
+<li>The camera follows your tank. Open <b>Menu</b> for <b>Full Map</b>, sound, invites and Leave Room.</li>
+<li>Turn your phone sideways for a wider battlefield.</li>
+</ul></div></article>
+<article id="lessonFind" class="lesson"><img src="./tutorial/find-tank.webp" alt="Close-up: your tank has a thick glowing ring and a star after its name" width="1152" height="628" loading="lazy"><div><p class="eyebrow">4 · FIND YOUR TANK</p><h3>Look for the glowing ring.</h3><ul>
+<li>Your tank has a <b>thick glowing ring</b> in your color. Other tanks don't.</li>
+<li>Your name tag ends with a <b>★</b>, and your score card has a colored edge.</li>
+<li>After you respawn, the ring shows where you came back.</li>
+</ul></div></article>
+<article id="lessonBounce" class="lesson"><img src="./tutorial/bouncing.webp" alt="A shell ricochets off two walls to hit a tank behind cover" width="1152" height="628" loading="lazy"><div><p class="eyebrow">5 · BOUNCING BULLETS</p><h3>Bank shots around cover.</h3><ul>
+<li>Shells bounce off walls and arena edges, up to <b>6 times</b>. Use bounces to hit tanks hiding behind cover.</li>
+<li>Your own shells never hurt you. In 2 vs 2, shells pass through teammates.</li>
+<li>Enemy shells that touch yours destroy each other, so you can shoot down incoming fire.</li>
+<li>The room creator can turn <b>Bullet bouncing</b> off; shells then disappear when they hit a wall.</li>
+</ul></div></article>
+<article id="lessonPowers" class="lesson lesson-powers"><img src="./tutorial/power-ups.webp" alt="Power-up tokens on the field, a laser beam and an Immortal tank with orbiting stars" width="1152" height="628" loading="lazy"><div><p class="eyebrow">6 · POWER-UPS</p><h3>Drive over a token to grab it.</h3><ul>
+<li>Tokens appear every 12 seconds (two at most) and vanish after 20 seconds. A wall between you and a token blocks it.</li>
+<li>Timed powers last <b>10 seconds</b>. A new one replaces your current power, and dying ends it. The badge in the top-left corner shows the time left.</li>
+<li>The room creator can turn <b>Super powers</b> off.</li>
+</ul>
+<div class="power-cards">
+<span class="power-card" style="--power-color:#ef628b"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-laser" x="0" y="0" width="32" height="32"/></svg><span><b>Laser</b><small>An instant beam that does 4 damage, wipes out enemy shells in its path and stops at the first tank or wall.</small></span></span>
+<span class="power-card" style="--power-color:#a279f5"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-double" x="0" y="0" width="32" height="32"/></svg><span><b>Double cannon</b><small>Each shot fires two shells side by side.</small></span></span>
+<span class="power-card" style="--power-color:#f2b931"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-speed" x="0" y="0" width="32" height="32"/></svg><span><b>Speed</b><small>Drive 60% faster to dodge, chase or grab tokens first.</small></span></span>
+<span class="power-card" style="--power-color:#3fb5cc"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-machine" x="0" y="0" width="32" height="32"/></svg><span><b>Machine gun</b><small>Rapid fire: a shell every 0.12 seconds instead of 0.42.</small></span></span>
+<span class="power-card" style="--power-color:#e8b933"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-immortal" x="0" y="0" width="32" height="32"/></svg><span><b>Immortal</b><small>Shells and lasers can't damage you for 10 seconds. You can still drive and fire.</small></span></span>
+<span class="power-card" style="--power-color:#ffe0e4"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-restore" x="0" y="0" width="32" height="32"/></svg><span><b>Restore</b><small>Instantly refills your health to 10 and keeps any power you already have.</small></span></span>
+</div></div></article>
+<div class="tutorial-foot"><button id="tutorialDone" class="primary" type="button">GOT IT, LET'S PLAY</button></div>
+</div></div></section>
 <small id="versionBadge" aria-label="Game version"></small>
 <script src="./shared.js"></script>
 <script src="./sound-bank.js"></script>
