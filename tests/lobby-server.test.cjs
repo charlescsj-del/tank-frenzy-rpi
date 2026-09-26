@@ -33,7 +33,8 @@ function server(options={}){
     response.on('finish',()=>resolve({status,headers,body:Buffer.concat(chunks)}));response.on('error',reject);
     game.server.emit('request',{url,method,headers:requestHeaders},response);
   });}
-  return {game,join,list,read};
+  function watch(room,pass){const socket=new Socket();game.wss.emit('connection',socket);socket.emit('message',JSON.stringify({type:'spectate',room,pass}));return socket;}
+  return {game,join,list,read,watch};
 }
 
 test('approved audio is served with the right type/cache policy and unrelated files stay private',async()=>{
@@ -200,4 +201,28 @@ test('/admin stops accepting passwords after 20 wrong guesses in a minute',async
   const s=server({adminPassword:'tank-secret'}),auth=password=>({authorization:'Basic '+Buffer.from('x:'+password).toString('base64')});
   for(let i=0;i<20;i++)assert.equal((await s.read('/admin/state',{headers:auth('guess'+i)})).status,401);
   assert.equal((await s.read('/admin/state',{headers:auth('tank-secret')})).status,429,'even the right password waits out the minute');
+});
+
+test('the admin page can live at a private address, and /admin then does not exist',async()=>{
+  const s=server({adminPassword:'tank-secret',adminPath:'hq-7f3k'}),auth={authorization:'Basic '+Buffer.from('x:tank-secret').toString('base64')};
+  assert.equal((await s.read('/admin',{headers:auth})).status,404);assert.equal((await s.read('/admin/state',{headers:auth})).status,404);
+  assert.equal((await s.read('/hq-7f3k',{headers:auth})).status,200);assert.equal((await s.read('/hq-7f3k/state',{headers:auth})).status,200);
+  assert.equal((await s.read('/hq-7f3k')).status,401);
+});
+
+test('hidden spectators watch a room without appearing to its players, and leave when it ends',async()=>{
+  const s=server({adminPassword:'tank-secret'}),auth={authorization:'Basic '+Buffer.from('x:tank-secret').toString('base64'),'x-tank-admin':'1'};
+  const ann=s.join('ALPHA','create','Ann');s.join('ALPHA','join','Bo');
+  assert.equal((await s.read('/admin/watch?room=ALPHA',{method:'POST',headers:{authorization:auth.authorization}})).status,404,'needs the admin header');
+  const {pass}=JSON.parse((await s.read('/admin/watch?room=ALPHA',{method:'POST',headers:auth})).body.toString());
+  const bad=s.watch('ALPHA','wrong');assert.equal(bad.messages[0].type,'error');assert.equal(bad.readyState,3);
+  const spy=s.watch('ALPHA',pass);
+  assert.equal(spy.messages[0].type,'spectating');const view=spy.messages[1];
+  assert.equal(view.type,'state');assert.deepEqual(view.players.map(p=>p.name).sort(),['Ann','Bo'],'sees the players');assert(view.map,'gets the map');
+  const room=s.game.rooms.get('ALPHA');assert.equal(room.players.size,2,'not added as a player');
+  assert.equal(s.list().body.rooms[0].available,2,'open seats unchanged');
+  assert.equal(JSON.parse(JSON.stringify(room.snapshot())).players.length,2,'players never receive the spectator');
+  spy.emit('message',JSON.stringify({type:'join',room:'ALPHA',name:'Sneaky'}));assert.equal(room.players.size,2,'a spectator socket cannot also join');
+  await s.read('/admin/close?room=ALPHA',{method:'POST',headers:auth});
+  assert.equal(spy.messages.at(-1).title,'Room closed');assert.equal(spy.readyState,3);assert.equal(ann.messages.at(-1).title,'Room closed');
 });

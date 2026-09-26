@@ -388,14 +388,15 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .leaderboard-card{width:min(600px,100%);height:auto;max-height:100%}
 .leaderboard-body{overflow:auto;padding:12px 20px 18px}.leaderboard-body .results-board td:nth-child(2),.leaderboard-body .results-board th:nth-child(2){text-align:left}
 .leaderboard-body .results-board th:first-child,.leaderboard-body .results-board td:first-child{width:2em;text-align:center}
-/* Leaderboard periods and region filter; Admin link for the Home Assistant sidebar. */
+/* Hidden spectators only get view controls. */
+.spectating #copy,.spectating #latency,.spectating #rematch{display:none}
+/* Leaderboard periods and region filter. */
 .leaderboard-filters{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
 .period-tabs{display:flex;flex-wrap:wrap;gap:6px}
 .period-tabs button{min-height:36px;padding:4px 12px;border:2px solid #becda3;border-radius:999px;background:#f3f5df;color:#47634e;font-size:12px}
 .period-tabs button[aria-pressed=true]{border-color:#bf7537;background:#ffe4a2;color:#6d3a14}
 .region-filter{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:900;color:#47634e}
 .region-filter select{min-height:36px;max-width:190px;padding:4px 8px;border:2px solid #bdcda4;border-radius:10px;background:#fffcdf;color:#385740;font:800 13px var(--round-font)}
-.admin-link{min-height:36px;padding:6px 12px;font-size:12px;text-decoration:none}
 @media(orientation:portrait) and (max-width:900px),(max-width:640px){.in-lobby #leaderboardButton{min-height:40px;min-width:44px;font-size:18px}}
 /* Kill feed and streak banner over the arena. */
 .kill-feed{position:absolute;top:10px;right:12px;z-index:2;display:grid;justify-items:end;gap:4px;margin:0;padding:0;list-style:none;pointer-events:none}
@@ -425,7 +426,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 <symbol id="power-restore" viewBox="-16 -16 32 32"><path d="M0 12C-23-2-9-19 0-7 9-19 23-2 0 12" fill="#e94d5c"/></symbol>
 </defs></svg>
 <main class="page">
-<header class="masthead"><div class="brand" aria-label="Tank Frenzy"><span>TANK</span> FRENZY</div><a id="adminLink" class="tool admin-link" href="admin" hidden>ADMIN</a></header>
+<header class="masthead"><div class="brand" aria-label="Tank Frenzy"><span>TANK</span> FRENZY</div></header>
 <section class="intro"><small id="versionBadge" aria-label="Game version"></small><img class="hero-art" src="./mode-banner.webp" alt="Cartoon tanks facing off in a sunny quarry" width="2048" height="768"><div class="intro-copy"><p class="eyebrow">YOUR TANK. YOUR BROWSER. ONE BATTLEFIELD.</p><h1>Small tanks.<br><span>Big rivalries.</span></h1></div><div class="intro-side"><p>Bring your friends into the field.<br><span id="introControls">Move with WASD. Aim with your mouse. Click to fire.</span></p><button id="leaderboardButton" class="tool" type="button" aria-label="Leaderboard">🏆</button><button id="howToPlay" class="tool" type="button">HOW TO PLAY</button></div></section>
 <section id="arena" class="game" aria-label="Network tank arena">
 <div id="arenaHeader" class="arena-header">

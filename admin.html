@@ -40,8 +40,8 @@ button.danger{border-color:#c46a4a;background:#ffe5da;color:#9b3b1d}
 <main id="rooms" aria-live="polite"></main>
 <script>
 'use strict';
-// Paths are relative to wherever the game is served (LAN, Cloudflare or the Home Assistant sidebar).
-const base=location.pathname.replace(/admin\/?$/,'');
+// The admin page can live at any private address; the game itself is one level up.
+const adminRoot=location.pathname.replace(/\/+$/,''),base=adminRoot.slice(0,adminRoot.lastIndexOf('/')+1);
 const $=id=>document.getElementById(id);
 const flag=code=>code?String.fromCodePoint(...[...code].map(c=>127397+c.charCodeAt(0))):'';
 const phaseNames={waiting:'Waiting',countdown:'Starting',playing:'Playing',results:'Rematch vote',postgame:'Ended'};
@@ -52,11 +52,22 @@ function card(code){
   if(cards.has(code))return cards.get(code);
   const canvas=el('canvas',{width:480,height:312});
   const head=el('div',{className:'room-head'}),table=el('table'),actions=el('div',{className:'actions'});
-  const open=el('a',{className:'button',href:base+'?room='+encodeURIComponent(code),target:'_blank',rel:'noopener',textContent:'Open room'});
+  // Watch opens the real match view as a hidden spectator in a new tab.
+  const open=el('button',{type:'button',textContent:'👁 Watch live'});
+  open.addEventListener('click',async()=>{
+    const tab=window.open('about:blank','_blank');
+    try{
+      const response=await fetch(adminRoot+'/watch?room='+encodeURIComponent(code),{method:'POST',headers:{'X-Tank-Admin':'1'}});
+      if(!response.ok)throw Error();
+      const {pass}=await response.json();
+      const target=base+'?spectate='+encodeURIComponent(code)+'&pass='+encodeURIComponent(pass);
+      if(tab)tab.location.href=target;else location.href=target;
+    }catch{tab?.close();alert('That room has ended.');refresh();}
+  });
   const end=el('button',{className:'danger',type:'button',textContent:'End room'});
   end.addEventListener('click',async()=>{
     if(!confirm('End room '+code+'? Everyone in it returns to the room browser.'))return;
-    await fetch(base+'admin/close?room='+encodeURIComponent(code),{method:'POST',headers:{'X-Tank-Admin':'1'}});refresh();
+    await fetch(adminRoot+'/close?room='+encodeURIComponent(code),{method:'POST',headers:{'X-Tank-Admin':'1'}});refresh();
   });
   actions.append(open,end);
   const node=el('article',{className:'room'},head,canvas,table,actions);
@@ -104,7 +115,7 @@ let timer;
 async function refresh(){
   clearTimeout(timer);
   try{
-    const response=await fetch(base+'admin/state',{cache:'no-store'});
+    const response=await fetch(adminRoot+'/state',{cache:'no-store'});
     if(response.status===401){location.reload();return;}
     if(!response.ok)throw Error(response.status);
     render(await response.json());

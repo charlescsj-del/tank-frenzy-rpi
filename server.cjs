@@ -21,7 +21,13 @@ function ingressBase(req){
 // Cloudflare adds the visitor's country; anything else (or unknown/Tor) is left blank.
 function countryOf(req){const code=String(req?.headers?.['cf-ipcountry']||'').toUpperCase();return /^[A-Z]{2}$/.test(code)&&!['XX','T1'].includes(code)?code:'';}
 const digest=value=>createHash('sha256').update(String(value)).digest();
-function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoomCreated=null,adminPassword=''}={}){
+function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoomCreated=null,adminPassword='',adminPath='admin'}={}){
+  // The admin page lives at a private address of your choosing; nothing in the game links to it.
+  const adminRoot='/'+(/^[A-Za-z0-9_-]{3,64}$/.test(adminPath)?adminPath:'admin');
+  // Hidden spectators watch a room with a short-lived pass from the admin page. They are not
+  // players: they never appear in snapshots, player counts or the room list.
+  const spectators=new Map(),watchPasses=new Map();
+  function closeSpectators(room,title,message){for(const [ws,watch] of spectators)if(watch.room===room){send(ws,{type:'error',title,message});ws.close(1000,title);spectators.delete(ws);}}
   const rooms=new Map(),sessions=new Map(),leaderboard=new Leaderboard(leaderboardFile);
   const files={'/':['index.html','text/html'],'/index.html':['index.html','text/html'],'/client.js':['client.js','text/javascript'],'/shared.js':['shared.js','text/javascript'],'/sound-bank.js':['sound-bank.js','text/javascript'],'/music.js':['music.js','text/javascript'],'/audio/cartoon-v1.mp3':['audio/cartoon-v1.mp3','audio/mpeg'],'/mode-banner.webp':['mode-banner.webp','image/webp']};
   for(const name of ['iron-advance','overdrive','steel-pressure'])files[`/audio/music-${name}-v1.mp3`]=[`audio/music-${name}-v1.mp3`,'audio/mpeg'];
@@ -58,21 +64,29 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
       if(!req[ingressRequest]&&!adminPassword){res.writeHead(404);res.end('Not found');return;}
       res.writeHead(401,{'WWW-Authenticate':'Basic realm="Tank Frenzy admin", charset="UTF-8"'});res.end('Admin password required');return;
     }
-    if(req.method==='GET'&&(url.pathname==='/admin'||url.pathname==='/admin/')){res.setHeader('Content-Type','text/html; charset=utf-8');fs.createReadStream(path.join(__dirname,'admin.html')).pipe(res);return;}
-    if(req.method==='GET'&&url.pathname==='/admin/state'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify(adminState()));return;}
+    const route=url.pathname.slice(adminRoot.length)||'/';
+    if(req.method==='GET'&&route==='/'){res.setHeader('Content-Type','text/html; charset=utf-8');fs.createReadStream(path.join(__dirname,'admin.html')).pipe(res);return;}
+    if(req.method==='GET'&&route==='/state'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify(adminState()));return;}
     // Ending a room needs a custom header, which other websites cannot send without permission.
-    if(req.method==='POST'&&url.pathname==='/admin/close'&&req.headers['x-tank-admin']==='1'){
+    if(req.method==='POST'&&route==='/watch'&&req.headers['x-tank-admin']==='1'){
+      const room=rooms.get(String(url.searchParams.get('room')||''));
+      if(!room){res.writeHead(404);res.end();return;}
+      const pass=randomBytes(18).toString('hex');watchPasses.set(pass,{code:room.code,expires:Date.now()+10*60000});
+      for(const [key,value] of watchPasses)if(value.expires<Date.now())watchPasses.delete(key);
+      res.setHeader('Content-Type','application/json');res.end(JSON.stringify({pass,room:room.code}));return;
+    }
+    if(req.method==='POST'&&route==='/close'&&req.headers['x-tank-admin']==='1'){
       const room=rooms.get(String(url.searchParams.get('room')||''));
       if(!room){res.writeHead(404);res.end();return;}
       for(const [token,session] of sessions)if(session.room===room){send(session.ws,{type:'error',title:'Room closed',message:'The host closed this room. Pick another room or create a new one.'});session.ws.close(1000,'Room closed');sessions.delete(token);}
-      rooms.delete(room.code);res.writeHead(204);res.end();return;
+      closeSpectators(room,'Room closed','You ended this room.');rooms.delete(room.code);res.writeHead(204);res.end();return;
     }
     res.writeHead(404);res.end();
   }
   const server=http.createServer((req,res)=>{
     const url=new URL(req.url,'http://localhost');
     res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
-    if(url.pathname==='/admin'||url.pathname.startsWith('/admin/')){admin(req,res,url);return;}
+    if(url.pathname===adminRoot||url.pathname.startsWith(adminRoot+'/')){admin(req,res,url);return;}
     if(req.method!=='GET'){res.writeHead(405);res.end();return;}
     if(url.pathname==='/health'){
       res.setHeader('Content-Type','application/json');res.end(JSON.stringify({status:'ok',version:require('./package.json').version}));return;
@@ -133,6 +147,12 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
       if(Date.now()-windowStart>1000){count=0;windowStart=Date.now();}if(++count>150){ws.close(1008,'Too many messages');return;}
       let msg;try{msg=JSON.parse(raw.toString());}catch{return;}
       if(!msg||typeof msg!=='object')return;
+      if(msg.type==='spectate'&&!session&&!spectators.has(ws)){
+        const pass=watchPasses.get(String(msg.pass||'')),room=pass&&pass.expires>Date.now()&&rooms.get(pass.code);
+        if(!room||room.code!==String(msg.room||'')){send(ws,{type:'error',title:'Cannot watch this room',message:'The watch link expired or the room has ended. Open a new one from the admin page.'});ws.close();return;}
+        clearTimeout(joinTimeout);spectators.set(ws,{room});send(ws,{type:'spectating',room:room.code});sendRaw(ws,encodeState(room.snapshot()));return;
+      }
+      if(spectators.has(ws))return;
       if(msg.type==='join'&&!session){
         const code=String(msg.room||'QUARRY').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,16)||'QUARRY';
         const existing=typeof msg.token==='string'?sessions.get(msg.token):null;
@@ -164,7 +184,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
       if(msg.type==='ping')send(ws,{type:'pong',sent:msg.sent});
       if(msg.type==='leave'){session.room.remove(session.player);if(session.room.players.size===0)rooms.delete(session.room.code);sessions.delete(session.token);ws.close(1000,'Left room');}
     });
-    ws.on('close',()=>{clearTimeout(joinTimeout);if(session&&session.ws===ws)session.room.disconnect(session.player);});
+    ws.on('close',()=>{clearTimeout(joinTimeout);spectators.delete(ws);if(session&&session.ws===ws)session.room.disconnect(session.player);});
   });
   let last=performance.now(),accumulator=0,tick=0;
   const timer=setInterval(()=>{
@@ -172,12 +192,13 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
     while(accumulator>=1/120){for(const room of rooms.values())room.step(1/120);accumulator-=1/120;}
     if(++tick%2===0){
       for(const room of rooms.values()){
-        if(room.players.size===0){rooms.delete(room.code);continue;}
+        if(room.players.size===0){closeSpectators(room,'Match over','Everyone left this room.');rooms.delete(room.code);continue;}
         // Record each finished match once, when its winner first appears.
         if(room.winner&&!room.recorded){room.recorded=true;leaderboard.record(room);}else if(!room.winner)room.recorded=false;
         // Encode once per room, not once per player; include the map once a second or when it changes.
         const withMap=room.sentMapId!==room.map.id||tick%60===0;room.sentMapId=room.map.id;
-        const snapshot=encodeState(room.snapshot({withMap}));for(const session of sessions.values())if(session.room===room&&session.player.connected)sendRaw(session.ws,snapshot);room.events=[];
+        const snapshot=encodeState(room.snapshot({withMap}));for(const session of sessions.values())if(session.room===room&&session.player.connected)sendRaw(session.ws,snapshot);
+        for(const [ws,watch] of spectators)if(watch.room===room)sendRaw(ws,snapshot);room.events=[];
       }
       for(const [token,s]of sessions)if(!s.room.players.has(s.player.id))sessions.delete(token);
     }

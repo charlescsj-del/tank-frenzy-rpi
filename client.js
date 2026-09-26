@@ -12,7 +12,7 @@ const sticks={move:{id:null,x:0,y:0},aim:{id:null,x:0,y:0}};
 let touchAim=null,expanded=false,mapOverview=false;
 let cssW=1120,cssH=610,scale=1,offsetX=0,offsetY=0;
 let tanks=[],shells=[],particles=[],tracks=[],pickups=[],beams=[],pickupFlashes=[],floaters=[],rings=[],hurt=0,shake=0,last=0,sound=true,audioReady=false,audioContext,soundBank;
-let socket=null,myId=null,token=null,joined=false,connecting=false,intentional=false,retry=0,retryTimer;
+let socket=null,myId=null,token=null,joined=false,spectating=false,connecting=false,intentional=false,retry=0,retryTimer;
 let latest=null,lastEvent=0,seq=0,rosterSignature='',pointer={x:500,y:330,active:false},firing=false,lastSnapshot=0;
 let roomCode=(new URL(location.href).searchParams.get('room')||'').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,16),networkBase=appBase.href.replace(/\/$/,'');
 let lobbyVisible=false,lobbyRooms=[],joinMode=null,roomRequest=0;
@@ -24,7 +24,7 @@ const cueVoices=new Set();
 $('roomInput').value=roomCode;$('roomCode').textContent=roomCode||'—';
 $('versionBadge').textContent='v'+FIELD.version;
 $('versionBadge').setAttribute('aria-label','Tank Frenzy version '+FIELD.version);
-function status(text){$('status').textContent=text;}
+function status(text){$('status').textContent=spectating?'👁 WATCHING (HIDDEN) · '+text:text;}
 function networkMessage(title,text,form=false){
   if(form)leaveFullscreen();
   $('waitingRoom').hidden=true;$('countdown').hidden=true;$('results').hidden=true;$('arena').classList.toggle('waiting-room',false);
@@ -153,8 +153,30 @@ function connect(){
     else{retry=0;networkMessage('Server unavailable.','Start the game server on the host, then join again.',true);}
   });
 }
+// Hidden spectator, opened from the admin page with a short-lived pass. The server never
+// adds spectators to rooms, snapshots or player counts, so players cannot see them.
+function spectate(code,pass){
+  spectating=true;roomCode=code;intentional=false;joined=false;myId=null;clearTimeout(retryTimer);
+  $('roomCode').textContent=code;networkMessage('Watching '+code+'…','Connecting as a hidden spectator.');
+  const wsUrl=new URL(appUrl('ws'));wsUrl.protocol=wsUrl.protocol==='https:'?'wss:':'ws:';
+  const ws=new WebSocket(wsUrl.href);socket=ws;
+  ws.addEventListener('open',()=>ws.send(JSON.stringify({type:'spectate',room:code,pass})));
+  ws.addEventListener('message',event=>{
+    if(socket!==ws)return;
+    let data;try{data=JSON.parse(event.data);}catch{return;}
+    if(data.type==='spectating'){retry=0;$('overlay').classList.add('hidden');document.body.classList.add('spectating');$('leave').hidden=false;$('leave').textContent='STOP WATCHING';updateTouchControls();}
+    else if(data.type==='state')applySnapshot(data);
+    else if(data.type==='error'){intentional=true;spectating=false;document.body.classList.remove('spectating');$('leave').textContent='LEAVE ROOM';networkMessage(data.title||'Cannot watch this room.',data.message);$('browseRooms').hidden=false;}
+  });
+  ws.addEventListener('close',()=>{
+    if(socket!==ws||intentional||!spectating)return;
+    if(++retry<=8)retryTimer=setTimeout(()=>spectate(code,pass),Math.min(800*retry,4000));
+    else{spectating=false;document.body.classList.remove('spectating');networkMessage('Connection lost.','Open a new watch link from the admin page.');$('browseRooms').hidden=false;}
+  });
+}
 function leave(){
   closeLeaveDialog();
+  if(spectating){spectating=false;document.body.classList.remove('spectating');$('leave').textContent='LEAVE ROOM';}
   intentional=true;clearTimeout(retryTimer);release();send({type:'leave'});socket?.close();socket=null;joined=false;connecting=false;myId=null;token=null;retry=0;
   latest=null;tanks=[];shells=[];tracks=[];pickups=[];beams=[];pickupFlashes=[];floaters=[];rings=[];hurt=0;$('killFeed').replaceChildren();$('streakBanner').hidden=true;resultsSignature='';$('leave').hidden=true;$('respawn').textContent='';$('latency').textContent='OFFLINE';$('roster').replaceChildren();
   touchAim=null;updateTouchControls();
@@ -297,7 +319,6 @@ function updateInvite(){
   return invite;
 }
 fetch(appUrl('network-info')).then(r=>{if(!r.ok)throw Error();return r.json();}).then(data=>{
-  if(data.ingress)$('adminLink').hidden=false;
   if(data.publicUrl)networkBase=data.publicUrl.replace(/\/$/,'');
   else if(!data.ingress&&['localhost','127.0.0.1','[::1]'].includes(location.hostname))networkBase=data.urls.find(u=>u.startsWith('http://192.168.'))||data.urls[0]||location.origin;
   updateInvite();
@@ -305,7 +326,7 @@ fetch(appUrl('network-info')).then(r=>{if(!r.ok)throw Error();return r.json();})
 $('copy').addEventListener('click',async()=>{const invite=updateInvite();try{await navigator.clipboard.writeText(invite);$('copy').textContent='LINK COPIED';setTimeout(()=>$('copy').textContent='COPY INVITE',1800);}catch{$('networkNote').textContent='Invite link: '+invite;status('INVITE LINK SHOWN BELOW THE ARENA');}});
 $('joinForm').addEventListener('submit',e=>{e.preventDefault();enterFullscreen();audioReady=true;playCue('menu');connect();});
 function closeLeaveDialog(){leaveDialogOpen=false;$('leaveDialog').hidden=true;}
-function requestLeave(){if(!joined)return;release();leaveDialogOpen=true;$('leaveDialog').hidden=false;$('cancelLeave').focus();}
+function requestLeave(){if(spectating){leave();return;}if(!joined)return;release();leaveDialogOpen=true;$('leaveDialog').hidden=false;$('cancelLeave').focus();}
 $('leave').addEventListener('click',requestLeave);
 $('cancelLeave').addEventListener('click',()=>{closeLeaveDialog();canvas.focus({preventScroll:true});});
 $('confirmLeave').addEventListener('click',leave);
@@ -462,11 +483,11 @@ for(const name of ['move','aim']){
 function updateTouchControls(){
   const mobile=touchMedia.matches;
   setArenaMenu(false);
-  $('arena').classList.toggle('mobile-active',mobile&&joined);
-  document.body.classList.toggle('mobile-playing',mobile&&joined);
+  $('arena').classList.toggle('mobile-active',mobile&&(joined||spectating));
+  document.body.classList.toggle('mobile-playing',mobile&&(joined||spectating));
   $('viewMode').hidden=!mobile||!joined;
   $('thumbControls').hidden=!mobile||!joined||(latest?.phase!=null&&latest.phase!=='playing');
-  document.body.classList.toggle('in-room',joined&&!mobile);
+  document.body.classList.toggle('in-room',(joined||spectating)&&!mobile);
   $('introControls').textContent=mobile?'Left thumb to move. Right thumb to aim and fire.':'Move with WASD. Aim with your mouse. Click to fire.';
   $('networkNote').textContent=mobile?'LEFT THUMB / MOVE · RIGHT THUMB / AIM + FIRE':'WASD / MOVE · MOUSE / AIM · LEFT CLICK / FIRE';
   canvas.setAttribute('aria-label',mobile?'Tank arena. Use the left thumb control to move and the right thumb control to aim and fire.':'Tank arena. Use W A S D to move, point the mouse to aim, and hold left click to fire.');
@@ -932,4 +953,7 @@ function frame(time){
 }
 new ResizeObserver(resize).observe(canvas);
 resize();requestAnimationFrame(frame);
-if(roomCode)showRoomForm(roomCode);else showLobby();
+const watchParams=new URL(location.href).searchParams,watchRoom=(watchParams.get('spectate')||'').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,16);
+// Keep the watch pass out of the address bar once it has been read.
+if(watchRoom&&watchParams.get('pass')){history.replaceState(null,'',location.pathname);spectate(watchRoom,watchParams.get('pass'));}
+else if(roomCode)showRoomForm(roomCode);else showLobby();

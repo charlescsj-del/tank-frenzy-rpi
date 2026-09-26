@@ -467,3 +467,19 @@ test('the leaderboard pop-up lists the top players and closes with Escape',async
   c.windowEvents.keydown({code:'Escape',preventDefault(){},target:{}});assert.equal(c.elements.get('leaderboard').hidden,true);
   c.sandbox.fetch=async()=>{throw Error('offline');};await c.run('openLeaderboard()');assert.match(c.elements.get('leaderboardNote').textContent,/Could not load/);
 });
+
+test('a watch link opens the match as a hidden spectator with a Stop watching button',()=>{
+  const sockets=[];
+  class FakeSocket{static OPEN=1;constructor(url){this.url=url;this.listeners={};this.sent=[];this.readyState=1;sockets.push(this);}addEventListener(n,f){this.listeners[n]=f;}send(d){this.sent.push(JSON.parse(d));}close(){}}
+  const c=client(false);
+  c.sandbox.WebSocket=FakeSocket;c.sandbox.history={replaceState(){}};c.sandbox.clearTimeout=()=>{};c.sandbox.setTimeout=()=>0;
+  c.run("joined=false;spectate('ALPHA','abc123')");
+  const ws=sockets.at(-1);ws.listeners.open();assert.equal(JSON.stringify(ws.sent[0]),JSON.stringify({type:'spectate',room:'ALPHA',pass:'abc123'}));
+  ws.listeners.message({data:JSON.stringify({type:'spectating',room:'ALPHA'})});
+  assert.equal(c.run('spectating'),true);assert(c.sandbox.document.body.classList.contains('spectating'));
+  assert.equal(c.elements.get('leave').textContent,'STOP WATCHING');assert.equal(c.elements.get('thumbControls').hidden,true,'no controls for spectators');
+  c.run("status('LIVE BATTLE')");assert.match(c.elements.get('status').textContent,/^👁 WATCHING \(HIDDEN\) · LIVE BATTLE/);
+  const before=c.sent.length;c.run('sendInput()');assert.equal(c.sent.length,before,'spectators never send input');
+  c.run('socket.close=()=>{}');c.elements.get('leave').events.click();
+  assert.equal(c.run('spectating'),false);assert.equal(c.elements.get('leave').textContent,'LEAVE ROOM');assert(c.sandbox.document.body.classList.contains('in-lobby'));
+});

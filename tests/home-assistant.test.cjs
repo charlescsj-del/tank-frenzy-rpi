@@ -63,7 +63,7 @@ test('ingress serves prefix-safe assets and shares live multiplayer rooms with L
 test('app options accept LAN and HTTPS addresses and reject unsafe or ambiguous invitations',()=>{
   const dir=fs.mkdtempSync(path.join(__dirname,'tank-options-')),file=path.join(dir,'options.json');
   try{
-    assert.deepEqual(readOptions(file),{ingress:true,publicUrl:'',notifyService:'',adminPassword:''});
+    assert.deepEqual(readOptions(file),{ingress:true,publicUrl:'',notifyService:'',adminPassword:'',adminPath:'admin'});
     for(const value of ['http://192.168.1.50:8765/','https://game.example/']){
       fs.writeFileSync(file,JSON.stringify({public_url:value}));assert.equal(readOptions(file).publicUrl,value.slice(0,-1));
     }
@@ -104,4 +104,12 @@ test('the Home Assistant sidebar opens /admin without a password',async t=>{
   game.ingressServer.prependListener('request',supervisor);
   assert.equal((await fetch(ingress+'/admin/state')).status,200);
   assert.equal((await fetch(base+'/admin/state')).status,404,'the LAN/public port stays closed without a password');
+});
+
+test('admin_path accepts a private address and rejects unsafe or game addresses',()=>{
+  const dir=fs.mkdtempSync(path.join(__dirname,'tank-admin-')),file=path.join(dir,'options.json');
+  try{
+    for(const [value,expected] of [['','admin'],['/hq-7f3k/','hq-7f3k'],['Boss_Room','Boss_Room']]){fs.writeFileSync(file,JSON.stringify({admin_path:value}));assert.equal(readOptions(file).adminPath,expected);}
+    for(const value of ['a','../etc','with space','rooms','tutorial','x'.repeat(65)]){fs.writeFileSync(file,JSON.stringify({admin_path:value}));assert.throws(()=>readOptions(file),value);}
+  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });

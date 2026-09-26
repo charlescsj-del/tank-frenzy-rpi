@@ -13,8 +13,13 @@ configuration:
   admin_password:
     name: Admin password
     description: >-
-      Opens /admin on the public game address (for example your Cloudflare link) to watch every
-      room live and end rooms. At least 8 characters. Leave empty to keep /admin off the public
-      address; the Home Assistant sidebar's Admin link always works without it.
+      Required to open the admin page on the public game address (for example your Cloudflare link).
+      At least 8 characters. Leave empty to keep the admin page off the public address; through the
+      Home Assistant sidebar it opens without a password.
+  admin_path:
+    name: Admin page address
+    description: >-
+      Private address of the admin page, for example hq-7f3k to use /hq-7f3k. Nothing in the game
+      links to it. Letters, digits, - and _ only. Leave empty for /admin.
 network:
   8765/tcp: Game access for LAN players (no Home Assistant login)

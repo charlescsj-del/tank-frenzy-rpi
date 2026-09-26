@@ -5,7 +5,7 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 ## App 1.14.0 — Tank Frenzy v1.14.0
 
 - About 70% less network traffic: snapshots are encoded once per room, numbers are rounded, shells carry only what the browser draws, and the map is resent once a second instead of 30 times.
-- New `/admin` page with live mini-maps, scores and server load for every room, plus End room. Free through the Home Assistant sidebar; on the public address only with the new `admin_password` option.
+- Private admin page (`/admin` or your own `admin_path`, never linked from the game) with live mini-maps, scores and server load for every room, hidden-spectator **Watch live** and End room. Free through the Home Assistant sidebar; on the public address only with the new `admin_password` option.
 - Leaderboard views for today, this week, this month and all time, filtered by the country Cloudflare reports. Recent match history is kept for 62 days in `/data/leaderboard.json`.
 - App-list icon and logo for Home Assistant. One or two rooms no longer stretch to fill the room list.
 

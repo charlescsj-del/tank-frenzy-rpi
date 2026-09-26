@@ -26,3 +26,4 @@ schema:
   public_url: str
   notify_service: str
   admin_password: password?
+  admin_path: str?
