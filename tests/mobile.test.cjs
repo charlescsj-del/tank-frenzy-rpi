@@ -449,3 +449,16 @@ test('the room starter sees bot controls that send add, remove and skill command
   state([me,bot,{...bot,id:'c',slot:2},{...bot,id:'d',slot:3}]);assert.equal(c.elements.get('addBot').disabled,true);
   state([me,bot],'someone-else');assert.equal(c.elements.get('botControls').hidden,true);assert.match(c.elements.get('waitingMessage').textContent,/Bots: hard/);
 });
+
+test('the leaderboard pop-up lists the top players and closes with Escape',async()=>{
+  const c=client(false);c.sandbox.HTMLInputElement=class{};
+  c.sandbox.fetch=async url=>{assert.match(url,/\/leaderboard$/);return {ok:true,json:async()=>({persistent:true,players:[{name:'Ann',wins:3,matches:4,kills:30,deaths:10},{name:'Bo',wins:1,matches:4,kills:12,deaths:0}]})};};
+  await c.run('openLeaderboard()');
+  assert.equal(c.elements.get('leaderboard').hidden,false);
+  const rows=c.elements.get('leaderboardRows').children.map(r=>r.children.map(cell=>String(cell.textContent)));
+  assert.deepEqual(rows,[['🥇','Ann','3','4','30','3.0'],['🥈','Bo','1','4','12','12.0']]);
+  assert.match(c.elements.get('leaderboardNote').textContent,/Saved on the Pi/);
+  c.windowEvents.keydown({code:'KeyW',preventDefault(){},target:{}});assert.equal(c.run('keys.size'),0);
+  c.windowEvents.keydown({code:'Escape',preventDefault(){},target:{}});assert.equal(c.elements.get('leaderboard').hidden,true);
+  c.sandbox.fetch=async()=>{throw Error('offline');};await c.run('openLeaderboard()');assert.match(c.elements.get('leaderboardNote').textContent,/Could not load/);
+});

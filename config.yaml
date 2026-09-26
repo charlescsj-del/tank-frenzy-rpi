@@ -1,5 +1,5 @@
 name: Tank Frenzy
-version: "1.12.0"
+version: "1.13.0"
 slug: tank_frenzy
 description: Multiplayer tank battles hosted on your Raspberry Pi
 url: https://github.com/charlescsj-del/tank-frenzy-rpi
@@ -18,7 +18,10 @@ ports:
 ports_description:
   8765/tcp: Game access for LAN players (no Home Assistant login)
 watchdog: http://[HOST]:[PORT:8765]/health
+homeassistant_api: true
 options:
   public_url: ""
+  notify_service: ""
 schema:
   public_url: str
+  notify_service: str

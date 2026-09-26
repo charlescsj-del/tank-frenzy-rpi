@@ -6,7 +6,7 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 
 // Exercise the production HTTP and WebSocket handlers without opening OS sockets.
-function server(){
+function server(options={}){
   class Socket extends EventEmitter{
     readyState=1;bufferedAmount=0;messages=[];
     send(raw){this.messages.push(JSON.parse(raw));}
@@ -23,7 +23,7 @@ function server(){
       return require(name);
     }};
   vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../server.cjs'),'utf8'),sandbox);
-  const game=sandbox.module.exports.createGameServer();
+  const game=sandbox.module.exports.createGameServer(options);
   function join(room,mode,name='Player',token,settings){const socket=new Socket();game.wss.emit('connection',socket);socket.emit('message',JSON.stringify({type:'join',room,mode,name,token,settings}));return socket;}
   function list(){let body,headers={};game.server.emit('request',{url:'/rooms',method:'GET'},{setHeader(k,v){headers[k]=v;},end(raw){body=JSON.parse(raw);}});return {body,headers};}
   function read(url){return new Promise((resolve,reject)=>{
@@ -158,4 +158,12 @@ test('the home-screen app manifest and icons are served with the right types',as
     const response=await s.read('/'+icon);assert.equal(response.status,200);assert.equal(response.headers['Content-Type'],'image/png');
     assert.deepEqual(response.body.subarray(1,4).toString(),'PNG');
   }
+});
+
+test('the leaderboard endpoint lists the top ten, and creating a room triggers the notifier once',async()=>{
+  const created=[],sandboxServer=server({onRoomCreated:room=>created.push(room),publicUrl:'http://pi.local:8765'});
+  sandboxServer.join('ALPHA','create','Ann');sandboxServer.join('ALPHA','join','Bo');
+  assert.equal(created.length,1);assert.equal(created[0].code,'ALPHA');assert.equal(created[0].name,'Ann');assert.equal(created[0].url,'http://pi.local:8765/?room=ALPHA');
+  const board=await sandboxServer.read('/leaderboard');assert.equal(board.status,200);
+  assert.deepEqual(JSON.parse(board.body.toString()),{players:[],persistent:false});
 });

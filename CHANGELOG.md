@@ -2,6 +2,12 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 1.13.0 — Tank Frenzy v1.13.0
+
+- All-time leaderboard saved as `/data/leaderboard.json`: wins, matches, kills and deaths by player name, shown from the 🏆 button. Written atomically; bots are not ranked.
+- New `notify_service` option: a Home Assistant notification (via the Supervisor API, `homeassistant_api: true`) when someone opens a room, with a tap-to-join link when `public_url` is set. At most one a minute.
+- Option names and descriptions in the Configuration tab (`translations/en.yaml`).
+
 ## App 1.12.0 — Tank Frenzy v1.12.0
 
 - Computer-controlled bots: the room starter adds or removes up to three bots in the waiting room and sets Easy, Normal or Hard skill.
@@ -64,6 +70,10 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 - Keep assets, sound, room discovery and WebSockets under the ingress prefix; support a configured invitation URL.
 - Include installation/update instructions and CI container builds for both architectures.
 - Verify 88 automated checks, including mixed ingress/LAN multiplayer. Physical Pi play still requires target-device verification.
+
+## 1.13.0
+
+- 🏆 leaderboard (`/leaderboard`, new `leaderboard.cjs`) and a room-created hook used by the Home Assistant app for notifications.
 
 ## 1.12.0
 
