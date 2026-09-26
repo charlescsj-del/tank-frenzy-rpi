@@ -253,6 +253,10 @@ class Room {
     }
     this.shells=this.shells.filter(s=>s.life>0);
   }
-  snapshot(){return {type:'state',room:this.code,settings:this.settings,phase:this.phase,countdownIn:this.phase==='countdown'?Math.max(0,this.countdownUntil-this.time):0,ownerId:this.ownerId,teamScores:this.teamScores,pickups:this.pickups,map:this.map,time:this.time,winner:this.winner,rematchIn:this.phase==='results'?Math.max(0,this.rematchUntil-this.time):0,rematchVotes:[...this.rematchVotes],botSkill:this.botSkill,rematchNeeded:this.phase==='results'?this.rematchNeeded():0,players:[...this.players.values()].map(({id,slot,bot,name,x,y,a,aim,hp,kills,deaths,shots,hits,streak,connected,respawnAt,shieldUntil,life,team,power,powerUntil})=>({id,slot,bot,name,x,y,a,aim,hp,kills,deaths,shots,hits,streak,connected,respawnIn:Math.max(0,respawnAt-this.time),shield:shieldUntil>this.time,life,team,power,powerRemaining:Math.max(0,powerUntil-this.time)})),shells:this.shells,events:this.events};}
+  // The map is optional: the server resends it once a second and whenever it changes, not in every frame.
+  snapshot({withMap=true}={}){return {type:'state',room:this.code,settings:this.settings,phase:this.phase,countdownIn:this.phase==='countdown'?Math.max(0,this.countdownUntil-this.time):0,ownerId:this.ownerId,teamScores:this.teamScores,pickups:this.pickups,map:withMap?this.map:undefined,mapId:this.map.id,time:this.time,winner:this.winner,rematchIn:this.phase==='results'?Math.max(0,this.rematchUntil-this.time):0,rematchVotes:[...this.rematchVotes],botSkill:this.botSkill,rematchNeeded:this.phase==='results'?this.rematchNeeded():0,players:[...this.players.values()].map(({id,slot,bot,name,x,y,a,aim,hp,kills,deaths,shots,hits,streak,connected,respawnAt,shieldUntil,life,team,power,powerUntil})=>({id,slot,bot,name,x,y,a,aim,hp,kills,deaths,shots,hits,streak,connected,respawnIn:Math.max(0,respawnAt-this.time),shield:shieldUntil>this.time,life,team,power,powerRemaining:Math.max(0,powerUntil-this.time)})),shells:this.shells.map(({id,x,y,slot})=>({id,x,y,slot})),events:this.events};}
 }
-module.exports={Room,hitRect};
+// Snapshots go out 30 times a second; tenths of a unit (hundredths of a radian for angles) look identical and are a quarter smaller.
+const precise=new Set(['a','aim']);
+function encodeState(state){return JSON.stringify(state,(key,value)=>typeof value==='number'&&!Number.isInteger(value)?Math.round(value*(precise.has(key)?100:10))/(precise.has(key)?100:10):value);}
+module.exports={Room,hitRect,encodeState};

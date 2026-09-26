@@ -452,12 +452,17 @@ test('the room starter sees bot controls that send add, remove and skill command
 
 test('the leaderboard pop-up lists the top players and closes with Escape',async()=>{
   const c=client(false);c.sandbox.HTMLInputElement=class{};
-  c.sandbox.fetch=async url=>{assert.match(url,/\/leaderboard$/);return {ok:true,json:async()=>({persistent:true,players:[{name:'Ann',wins:3,matches:4,kills:30,deaths:10},{name:'Bo',wins:1,matches:4,kills:12,deaths:0}]})};};
+  const urls=[];c.sandbox.fetch=async url=>{urls.push(url);return {ok:true,json:async()=>({persistent:true,countries:[{code:'MY',players:2}],players:[{name:'Ann',wins:3,matches:4,kills:30,deaths:10},{name:'Bo',wins:1,matches:4,kills:12,deaths:0}]})};};
   await c.run('openLeaderboard()');
   assert.equal(c.elements.get('leaderboard').hidden,false);
   const rows=c.elements.get('leaderboardRows').children.map(r=>r.children.map(cell=>String(cell.textContent)));
   assert.deepEqual(rows,[['🥇','Ann','3','4','30','3.0'],['🥈','Bo','1','4','12','12.0']]);
   assert.match(c.elements.get('leaderboardNote').textContent,/Saved on the Pi/);
+  assert.match(urls.at(-1),/\/leaderboard\?period=all&country=$/);
+  assert.equal(c.elements.get('leaderboardRegion').children.length,2,'All regions plus each country seen');
+  c.elements.get('leaderboardPeriods').events.click({target:{closest:()=>({dataset:{period:'week'}})}});await Promise.resolve();
+  assert.match(urls.at(-1),/period=week/);
+  c.elements.get('leaderboardRegion').value='MY';c.elements.get('leaderboardRegion').events.change();assert.match(urls.at(-1),/period=week&country=MY/);
   c.windowEvents.keydown({code:'KeyW',preventDefault(){},target:{}});assert.equal(c.run('keys.size'),0);
   c.windowEvents.keydown({code:'Escape',preventDefault(){},target:{}});assert.equal(c.elements.get('leaderboard').hidden,true);
   c.sandbox.fetch=async()=>{throw Error('offline');};await c.run('openLeaderboard()');assert.match(c.elements.get('leaderboardNote').textContent,/Could not load/);

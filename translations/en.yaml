@@ -10,5 +10,11 @@ configuration:
       Home Assistant notify service that announces newly opened rooms, for example
       notify.mobile_app_your_phone or notify.notify. At most one notification a minute.
       Leave empty to turn notifications off.
+  admin_password:
+    name: Admin password
+    description: >-
+      Opens /admin on the public game address (for example your Cloudflare link) to watch every
+      room live and end rooms. At least 8 characters. Leave empty to keep /admin off the public
+      address; the Home Assistant sidebar's Admin link always works without it.
 network:
   8765/tcp: Game access for LAN players (no Home Assistant login)

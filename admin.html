@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Tank Frenzy Admin</title>
+<style>
+:root{--paper:#fff6dd;--ink:#304e45;--muted:#657661;--card:#fffdf0;--line:#d3deb8;--accent:#ef8847;--font:ui-rounded,"Trebuchet MS","Arial Rounded MT Bold",system-ui,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font)}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-bottom:2px solid #dbddb8;background:#fff9e8}
+h1{margin:0;font-size:24px;font-weight:1000;letter-spacing:-.5px}h1 span{color:var(--accent)}
+.meta{font-size:12px;font-weight:700;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;padding:14px 20px}
+.stat{padding:10px 12px;border:2px solid var(--line);border-radius:14px;background:var(--card)}
+.stat b{display:block;font-size:22px;font-weight:1000}.stat small{font-size:11px;font-weight:800;letter-spacing:.6px;color:var(--muted);text-transform:uppercase}
+main{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));gap:14px;padding:0 20px 24px}
+.room{display:flex;flex-direction:column;gap:8px;padding:12px;border:2px solid var(--line);border-radius:18px;background:var(--card);box-shadow:0 4px 0 #c9d6a9}
+.room-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.room-head strong{margin-right:auto;font-size:16px}
+.badge{padding:3px 8px;border-radius:999px;background:#eef3dc;font-size:11px;font-weight:900;color:#47634e}
+.badge.playing{background:#ffe4a2;color:#8a4a1c}.badge.results,.badge.postgame{background:#e4def7;color:#5a3fb0}
+canvas{display:block;width:100%;aspect-ratio:1600/1040;border-radius:10px;background:#b9da86}
+table{width:100%;border-collapse:collapse;font-size:13px;font-weight:700}
+td{padding:3px 4px;border-top:1px dashed #e2d9b0}td.num{text-align:right;font-variant-numeric:tabular-nums}
+.dot{display:inline-block;width:10px;height:10px;margin-right:6px;border-radius:50%;vertical-align:-1px}
+.off{opacity:.45}
+.hp{display:inline-block;width:50px;height:6px;border-radius:3px;background:#e3e3cc;overflow:hidden;vertical-align:middle}.hp i{display:block;height:100%;background:#6fae4f}
+.actions{display:flex;gap:8px}
+button,a.button{flex:1;min-height:38px;padding:6px 10px;border:2px solid #bdcda4;border-radius:11px;background:#fffcdf;color:#47634e;font:900 12px var(--font);text-align:center;text-decoration:none;cursor:pointer;display:grid;place-items:center}
+button.danger{border-color:#c46a4a;background:#ffe5da;color:#9b3b1d}
+.empty,.error{grid-column:1/-1;padding:40px 20px;text-align:center;font-weight:800;color:var(--muted)}
+.error{color:#9b3b1d}
+</style>
+</head>
+<body>
+<header><h1>TANK <span>FRENZY</span> · Admin</h1><div class="meta" id="meta">Connecting…</div></header>
+<section class="stats" id="stats" aria-label="Server status"></section>
+<main id="rooms" aria-live="polite"></main>
+<script>
+'use strict';
+// Paths are relative to wherever the game is served (LAN, Cloudflare or the Home Assistant sidebar).
+const base=location.pathname.replace(/admin\/?$/,'');
+const $=id=>document.getElementById(id);
+const flag=code=>code?String.fromCodePoint(...[...code].map(c=>127397+c.charCodeAt(0))):'';
+const phaseNames={waiting:'Waiting',countdown:'Starting',playing:'Playing',results:'Rematch vote',postgame:'Ended'};
+const time=s=>s>=3600?Math.floor(s/3600)+'h '+Math.floor(s%3600/60)+'m':s>=60?Math.floor(s/60)+'m '+(s%60)+'s':s+'s';
+const cards=new Map();
+function el(tag,props={},...children){const node=Object.assign(document.createElement(tag),props);node.append(...children);return node;}
+function card(code){
+  if(cards.has(code))return cards.get(code);
+  const canvas=el('canvas',{width:480,height:312});
+  const head=el('div',{className:'room-head'}),table=el('table'),actions=el('div',{className:'actions'});
+  const open=el('a',{className:'button',href:base+'?room='+encodeURIComponent(code),target:'_blank',rel:'noopener',textContent:'Open room'});
+  const end=el('button',{className:'danger',type:'button',textContent:'End room'});
+  end.addEventListener('click',async()=>{
+    if(!confirm('End room '+code+'? Everyone in it returns to the room browser.'))return;
+    await fetch(base+'admin/close?room='+encodeURIComponent(code),{method:'POST',headers:{'X-Tank-Admin':'1'}});refresh();
+  });
+  actions.append(open,end);
+  const node=el('article',{className:'room'},head,canvas,table,actions);
+  const entry={node,head,canvas,table};cards.set(code,entry);return entry;
+}
+function draw(canvas,room,state){
+  const ctx=canvas.getContext('2d'),sx=canvas.width/state.board.width,sy=canvas.height/state.board.height;
+  ctx.fillStyle='#b9da86';ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#f4dda1';ctx.strokeStyle='#83734d';ctx.lineWidth=1.5;
+  for(const w of room.walls){ctx.fillRect(w.x*sx,w.y*sy,w.w*sx,w.h*sy);ctx.strokeRect(w.x*sx,w.y*sy,w.w*sx,w.h*sy);}
+  for(const s of room.shells){ctx.fillStyle=state.palette[s.slot];ctx.beginPath();ctx.arc(s.x*sx,s.y*sy,2.5,0,Math.PI*2);ctx.fill();}
+  ctx.font='900 11px ui-rounded,"Trebuchet MS",sans-serif';ctx.textAlign='center';
+  for(const p of room.players){
+    if(!p.connected)continue;const x=p.x*sx,y=p.y*sy;
+    ctx.globalAlpha=p.hp>0?1:.35;ctx.fillStyle=state.palette[p.slot];ctx.strokeStyle='#354e4b';ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(p.aim)*14,y+Math.sin(p.aim)*14);ctx.stroke();
+    ctx.fillStyle='#fffbe6';ctx.strokeStyle='#354e4b';ctx.lineWidth=3;ctx.strokeText(p.name,x,y-12);ctx.fillText(p.name,x,y-12);ctx.globalAlpha=1;
+  }
+}
+function render(state){
+  const humans=state.rooms.flatMap(r=>r.players).filter(p=>!p.bot&&p.connected).length,bots=state.rooms.flatMap(r=>r.players).filter(p=>p.bot).length;
+  $('meta').textContent='v'+state.version+' · updated '+new Date().toLocaleTimeString();
+  $('stats').replaceChildren(...[['Rooms',state.rooms.length],['Players online',humans],['Bots',bots],['Game CPU',state.cpu+'%'],['Memory',state.memory+' MB'],['Pi load',state.load[0]],['Uptime',time(state.uptime)]]
+    .map(([label,value])=>el('div',{className:'stat'},el('b',{textContent:value}),el('small',{textContent:label}))));
+  const live=new Set(state.rooms.map(r=>r.code));
+  for(const [code,entry] of cards)if(!live.has(code)){entry.node.remove();cards.delete(code);}
+  if(!state.rooms.length){$('rooms').replaceChildren(el('p',{className:'empty',textContent:'No rooms right now. Rooms appear here as soon as someone creates one.'}));return;}
+  $('rooms').querySelector('.empty,.error')?.remove();
+  for(const room of state.rooms){
+    const {node,head,canvas,table}=card(room.code);
+    const score=room.settings.mode==='teams'?' · Orange '+room.teamScores[0]+' – '+room.teamScores[1]+' Blue':'';
+    head.replaceChildren(el('strong',{textContent:room.code}),el('span',{className:'badge',textContent:room.settings.mode==='teams'?'2 vs 2':'Free-for-all'}),
+      el('span',{className:'badge '+room.phase,textContent:(phaseNames[room.phase]||room.phase)+(room.winner?': '+room.winner.name+' won':'')+score}),el('span',{className:'badge',textContent:time(room.time)}));
+    table.replaceChildren(...[...room.players].sort((a,b)=>b.kills-a.kills).map(p=>{
+      const hp=el('span',{className:'hp'},el('i',{style:'width:'+p.hp*10+'%'}));
+      return el('tr',{className:p.connected?'':'off'},el('td',{},el('span',{className:'dot',style:'background:'+state.palette[p.slot]}),p.name+(p.country?' '+flag(p.country):'')+(p.connected?'':' (away)')),
+        el('td',{className:'num',textContent:p.kills+' / '+p.deaths}),el('td',{className:'num'},hp));
+    }));
+    draw(canvas,room,state);
+    if(!node.isConnected)$('rooms').append(node);
+  }
+}
+let timer;
+async function refresh(){
+  clearTimeout(timer);
+  try{
+    const response=await fetch(base+'admin/state',{cache:'no-store'});
+    if(response.status===401){location.reload();return;}
+    if(!response.ok)throw Error(response.status);
+    render(await response.json());
+  }catch{$('rooms').replaceChildren(el('p',{className:'error',textContent:'Cannot reach the game server. Retrying…'}));cards.clear();}
+  timer=setTimeout(refresh,document.hidden?5000:500);
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
+refresh();
+</script>
+</body>
+</html>

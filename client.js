@@ -141,7 +141,7 @@ function connect(){
       history.replaceState(null,'','?room='+encodeURIComponent(roomCode));sendInput();
     }else if(data.type==='state'){applySnapshot(data);}
     else if(data.type==='pong'){$('latency').textContent=Math.round(performance.now()-data.sent)+' MS';}
-    else if(data.type==='error'){intentional=true;joined=false;connecting=false;networkMessage('Cannot join this room.',data.message,true);status('CHOOSE A ROOM');}
+    else if(data.type==='error'){intentional=true;joined=false;connecting=false;networkMessage(data.title||'Cannot join this room.',data.message,true);status('CHOOSE A ROOM');}
   });
   ws.addEventListener('error',()=>{});
   ws.addEventListener('close',()=>{
@@ -297,6 +297,7 @@ function updateInvite(){
   return invite;
 }
 fetch(appUrl('network-info')).then(r=>{if(!r.ok)throw Error();return r.json();}).then(data=>{
+  if(data.ingress)$('adminLink').hidden=false;
   if(data.publicUrl)networkBase=data.publicUrl.replace(/\/$/,'');
   else if(!data.ingress&&['localhost','127.0.0.1','[::1]'].includes(location.hostname))networkBase=data.urls.find(u=>u.startsWith('http://192.168.'))||data.urls[0]||location.origin;
   updateInvite();
@@ -337,21 +338,35 @@ function closeTutorial(){
   tutorialReturn?.focus?.({preventScroll:true});tutorialReturn=null;
 }
 $('howToPlay').addEventListener('click',openTutorial);
-// All-time leaderboard, kept by the server (saved on the Pi in the Home Assistant app).
-async function openLeaderboard(){
-  release();leaderboardOpen=true;$('leaderboard').hidden=false;document.body.classList.add('tutorial-open');$('closeLeaderboard').focus();
+// Leaderboard kept by the server (saved on the Pi in the Home Assistant app): by period and region.
+let leaderboardPeriod='all',leaderboardCountry='',leaderboardRequest=0;
+const flagOf=code=>/^[A-Z]{2}$/.test(code||'')?String.fromCodePoint(...[...code].map(c=>127397+c.charCodeAt(0))):'';
+function regionName(code){try{return new Intl.DisplayNames(['en'],{type:'region'}).of(code);}catch{return code;}}
+async function loadLeaderboard(){
+  const request=++leaderboardRequest;
+  for(const button of $('leaderboardPeriods').children||[])button.setAttribute?.('aria-pressed',String(button.dataset?.period===leaderboardPeriod));
   $('leaderboardRows').replaceChildren();$('leaderboardNote').textContent='Loading…';
   try{
-    const response=await fetch(appUrl('leaderboard'));if(!response.ok)throw Error();
-    const data=await response.json();
+    const response=await fetch(appUrl('leaderboard?period='+leaderboardPeriod+'&country='+leaderboardCountry));if(!response.ok)throw Error();
+    const data=await response.json();if(request!==leaderboardRequest)return;
     data.players.forEach((p,i)=>{
       const row=document.createElement('tr');
-      for(const value of [i<3?['🥇','🥈','🥉'][i]:i+1,p.name,p.wins,p.matches,p.kills,(p.kills/Math.max(1,p.deaths)).toFixed(1)]){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}
+      for(const value of [i<3?['🥇','🥈','🥉'][i]:i+1,p.name+(p.country?' '+flagOf(p.country):''),p.wins,p.matches,p.kills,(p.kills/Math.max(1,p.deaths)).toFixed(1)]){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}
       $('leaderboardRows').append(row);
     });
-    $('leaderboardNote').textContent=(data.players.length?'':'No finished matches yet. Win one to get on the board! ')+(data.persistent?'Saved on the Pi across restarts.':'Resets when the game server restarts.');
-  }catch{$('leaderboardNote').textContent='Could not load the leaderboard. Try again in a moment.';}
+    const regions=[['','All regions'],...(data.countries||[]).map(c=>[c.code,flagOf(c.code)+' '+regionName(c.code)+' ('+c.players+')'])];
+    $('leaderboardRegion').replaceChildren(...regions.map(([code,label])=>{const option=document.createElement('option');option.value=code;option.textContent=label;return option;}));
+    $('leaderboardRegion').value=leaderboardCountry;
+    const when={day:'today',week:'this week',month:'this month',all:'yet'}[leaderboardPeriod];
+    $('leaderboardNote').textContent=(data.players.length?'':'No finished matches '+when+(leaderboardCountry?' in this region':'')+'. ')+(data.persistent?'Saved on the Pi across restarts.':'Resets when the game server restarts.');
+  }catch{if(request===leaderboardRequest)$('leaderboardNote').textContent='Could not load the leaderboard. Try again in a moment.';}
 }
+async function openLeaderboard(){
+  release();leaderboardOpen=true;$('leaderboard').hidden=false;document.body.classList.add('tutorial-open');$('closeLeaderboard').focus();
+  await loadLeaderboard();
+}
+$('leaderboardPeriods').addEventListener('click',e=>{const tab=e.target.closest?.('[data-period]');if(tab){leaderboardPeriod=tab.dataset.period;loadLeaderboard();}});
+$('leaderboardRegion').addEventListener('change',()=>{leaderboardCountry=$('leaderboardRegion').value;loadLeaderboard();});
 function closeLeaderboard(){leaderboardOpen=false;$('leaderboard').hidden=true;if(!tutorialOpen)document.body.classList.remove('tutorial-open');}
 $('leaderboardButton').addEventListener('click',openLeaderboard);
 $('closeLeaderboard').addEventListener('click',closeLeaderboard);
@@ -377,7 +392,7 @@ function syncMusic(){
   if(!music||!audioReady||document.hidden){musicPlayer?.stop();return;}
   const ac=getAudio(true);if(!ac||typeof TankMusic==='undefined')return;
   musicPlayer??=new TankMusic(ac);
-  const key=`${roomCode}:${latest?.map?.id}`;
+  const key=`${roomCode}:${latest?.mapId??latest?.map?.id}`;
   musicPlayer.play(joined&&['playing','results'].includes(latest?.phase)?'battle':'lobby',key);
   if(joined&&latest?.phase==='countdown')musicPlayer.prepareBattle(key);
 }
