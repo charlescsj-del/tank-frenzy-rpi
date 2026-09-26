@@ -7,6 +7,7 @@ const {randomBytes,createHash,timingSafeEqual}=require('node:crypto');
 const {WebSocketServer,WebSocket}=require('ws');
 const {Room,encodeState}=require('./game-server.cjs');
 const {Leaderboard}=require('./leaderboard.cjs');
+const {createMetrics}=require('./system-metrics.cjs');
 const F=require('./shared.js'),{maxPlayers}=F;
 const ingressRequest=Symbol('supervisor ingress');
 function lanAddresses(){
@@ -38,7 +39,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
   for(const name of ['win','pc-controls','mobile-controls','find-tank','getting-hit','bouncing','power-ups'])files[`/tutorial/${name}.webp`]=[`tutorial/${name}.webp`,'image/webp'];
   // Admin: open through the Home Assistant sidebar (already signed in); on the
   // public game port only with the admin password (HTTP Basic, over HTTPS via Cloudflare).
-  const started=Date.now();let cpuMark={usage:process.cpuUsage(),at:performance.now()};
+  const started=Date.now(),readMetrics=createMetrics();
   function adminAllowed(req){
     if(req[ingressRequest])return true;
     const match=/^Basic (.+)$/.exec(req.headers.authorization||'');if(!adminPassword||!match)return false;
@@ -46,9 +47,9 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
     return timingSafeEqual(digest(text.slice(text.indexOf(':')+1)),digest(adminPassword));
   }
   function adminState(){
-    const usage=process.cpuUsage(cpuMark.usage),elapsed=performance.now()-cpuMark.at;cpuMark={usage:process.cpuUsage(),at:performance.now()};
-    return {version:require('./package.json').version,board:{width:F.width,height:F.height},palette:F.palette.map(p=>p.body),uptime:Math.round((Date.now()-started)/1000),cpu:elapsed>0?Math.round((usage.user+usage.system)/10/elapsed):0,
-      memory:Math.round(process.memoryUsage().rss/1048576),load:os.loadavg().map(v=>Math.round(v*100)/100),sessions:sessions.size,
+    const system=readMetrics();
+    return {version:require('./package.json').version,board:{width:F.width,height:F.height},palette:F.palette.map(p=>p.body),uptime:Math.round((Date.now()-started)/1000),system,cpu:system.game.cpuPercent,
+      memory:system.game.rssBytes===null?null:Math.round(system.game.rssBytes/1048576),load:system.load,sessions:sessions.size,
       rooms:[...rooms.values()].filter(room=>room.players.size).map(room=>({code:room.code,phase:room.phase,settings:room.settings,botSkill:room.botSkill,time:Math.round(room.time),
         winner:room.winner,teamScores:room.teamScores,walls:room.map.walls,shells:room.shells.map(({x,y,slot})=>({x:Math.round(x),y:Math.round(y),slot})),
         players:[...room.players.values()].map(({id,name,slot,team,bot,connected,hp,kills,deaths,x,y,aim,country,power})=>({id,name,slot,team,bot:!!bot,connected,hp,kills,deaths,x:Math.round(x),y:Math.round(y),aim:Math.round(aim*100)/100,country:country||'',power:power||null}))}))};

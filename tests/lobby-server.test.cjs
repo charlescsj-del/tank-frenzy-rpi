@@ -178,7 +178,11 @@ test('/admin is hidden without a password, asks for one, and shows and ends room
   const ann=s.join('ALPHA','create','Ann');s.join('BETA','create','Bo');
   const state=JSON.parse((await s.read('/admin/state',{headers:auth('tank-secret')})).body.toString());
   assert.deepEqual(state.rooms.map(r=>r.code).sort(),['ALPHA','BETA']);assert.equal(state.rooms.find(r=>r.code==='ALPHA').players[0].name,'Ann');
-  assert(Number.isFinite(state.cpu)&&state.memory>0&&state.palette.length>=4);
+  assert((state.cpu===null||Number.isFinite(state.cpu))&&(state.memory===null||state.memory>0)&&state.palette.length>=4);
+  assert(Number.isFinite(state.system.sampledAt));assert(state.system.game.rssBytes===null||state.system.game.rssBytes>0);
+  assert.equal(state.system.load.length,3);assert(state.system.memory.totalBytes===null||state.system.memory.totalBytes>0);
+  const again=JSON.parse((await s.read('/admin/state',{headers:auth('tank-secret')})).body.toString());
+  assert.equal(again.system.sampledAt,state.system.sampledAt,'admin viewers share a stable resource sample');
   assert.equal((await s.read('/admin/close?room=ALPHA',{method:'POST',headers:auth('tank-secret')})).status,404,'needs the admin header');
   assert.equal((await s.read('/admin/close?room=ALPHA',{method:'POST',headers:{...auth('tank-secret'),'x-tank-admin':'1'}})).status,204);
   assert(!s.game.rooms.has('ALPHA'));assert.equal(ann.messages.at(-1).title,'Room closed');assert.equal(ann.readyState,3);

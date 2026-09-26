@@ -16,6 +16,25 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm test
+  admin-ui:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.62.1
+      - run: npx playwright install --with-deps chromium
+      - run: node tools/admin-ui-check.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: admin-dashboard-screenshots
+          path: artifacts/admin/
+          retention-days: 7
   container:
     needs: test
     strategy:

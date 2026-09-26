@@ -28,12 +28,20 @@ The complete repository must be inside `/addons/tank_frenzy`, with `config.yaml`
 
 The app has no HA configuration/media mappings. It uses the Home Assistant API only to send the optional notifications. `/data` holds Supervisor options and `leaderboard.json`: all-time totals (wins, matches, kills, deaths and country by player name, at most 200 names) plus the last 62 days of match results, which power the Today, This week and This month views. It is saved about a second after every finished match and again when the app stops, written to a temporary file first so a power cut cannot corrupt it. It survives app restarts, updates and Pi reboots, and is included in Home Assistant backups of the app; uninstalling the app deletes it. Delete the file with the app stopped to reset the leaderboard. Days and weeks (Monday to Sunday) follow Home Assistant's time zone. Rooms and matches in progress are not persisted: app restarts/updates end active matches.
 
+## Reading the admin resource charts
+
+- **System CPU** is busy CPU time across all host cores over the latest sample interval. The game's CPU is listed separately: **100% means one full core**, so a process using multiple cores can exceed 100% there.
+- **System memory** shows used / total host RAM. On Linux it uses `MemTotal − MemAvailable`, so reclaimable cache does not look like exhausted RAM. Available RAM and game resident memory (RSS) are also shown. If Linux's available-memory figure cannot be read, the display explicitly says used memory includes cache. Values use MiB/GiB.
+- **Pi load** counts running/runnable tasks and tasks waiting in uninterruptible I/O. It is **not CPU usage**. On a four-core Pi, load 4.00 is the one-task-per-core reference. Compare the 1-, 5- and 15-minute averages to see a short spike versus sustained demand. Bar midpoints and the dashed trend line mark that reference; high values are not capped in the numeric readouts.
+- Gauges summarize the host visible to the app, including other services; they do not represent a container memory limit. Colors are visual usage bands, not a hardware health diagnosis. The CPU gauge marks 70%/90%, memory 75%/90%; load bands use 0.7/1.0 tasks per core.
+- Resource samples are taken on demand, at most once a second for all admin viewers combined. The CPU gauge needs a second sample after opening or returning from a long gap. The browser keeps up to 60 seconds of load history, clears it after gaps, and labels the last readings when disconnected. Missing metrics show a dash, never a fake zero.
+
 ## Verify after starting
 
 1. The app log should show listeners on game port `8765` and internal ingress port `8099`.
 2. Open **Web UI**: the lobby, banner and room list should load.
 3. Open `http://YOUR_PI_IP:8765` on two devices. Create and join one room, start a round, move, shoot, and confirm sound after interacting.
-4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `1.14.0`.
+4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `1.15.0`.
 5. Test an invitation generated from the sidebar after setting `public_url`.
 
 ## Updates
