@@ -61,7 +61,9 @@ test('four unique slots, capacity, winner, voted rematch, disconnect expiry',()=
   ps[0].kills=9;ps[1].hp=1;ps[1].shieldUntil=0;
   r.shells=[{id:1,x:ps[1].x-24,y:ps[1].y,vx:410,vy:0,owner:ps[0].id,slot:0,life:1,bounces:0}];r.step(1/120);assert.equal(r.winner.id,ps[0].id);
   const previousMap=r.map.id;step(r,10.1);assert.equal(r.map.id,previousMap);assert.equal(r.phase,'results');
-  for(const p of ps)assert.equal(r.voteRematch(p),true);
+  for(const p of ps.slice(0,2))assert.equal(r.voteRematch(p),true);
+  assert.equal(r.phase,'results','two of four is not a majority');assert.equal(r.snapshot().rematchNeeded,3);
+  assert.equal(r.voteRematch(ps[2]),true);assert.equal(r.phase,'countdown');assert.equal(r.voteRematch(ps[3]),false);
   assert.notEqual(r.map.id,previousMap);assert.equal(r.winner,null);assert.equal(ps[0].kills,0);
   r.disconnect(ps[3]);step(r,15.1);assert(!r.players.has(ps[3].id));
 });

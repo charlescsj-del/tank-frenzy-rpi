@@ -15,10 +15,10 @@ let tanks=[],shells=[],particles=[],tracks=[],pickups=[],beams=[],pickupFlashes=
 let socket=null,myId=null,token=null,joined=false,connecting=false,intentional=false,retry=0,retryTimer;
 let latest=null,lastEvent=0,seq=0,rosterSignature='',pointer={x:500,y:330,active:false},firing=false,lastSnapshot=0;
 let roomCode=(new URL(location.href).searchParams.get('room')||'').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,16),networkBase=appBase.href.replace(/\/$/,'');
-let lobbyVisible=false,lobbyRooms=[],selectedRoom=null,joinMode=null,roomRequest=0;
+let lobbyVisible=false,lobbyRooms=[],joinMode=null,roomRequest=0;
 let selectedGameMode='ffa',leaveDialogOpen=false,tutorialOpen=false,tutorialReturn=null;
 let roundAudioMap=null,resultAudioKey=null,countdownAudioKey=null,activePower=null,lastMenuSound=-Infinity;
-let music=true,musicPlayer,waitingSignature='',roomPhase=null;
+let music=true,musicPlayer,waitingSignature='',resultsSignature='',roomPhase=null,nextHeartbeat=0;
 try{sound=localStorage.getItem('tank-frenzy-sfx')!=='off';music=localStorage.getItem('tank-frenzy-music')!=='off';}catch{/* Storage can be unavailable in private browsing. */}
 const cueVoices=new Set();
 $('roomInput').value=roomCode;$('roomCode').textContent=roomCode||'—';
@@ -42,30 +42,28 @@ function showRoomForm(code,mode=null){
   $('gameMode').value=selectedGameMode;$('bounceOption').checked=true;$('powersOption').checked=true;
   window.scrollTo?.(0,0);
 }
-function selectGameMode(mode){selectedGameMode=mode;selectedRoom=null;$('ffaMode').setAttribute('aria-pressed',String(mode==='ffa'));$('teamMode').setAttribute('aria-pressed',String(mode==='teams'));renderRooms();}
+function selectGameMode(mode){selectedGameMode=mode;$('ffaMode').setAttribute('aria-pressed',String(mode==='ffa'));$('teamMode').setAttribute('aria-pressed',String(mode==='teams'));renderRooms();}
 $('ffaMode').addEventListener('click',()=>selectGameMode('ffa'));
 $('teamMode').addEventListener('click',()=>selectGameMode('teams'));
-function renderRoomDetails(){
-  const room=lobbyRooms.find(r=>r.code===selectedRoom);
-  $('roomDetails').hidden=!room;$('joinSelected').disabled=!room||room.available<=0;
-  $('roomPlayers').replaceChildren();
-  if(!room)return;
-  $('selectedRoomName').textContent=room.code;
-  for(const p of room.players){const item=document.createElement('li');item.textContent=p.name+(p.team!=null?' · '+(p.team===0?'Orange':'Blue'):'')+(p.connected?'':' (reconnecting)');$('roomPlayers').append(item);}
-  $('roomCapacity').textContent=room.phase==='postgame'?'Match ended — choose another room.':room.available>0?room.available+' open '+(room.available===1?'spot':'spots'):'Room full — all spots occupied or reserved.';
-  $('roomRules').textContent=(room.settings?.mode==='teams'?'2 VS 2':'FREE-FOR-ALL')+' · Bounce '+(room.settings?.bouncing===false?'OFF':'ON')+' · Powers '+(room.settings?.powers===false?'OFF':'ON');
-}
+const phaseNames={waiting:'WAITING',countdown:'STARTING',results:'REMATCH VOTE',postgame:'MATCH ENDED'};
+// One row per room: its players and rules are visible at once, and Join is a single tap.
 function renderRooms(){
   $('roomList').replaceChildren();
   const rooms=lobbyRooms.filter(room=>(room.settings?.mode||'ffa')===selectedGameMode);
   for(const room of rooms){
-    const button=document.createElement('button');button.type='button';button.className='room-choice';
-    button.textContent=room.code+' · '+room.players.filter(p=>p.connected).length+'/'+room.capacity+' online · '+(room.phase==='waiting'?'WAITING':room.phase==='countdown'?'STARTING':room.phase==='results'?'REMATCH VOTE':room.phase==='postgame'?'MATCH ENDED':'IN GAME')+(room.available<=0&&room.phase!=='postgame'?' · FULL':'');
-    button.setAttribute('aria-pressed',String(room.code===selectedRoom));
-    button.addEventListener('click',()=>{selectedRoom=room.code;renderRooms();});$('roomList').append(button);
+    const row=document.createElement('div');row.className='room-row';
+    const info=document.createElement('div');info.className='room-choice';
+    const title=document.createElement('strong');title.textContent=room.code+' · '+room.players.filter(p=>p.connected).length+'/'+room.capacity+' · '+(phaseNames[room.phase]||'IN GAME');
+    const players=document.createElement('small');players.textContent=room.players.map(p=>p.name+(p.team!=null?' ('+(p.team===0?'Orange':'Blue')+')':'')+(p.connected?'':' · reconnecting')).join(', ')||'Empty';
+    const rules=document.createElement('small');rules.textContent='Bounce '+(room.settings?.bouncing===false?'off':'on')+' · Powers '+(room.settings?.powers===false?'off':'on');
+    info.append(title,players,rules);
+    const join=document.createElement('button');join.type='button';join.className='primary room-join';
+    const open=room.available>0&&room.phase!=='postgame';
+    join.textContent=open?'JOIN':room.phase==='postgame'?'ENDED':'FULL';join.disabled=!open;join.setAttribute('aria-label',open?'Join room '+room.code:'Room '+room.code+' cannot be joined');
+    join.addEventListener('click',()=>joinRoomNow(room.code));
+    row.append(info,join);$('roomList').append(row);
   }
-  $('roomListStatus').textContent=rooms.length?'Select a room to see its players.':'No active rooms in this mode. Create one to start playing.';
-  renderRoomDetails();
+  $('roomListStatus').textContent=rooms.length?'Tap Join, or Quick Play to jump into the best room.':'No rooms in this mode yet. Quick Play creates one.';
 }
 async function refreshRooms(){
   if(!lobbyVisible)return;
@@ -82,14 +80,37 @@ async function refreshRooms(){
 }
 function showLobby(){
   networkMessage('Find your battle.','Pick a room to see who is playing, or create your own.');
-  lobbyVisible=true;joinMode=null;selectedRoom=null;lobbyRooms=[];$('roomBrowser').hidden=false;
+  lobbyVisible=true;joinMode=null;lobbyRooms=[];$('roomBrowser').hidden=false;
   document.body.classList.toggle('in-lobby',true);$('arena').classList.toggle('lobby-open',true);
   renderRooms();$('roomListStatus').textContent='Loading rooms…';refreshRooms();
 }
 $('refreshRooms').addEventListener('click',refreshRooms);
 $('browseRooms').addEventListener('click',showLobby);
-$('createRoom').addEventListener('click',()=>showRoomForm('ROOM-'+Math.random().toString(36).slice(2,7).toUpperCase(),'create'));
-$('joinSelected').addEventListener('click',()=>{const room=lobbyRooms.find(r=>r.code===selectedRoom);if(room&&room.available>0)showRoomForm(room.code,'join');});
+const newRoomCode=()=>'ROOM-'+Math.random().toString(36).slice(2,7).toUpperCase();
+$('createRoom').addEventListener('click',()=>showRoomForm(newRoomCode(),'create'));
+// The player's name is remembered on this device and shared by the lobby and the Create/Join form.
+function rememberName(value){
+  for(const id of ['lobbyName','callsign'])if($(id).value!==value)$(id).value=value;
+  try{localStorage.setItem('tank-frenzy-name',value);}catch{}
+}
+try{rememberName(localStorage.getItem('tank-frenzy-name')||'');}catch{}
+for(const id of ['lobbyName','callsign'])$(id).addEventListener('input',()=>rememberName($(id).value));
+function joinRoomNow(code,mode='join'){
+  enterFullscreen();audioReady=true;
+  joinMode=mode;$('roomInput').value=code;$('roomInput').readOnly=mode==='join';
+  if(mode==='create'){$('gameMode').value=selectedGameMode;$('bounceOption').checked=true;$('powersOption').checked=true;}
+  connect();
+}
+// Quick Play prefers a waiting room, then the fullest open one, in the chosen mode; otherwise it makes a room.
+async function quickPlay(){
+  enterFullscreen();
+  let rooms=lobbyRooms;
+  try{const response=await fetch(appUrl('rooms'));if(response.ok)rooms=(await response.json()).rooms;}catch{/* Use the last list shown. */}
+  const open=rooms.filter(room=>(room.settings?.mode||'ffa')===selectedGameMode&&room.available>0&&!['results','postgame'].includes(room.phase))
+    .sort((a,b)=>(a.phase==='waiting'?0:1)-(b.phase==='waiting'?0:1)||a.available-b.available);
+  if(open.length)joinRoomNow(open[0].code);else joinRoomNow(newRoomCode(),'create');
+}
+$('quickPlay').addEventListener('click',quickPlay);
 setInterval(()=>{if(lobbyVisible&&!document.hidden)refreshRooms();},5000);
 function send(data){if(socket?.readyState===WebSocket.OPEN&&socket.bufferedAmount<32768)socket.send(JSON.stringify(data));}
 function sendInput(){
@@ -135,7 +156,7 @@ function connect(){
 function leave(){
   closeLeaveDialog();
   intentional=true;clearTimeout(retryTimer);release();send({type:'leave'});socket?.close();socket=null;joined=false;connecting=false;myId=null;token=null;retry=0;
-  latest=null;tanks=[];shells=[];tracks=[];pickups=[];beams=[];pickupFlashes=[];floaters=[];rings=[];hurt=0;$('leave').hidden=true;$('respawn').textContent='';$('latency').textContent='OFFLINE';$('roster').replaceChildren();
+  latest=null;tanks=[];shells=[];tracks=[];pickups=[];beams=[];pickupFlashes=[];floaters=[];rings=[];hurt=0;$('killFeed').replaceChildren();$('streakBanner').hidden=true;resultsSignature='';$('leave').hidden=true;$('respawn').textContent='';$('latency').textContent='OFFLINE';$('roster').replaceChildren();
   touchAim=null;updateTouchControls();
   roundAudioMap=null;resultAudioKey=null;countdownAudioKey=null;activePower=null;roomPhase=null;waitingSignature='';stopCueSounds();syncMusic();
   roomCode='';$('roomCode').textContent='—';$('roomCount').textContent='0 / 4 PLAYERS';$('powerStatus').hidden=true;history.replaceState(null,'',location.pathname);leaveFullscreen();showLobby();status('READY TO CONNECT');
@@ -144,7 +165,7 @@ function applySnapshot(data){
   latest=data;lastSnapshot=performance.now();
   updateMatchSounds(data);
   pickups=data.pickups||[];
-  if(data.map&&data.map.id!==mapId){mapId=data.map.id;walls=data.map.walls;spawns=data.map.spawns;tracks=[];particles=[];shells=[];beams=[];pickupFlashes=[];floaters=[];rings=[];hurt=0;$('mapLabel').textContent='RANDOM MAP / '+mapId.toString(16).toUpperCase();}
+  if(data.map&&data.map.id!==mapId){mapId=data.map.id;walls=data.map.walls;spawns=data.map.spawns;tracks=[];particles=[];shells=[];beams=[];pickupFlashes=[];floaters=[];rings=[];hurt=0;}
   const previous=new Map(tanks.map(t=>[t.id,t]));
   tanks=data.players.filter(p=>p.connected).map(p=>{
     const before=previous.get(p.id);
@@ -172,6 +193,7 @@ function applySnapshot(data){
       floaters=floaters.slice(-24);rings=rings.slice(-8);
       if(dead)playDestroySound(e);else if(!playEffect('hit',e,{volume:.75,priority:2,interval:.07,key:'hit:'+e.player})){beep(100,.22,'sawtooth',.045);rumble(.18,.07,1800);}
       if(e.player===myId)feelHit(dead,e.damage||1);
+      if(dead)announceKill(e,data.players);
     }
     if(e.type==='restart'){tracks=[];particles=[];beams=[];pickupFlashes=[];floaters=[];rings=[];hurt=0;}
   }
@@ -189,10 +211,20 @@ function updateRoomPhase(data){
     $('resultsTitle').textContent=data.winner.name+' wins!';
     $('resultsOutcome').textContent=won?'VICTORY!':'GOOD BATTLE!';
     const connected=data.players.filter(p=>p.connected),votes=data.rematchVotes||[],voted=votes.includes(myId);
-    $('resultsVotes').textContent=postgame?'The rematch window has closed.':votes.filter(id=>connected.some(p=>p.id===id)).length+' / '+connected.length+' players ready';
+    const needed=data.rematchNeeded||connected.length,ready=votes.filter(id=>connected.some(p=>p.id===id)).length;
+    $('resultsVotes').textContent=postgame?'The rematch window has closed.':ready+' / '+needed+' votes needed for a rematch';
+    const board=JSON.stringify(data.players.map(p=>[p.id,p.kills,p.deaths,p.shots,p.hits]));
+    if(board!==resultsSignature){
+      resultsSignature=board;$('resultsRows').replaceChildren();
+      for(const p of [...data.players].sort((a,b)=>b.kills-a.kills||a.deaths-b.deaths)){
+        const row=document.createElement('tr');if(p.id===myId)row.className='me';
+        const cells=[p.name+(p.id===myId?' ★':''),p.kills,p.deaths,p.shots?Math.round(100*Math.min(p.hits,p.shots)/p.shots)+'%':'—'].map(value=>{const cell=document.createElement('td');cell.textContent=value;return cell;});
+        cells[0].style.color=colors[p.slot];row.append(...cells);$('resultsRows').append(row);
+      }
+    }
     $('rematch').disabled=postgame||voted||!joined;
     $('rematch').textContent=postgame?'REMATCH CLOSED':voted?'READY ✓':'REMATCH';
-    $('resultsTimer').textContent=postgame?'Leave the room to start or join a new battle.':'All connected players must choose Rematch within '+Math.ceil(data.rematchIn)+'s.';
+    $('resultsTimer').textContent=postgame?'Leave the room to start or join a new battle.':'Rematch starts when most players vote. '+Math.ceil(data.rematchIn)+'s left.';
   }
   if(waiting){
     const signature=JSON.stringify([data.ownerId,data.players.map(p=>[p.id,p.name,p.connected,p.team])]);
@@ -311,8 +343,8 @@ $('tutorialBody').addEventListener('pointerup',e=>{
   if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5)showTutorialPage(tutorialPage+(dx<0?1:-1));
 });
 function updateAudioButtons(){
-  $('sound').textContent=sound?'EFFECTS ON':'EFFECTS OFF';$('sound').setAttribute('aria-pressed',String(sound));
-  $('music').textContent=music?'MUSIC ON':'MUSIC OFF';$('music').setAttribute('aria-pressed',String(music));
+  $('sound').textContent=sound?'EFFECTS ON':'EFFECTS OFF';$('sound').setAttribute('aria-pressed',String(sound));$('sound').setAttribute('data-icon',sound?'🔊':'🔇');
+  $('music').textContent=music?'MUSIC ON':'MUSIC OFF';$('music').setAttribute('aria-pressed',String(music));$('music').setAttribute('data-icon',music?'🎵':'🔕');
 }
 function rememberAudio(){try{localStorage.setItem('tank-frenzy-sfx',sound?'on':'off');localStorage.setItem('tank-frenzy-music',music?'on':'off');}catch{}}
 function syncMusic(){
@@ -393,8 +425,7 @@ function updateTouchControls(){
   document.body.classList.toggle('mobile-playing',mobile&&joined);
   $('viewMode').hidden=!mobile||!joined;
   $('thumbControls').hidden=!mobile||!joined||(latest?.phase!=null&&latest.phase!=='playing');
-  $('mobileHelp').hidden=!mobile;
-  $('desktopHelp').hidden=mobile;
+  document.body.classList.toggle('in-room',joined&&!mobile);
   $('introControls').textContent=mobile?'Left thumb to move. Right thumb to aim and fire.':'Move with WASD. Aim with your mouse. Click to fire.';
   $('networkNote').textContent=mobile?'LEFT THUMB / MOVE · RIGHT THUMB / AIM + FIRE':'WASD / MOVE · MOUSE / AIM · LEFT CLICK / FIRE';
   canvas.setAttribute('aria-label',mobile?'Tank arena. Use the left thumb control to move and the right thumb control to aim and fire.':'Tank arena. Use W A S D to move, point the mouse to aim, and hold left click to fire.');
@@ -434,10 +465,13 @@ function setExpanded(value){
 function enterFullscreen(){
   if(expanded||fullscreenElement())return;
   const arena=$('arena'),request=arena.requestFullscreen||arena.webkitRequestFullscreen;
-  try{Promise.resolve(request?.call(arena)).catch(()=>{});}catch{/* Fullscreen was refused; keep the page layout. */}
+  try{
+    Promise.resolve(request?.call(arena)).then(()=>{if(touchMedia.matches)return screen.orientation?.lock?.('landscape');}).catch(()=>{});
+  }catch{/* Fullscreen was refused; keep the page layout. */}
 }
 function leaveFullscreen(){
   if(expanded)setExpanded(false);
+  try{screen.orientation?.unlock?.();}catch{}
   if(fullscreenElement()===$('arena')){try{Promise.resolve((document.exitFullscreen||document.webkitExitFullscreen).call(document)).catch(()=>{});}catch{}}
 }
 $('fullscreen').addEventListener('click',async()=>{
@@ -480,6 +514,24 @@ function updateMatchSounds(data){
   const me=data.players.find(p=>p.id===myId);if(!me)return;
   const won=data.settings?.mode==='teams'?me.team===data.winner.team:me.id===data.winner.id;
   playCue(won?'win':'lose');
+}
+// A short kill feed, plus a banner when a player reaches a streak without being destroyed.
+const streakCalls={3:'is on fire! 🔥',5:'is unstoppable! ⚡',7:'is a tank legend! 👑'};
+let streakTimer;
+function announceKill(e,players){
+  const killer=players.find(p=>p.id===e.by),victim=players.find(p=>p.id===e.player);
+  const item=document.createElement('li');
+  const tag=(player,fallback)=>{const name=document.createElement('b');name.textContent=player?.name||fallback;name.style.color=player?colors[player.slot]:'#6a765e';return name;};
+  item.append(tag(killer,'Someone'),' 💥 ',tag(victim,'a tank'));
+  if(e.by===myId||e.player===myId)item.className='mine';
+  $('killFeed').prepend(item);
+  while($('killFeed').children.length>4)$('killFeed').lastElementChild.remove();
+  setTimeout(()=>item.remove(),4500);
+  const call=streakCalls[e.streak];
+  if(killer&&call){
+    $('streakBanner').textContent=(killer.id===myId?'You':killer.name)+' '+(killer.id===myId?call.replace(/^is /,'are '):call);
+    $('streakBanner').hidden=false;clearTimeout(streakTimer);streakTimer=setTimeout(()=>{$('streakBanner').hidden=true;},2600);
+  }
 }
 // Your own hits: fiery screen edges, a harder shake and, on phones that support it, a buzz.
 function feelHit(dead,damage){
@@ -531,6 +583,16 @@ function playShotSound(event){
   const sample=power==='double'?'double':'shot';
   if(playEffect(sample,event,{volume:power==='machine'?.4:.6,interval:sample==='double'?.12:.06,key:'shot:'+event.player,vary:sample!=='double'}))return;
   beep(160+event.slot*30,.15,'triangle',.065);rumble(.12,.065,1500);
+}
+// Low-health heartbeat: two soft low thumps ("lub-dub"), muted with Effects.
+function playHeartbeat(){
+  const ac=getAudio();if(!ac||document.hidden)return;
+  for(const [delay,volume] of [[0,.16],[.17,.11]]){
+    const osc=ac.createOscillator(),gain=ac.createGain(),at=ac.currentTime+delay;
+    osc.type='sine';osc.frequency.setValueAtTime(70,at);osc.frequency.exponentialRampToValueAtTime(42,at+.14);
+    gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(volume,at+.015);gain.gain.exponentialRampToValueAtTime(.0001,at+.16);
+    osc.connect(gain);gain.connect(soundBank?.combat||ac.destination);trackFallback(osc,gain,()=>{osc.disconnect();gain.disconnect();});osc.start(at);osc.stop(at+.18);
+  }
 }
 function stopMovementSound(){
   if(!engine)return;
@@ -819,6 +881,8 @@ function frame(time){
     if(Math.hypot(t.x-x,t.y-y)>.1&&t.hp>0){t.track+=dt;if(t.track>.08){tracks.push({x:t.x,y:t.y,a:t.a,life:9});t.track=0;}}
   }
   updateMovementSound(ownSpeed);
+  const me=joined&&latest?.phase==='playing'&&tanks.find(t=>t.id===myId);
+  if(me&&me.hp>0&&me.hp<=3){if(time>=nextHeartbeat){nextHeartbeat=time+(me.hp===1?650:900);playHeartbeat();}}else nextHeartbeat=0;
   beams=beams.filter(b=>(b.life-=dt)>0);
   pickupFlashes=pickupFlashes.filter(f=>(f.life-=dt)>0);
   floaters=floaters.filter(f=>(f.life-=dt)>0);rings=rings.filter(r=>(r.life-=dt)>0);hurt=Math.max(0,hurt-dt*1.1);

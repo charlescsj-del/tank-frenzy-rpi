@@ -24,7 +24,8 @@ test('friendly shells pass teammates and team kills produce a shared victory',()
   r.teamScores[0]=9;r.damage(enemy,friend.id,10);
   assert.equal(r.teamScores[0],10);assert.equal(r.winner.name,'Orange team');
   r.step(11);assert.deepEqual(r.teamScores,[10,0]);assert.equal(r.phase,'results');
-  for(const p of [a,enemy,friend])assert.equal(r.voteRematch(p),true);
+  for(const p of [a,enemy])assert.equal(r.voteRematch(p),true);
+  assert.equal(r.phase,'countdown','two of three players are a majority');
   assert.deepEqual(r.teamScores,[0,0]);assert.equal(r.winner,null);assert.equal(friend.power,null);
 });
 

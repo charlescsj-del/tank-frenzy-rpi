@@ -27,7 +27,7 @@ class Room {
   add(name){
     if(this.players.size>=F.maxPlayers)return null;
     const slot=Array.from({length:F.maxPlayers},(_,i)=>i).find(i=>![...this.players.values()].some(p=>p.slot===i));
-    const p={id:randomUUID(),slot,name:name||F.palette[slot].name,x:0,y:0,a:0,aim:0,hp:F.maxHealth,kills:0,deaths:0,cool:0,respawnAt:0,shieldUntil:0,connected:true,disconnectedAt:0,input:neutral(),lastInput:this.time,seq:-1,life:0};
+    const p={id:randomUUID(),slot,name:name||F.palette[slot].name,x:0,y:0,a:0,aim:0,hp:F.maxHealth,kills:0,deaths:0,shots:0,hits:0,streak:0,cool:0,respawnAt:0,shieldUntil:0,connected:true,disconnectedAt:0,input:neutral(),lastInput:this.time,seq:-1,life:0};
     const teams=[0,1].map(team=>[...this.players.values()].filter(t=>t.team===team).length);
     p.team=this.settings.mode==='teams'?(teams[0]<=teams[1]?0:1):null;
     if(this.phase==='waiting')this.ownerId??=p.id;
@@ -45,14 +45,19 @@ class Room {
   }
   voteRematch(p){
     if(this.phase!=='results'||this.time>=this.rematchUntil||!p?.connected||this.players.get(p.id)!==p||this.rematchVotes.has(p.id))return false;
-    this.rematchVotes.add(p.id);
-    const connected=[...this.players.values()].filter(player=>player.connected);
-    if(connected.every(player=>this.rematchVotes.has(player.id))){
-      this.winner=null;this.rematchUntil=0;this.rematchVotes.clear();this.teamScores=[0,0];this.map=generateMap();
-      for(const player of this.players.values()){player.kills=0;player.deaths=0;}
-      this.beginCountdown();this.emit('restart',{});
-    }
+    this.rematchVotes.add(p.id);this.checkRematch();
     return true;
+  }
+  // A majority of connected players starts the rematch, so one idle player cannot block it.
+  // With two players both must agree.
+  rematchNeeded(){return Math.floor([...this.players.values()].filter(player=>player.connected).length/2)+1;}
+  checkRematch(){
+    if(this.phase!=='results')return;
+    const votes=[...this.rematchVotes].filter(id=>this.players.get(id)?.connected).length;
+    if(votes<this.rematchNeeded())return;
+    this.winner=null;this.rematchUntil=0;this.rematchVotes.clear();this.teamScores=[0,0];this.map=generateMap();
+    for(const player of this.players.values()){player.kills=0;player.deaths=0;player.shots=0;player.hits=0;player.streak=0;}
+    this.beginCountdown();this.emit('restart',{});
   }
   beginCountdown(){
     this.phase='countdown';this.ownerId=null;this.countdownUntil=this.time+3;
@@ -83,7 +88,9 @@ class Room {
     const attacker=this.players.get(owner);
     if(p.hp<=0||this.invulnerable(p)||(attacker&&this.friendly(attacker,p)))return;
     p.hp=Math.max(0,p.hp-amount);const dead=p.hp===0;
-    this.emit(dead?'destroyed':'hit',{x:p.x,y:p.y,slot:p.slot,player:p.id,damage:amount});
+    if(attacker)attacker.hits++;
+    if(dead){p.streak=0;if(attacker)attacker.streak++;}
+    this.emit(dead?'destroyed':'hit',{x:p.x,y:p.y,slot:p.slot,player:p.id,damage:amount,...(dead&&attacker?{by:attacker.id,streak:attacker.streak}:{})});
     if(!dead)return;
     p.deaths++;p.respawnAt=this.time+3;p.input=neutral();p.pendingShot=false;p.power=null;p.powerUntil=0;
     if(!attacker)return;
@@ -131,6 +138,7 @@ class Room {
     const count=power==='double'?2:1;
     if(power!=='laser'&&(this.shells.length+count>F.maxShells||this.shells.filter(s=>s.owner===p.id).length+count>F.maxShellsPerPlayer))return;
     p.cool=power==='machine'?.12:power==='laser'?.8:F.fireCooldown;
+    p.shots+=count;
     if(power==='laser'){this.fireLaser(p);return;}
     const dx=Math.cos(p.aim),dy=Math.sin(p.aim);
     for(const offset of power==='double'?[-F.doubleBarrelOffset,F.doubleBarrelOffset]:[0]){
@@ -157,7 +165,7 @@ class Room {
       if(this.time>=this.countdownUntil){this.phase='playing';for(const p of this.players.values()){p.input=neutral();p.pendingShot=false;p.lastInput=this.time;}this.emit('start',{});}
       return;
     }
-    if(this.phase==='results'){if(this.time>=this.rematchUntil){this.phase='postgame';this.rematchVotes.clear();}return;}
+    if(this.phase==='results'){this.checkRematch();if(this.phase==='results'&&this.time>=this.rematchUntil){this.phase='postgame';this.rematchVotes.clear();}return;}
     if(this.phase==='postgame')return;
     this.pickups=this.pickups.filter(p=>p.expiresAt>this.time);
     if(this.settings.powers&&this.time>=this.nextPickup){this.spawnPickup();this.nextPickup=this.time+F.pickupInterval;}
@@ -226,6 +234,6 @@ class Room {
     }
     this.shells=this.shells.filter(s=>s.life>0);
   }
-  snapshot(){return {type:'state',room:this.code,settings:this.settings,phase:this.phase,countdownIn:this.phase==='countdown'?Math.max(0,this.countdownUntil-this.time):0,ownerId:this.ownerId,teamScores:this.teamScores,pickups:this.pickups,map:this.map,time:this.time,winner:this.winner,rematchIn:this.phase==='results'?Math.max(0,this.rematchUntil-this.time):0,rematchVotes:[...this.rematchVotes],players:[...this.players.values()].map(({id,slot,name,x,y,a,aim,hp,kills,deaths,connected,respawnAt,shieldUntil,life,team,power,powerUntil})=>({id,slot,name,x,y,a,aim,hp,kills,deaths,connected,respawnIn:Math.max(0,respawnAt-this.time),shield:shieldUntil>this.time,life,team,power,powerRemaining:Math.max(0,powerUntil-this.time)})),shells:this.shells,events:this.events};}
+  snapshot(){return {type:'state',room:this.code,settings:this.settings,phase:this.phase,countdownIn:this.phase==='countdown'?Math.max(0,this.countdownUntil-this.time):0,ownerId:this.ownerId,teamScores:this.teamScores,pickups:this.pickups,map:this.map,time:this.time,winner:this.winner,rematchIn:this.phase==='results'?Math.max(0,this.rematchUntil-this.time):0,rematchVotes:[...this.rematchVotes],rematchNeeded:this.phase==='results'?this.rematchNeeded():0,players:[...this.players.values()].map(({id,slot,name,x,y,a,aim,hp,kills,deaths,shots,hits,streak,connected,respawnAt,shieldUntil,life,team,power,powerUntil})=>({id,slot,name,x,y,a,aim,hp,kills,deaths,shots,hits,streak,connected,respawnIn:Math.max(0,respawnAt-this.time),shield:shieldUntil>this.time,life,team,power,powerRemaining:Math.max(0,powerUntil-this.time)})),shells:this.shells,events:this.events};}
 }
 module.exports={Room,hitRect};

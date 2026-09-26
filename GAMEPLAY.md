@@ -2,7 +2,7 @@
 
 A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarry, rounded menus and bold lettering. Choose Free-for-All or 2 vs 2 and invite your friends.
 
-Current release: **v1.10.0**, also shown in the top-left corner of the room browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. Keep the version in `shared.js`, `package.json`, and `package-lock.json` synchronized when releasing changes.
+Current release: **v1.11.0**, also shown in the top-left corner of the room browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. Keep the version in `shared.js`, `package.json`, and `package-lock.json` synchronized when releasing changes.
 
 See [SOUND_DESIGN.md](SOUND_DESIGN.md) for the approved cartoon arcade audio direction and implementation notes.
 
@@ -11,6 +11,10 @@ See [SOUND_DESIGN.md](SOUND_DESIGN.md) for the approved cartoon arcade audio dir
 Play online at https://tank-frenzy.onrender.com/ to browse active rooms or create a new room. Select a room to preview player names and available spots before joining. The list refreshes every five seconds; reconnecting players keep their reserved spots briefly, and full rooms remain visible but cannot be joined.
 
 Room links such as https://tank-frenzy.onrender.com/?room=QUARRY still open the join form with that code prefilled. Creating a room checks that its code is unused; rooms exist while players are present and disappear after everyone leaves (or their reconnection reservations expire).
+
+The room browser has a **Your name** box (remembered on this device and shared with the Create/Join form), **⚡ Quick Play**, **Create Room** and a refresh button. Every room row shows its players and rules with its own **Join** button, so one tap joins. Quick Play joins a waiting room in the chosen mode first, then the fullest open room, and creates a new room when none is open. Full rooms and ended matches show **FULL** or **ENDED**. Effects and music are the round 🔊/🎵 buttons in the panel corner.
+
+Desktop waiting rooms and battles fit the window without scrolling: the brand, tagline and How to Play share one slim row above the arena.
 
 The room browser fits on one screen without scrolling: the quarry artwork with “Small tanks. Big rivalries.” and a **How to Play** button sits beside the room panel on wide screens and above it on phones. Only the room list scrolls, inside its own box, when many rooms are open. Create/Join, waiting rooms and battles show the same tagline in one compact line. On narrow screens the Create/Join form keeps its room rules and submit button visible without the arena header or controls taking space.
 
@@ -47,6 +51,8 @@ Maps are 1600 by 1040 world units (about 2.5 times the previous area). Each room
 - During touch play, the arena fills the available browser height. A single 44px top row shows the room, your name and health, and **Menu**. Open Menu for fullscreen, invite, leave, separate music/effects switches and view controls. A close camera follows your tank so tanks and nearby cover stay large. Choose **Full Map** for an overview and **Close View** to return; this changes only your view, not movement, aiming, or the shared map. Landscape gives you a wider view. Leaving the room restores the page.
 - Pressing **Create & Join**, **Join Arena** or **Start Game** puts the arena in fullscreen automatically where the browser allows it (iPhone Safari does not; touch play still fills the browser view). Leaving the room exits fullscreen.
 - Getting hit flares flames around the screen edges and shakes the view, harder for a laser or when destroyed. A −1/−4 damage number rises above every tank that takes damage, and destroyed tanks throw smoke and a shockwave ring. Android phones vibrate on your own hits (Effects Off disables it). At 3 health or less the edges keep smouldering until you heal or respawn. Reduced-motion settings keep the flames still and skip the shake.
+- Every destruction appears for a few seconds in a kill feed at the top right ("Alice 💥 Bo"; your own kills and deaths are outlined). Three kills in a row without being destroyed shows "… is on fire! 🔥", five "… is unstoppable! ⚡", seven "… is a tank legend! 👑". Streaks reset when you are destroyed and on a rematch.
+- At 3 health or less a soft heartbeat plays with the smouldering screen edges (Effects Off mutes it).
 - Your own tank has a thick translucent halo in your color, plus a ★ after your name, so you can find it at a glance.
 - Full Screen expands the arena on desktop and mobile. Where browser fullscreen is unavailable or rejected, it falls back to an expanded view inside the browser; browser bars may remain visible. Use Exit Full Screen to return. Landscape is recommended on phones.
 - W/A/S/D: move up/left/down/right along the unrotated map axes, including diagonal movement.
@@ -65,7 +71,7 @@ Maps are 1600 by 1040 world units (about 2.5 times the previous area). Each room
 - Left click: fire. Hold to keep firing, with a 0.42-second cooldown between shots.
 - Tanks have **10 health**: ten normal shells or three unprotected laser hits destroy a full-health tank. Respawn takes three seconds and restores all 10 health. Five compact health pips each represent two health; half pips show odd health values without widening the mobile header.
 - Mid-match joins and respawns have three seconds of protection, even while moving and firing. Protected tanks slowly fade in/out; the ten-second Immortal power uses the same effect. Reduced-motion mode uses steady translucency.
-- First to ten kills wins. A large animated result card appears over the field and combat stops. Every connected player can choose **Rematch** within 20 seconds, or **Leave Room** right beside it (no confirmation needed once the round is over); only unanimous votes start the next three-second countdown. If the vote expires, the room stays open with its result displayed until everyone leaves; it remains listed but cannot be newly joined. Start or join another room for a new battle. Late joiners during the vote can participate. Disconnecting players cannot vote, and their votes are not required until they reconnect.
+- First to ten kills wins. A large animated result card appears over the field and combat stops. The card lists every player's kills, deaths and hit rate (hits divided by shells and laser shots fired this match). Players choose **Rematch** within 20 seconds, or **Leave Room** right beside it (no confirmation needed once the round is over). A majority of connected players starts the next three-second countdown: both of two players, two of three, three of four. If a player who has not voted leaves, the remaining votes can complete the majority. If the vote expires, the room stays open with its result displayed until everyone leaves; it remains listed but cannot be newly joined. Start or join another room for a new battle. Late joiners during the vote can participate. Disconnecting players cannot vote, and their votes are not required until they reconnect.
 - Leaving the tab stops your controls, but other players keep playing.
 - A brief connection loss reserves your tank for 15 seconds and reconnects automatically. Reloading or leaving creates a new player session.
 

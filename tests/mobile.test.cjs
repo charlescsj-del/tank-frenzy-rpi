@@ -7,7 +7,7 @@ function client(mobile=true,url='http://localhost:8765'){
   const elements=new Map(),windowEvents={},documentEvents={},sent=[];
   function element(){
     const events={},classes=new Set(),captures=new Set();
-    return {events,children:[],hidden:false,textContent:'',style:{setProperty(){}},replaceChildren(...items){this.children=items;},append(...items){this.children.push(...items);},
+    return {events,children:[],hidden:false,textContent:'',style:{setProperty(){}},replaceChildren(...items){this.children=items;},append(...items){this.children.push(...items);},prepend(...items){this.children.unshift(...items);},
       classList:{add:n=>classes.add(n),remove:n=>classes.delete(n),toggle(n,on){on?classes.add(n):classes.delete(n);},contains:n=>classes.has(n)},
       attributes:{},addEventListener(n,f){events[n]=f;},setAttribute(n,v){this.attributes[n]=v;},focus(){},
       getContext:()=>({}),getBoundingClientRect:()=>({left:0,top:0,width:100,height:100}),
@@ -59,8 +59,8 @@ test('dead zone, captured pointer loss, blur, rotation and input mode changes cl
 test('desktop hides thumb controls; touch controls wait for joining',()=>{
   const desktop=client(false);
   assert.equal(desktop.elements.get('thumbControls').hidden,true);
-  assert.equal(desktop.elements.get('desktopHelp').hidden,false);
-  const mobile=client();assert.equal(mobile.elements.get('thumbControls').hidden,false);
+  assert(desktop.sandbox.document.body.classList.contains('in-room'),'desktop battles use the one-screen layout');
+  const mobile=client();assert(!mobile.sandbox.document.body.classList.contains('in-room'));assert.equal(mobile.elements.get('thumbControls').hidden,false);
   mobile.run('joined=false;updateTouchControls()');assert.equal(mobile.elements.get('thumbControls').hidden,true);
 });
 
@@ -76,7 +76,7 @@ test('leaving requires confirmation and cancellation keeps the player in the roo
 test('mode choice filters rooms and new room options default to enabled',()=>{
   const c=client();c.run('lobbyRooms=[{code:"SOLO",settings:{mode:"ffa"},players:[],capacity:4,available:4},{code:"TEAM",settings:{mode:"teams"},players:[],capacity:4,available:4}]');
   c.elements.get('teamMode').events.click();assert.equal(c.elements.get('roomList').children.length,1);
-  assert.match(c.elements.get('roomList').children[0].textContent,/TEAM/);
+  assert.match(c.elements.get('roomList').children[0].children[0].children[0].textContent,/TEAM/);
   c.elements.get('createRoom').events.click();assert.equal(c.elements.get('gameMode').value,'teams');
   assert.equal(c.elements.get('bounceOption').checked,true);assert.equal(c.elements.get('powersOption').checked,true);
 });
@@ -171,7 +171,7 @@ test('winner fills the arena, rematch vote is one-shot, and expiry does not rest
   assert.equal(c.elements.get('results').hidden,false);
   assert.equal(c.elements.get('resultsTitle').textContent,'Friend wins!');
   assert.equal(c.elements.get('resultsOutcome').textContent,'GOOD BATTLE!');
-  assert.equal(c.elements.get('resultsVotes').textContent,'0 / 2 players ready');
+  assert.equal(c.elements.get('resultsVotes').textContent,'0 / 2 votes needed for a rematch');
   assert.match(c.elements.get('resultsTimer').textContent,/20s/);
   assert.equal(c.elements.get('respawn').textContent,'');
   assert.equal(c.elements.get('thumbControls').hidden,true);
@@ -214,32 +214,53 @@ test('plain URLs open the room browser while room links keep the prefilled join 
   assert.equal(linked.elements.get('joinFields').hidden,false);
 });
 
-test('room selection previews names before joining and create opens a separate editable form',async()=>{
-  const c=client();c.run('joined=false');
-  c.sandbox.fetch=async()=>({ok:true,json:async()=>({rooms:[{code:'ALPHA',capacity:4,available:2,players:[{name:'Alice',connected:true},{name:'Bob',connected:false}]}]})});
-  await c.run('refreshRooms()');c.elements.get('roomList').children[0].events.click();
-  assert.equal(c.elements.get('roomDetails').hidden,false);
-  assert.deepEqual(c.elements.get('roomPlayers').children.map(p=>p.textContent),['Alice','Bob (reconnecting)']);
-  c.elements.get('joinSelected').events.click();
-  assert.equal(c.run('joinMode'),'join');assert.equal(c.elements.get('roomInput').value,'ALPHA');assert.equal(c.elements.get('roomInput').readOnly,true);
-  assert(c.sandbox.document.body.classList.contains('in-room-form'));
-  assert(c.elements.get('arena').classList.contains('room-form-open'));
-  c.elements.get('createRoom').events.click();
+function lobbyClient(){
+  const c=client(),sockets=[];c.run('joined=false');
+  Object.assign(c.sandbox,{setTimeout:()=>0,clearTimeout(){},WebSocket:class{static OPEN=1;constructor(url){sockets.push(url);}addEventListener(){}close(){}}});
+  const rooms=list=>{c.sandbox.fetch=async()=>({ok:true,json:async()=>({rooms:list})});};
+  return {c,sockets,rooms};
+}
+
+test('rooms list players inline with a one-tap Join; the saved name is shared; create opens the editable form',async()=>{
+  const {c,sockets,rooms}=lobbyClient();
+  rooms([{code:'ALPHA',capacity:4,available:2,phase:'waiting',players:[{name:'Alice',connected:true},{name:'Bob',connected:false}]}]);
+  await c.run('refreshRooms()');
+  const [info,join]=c.elements.get('roomList').children[0].children;
+  assert.equal(info.children[1].textContent,'Alice, Bob · reconnecting');assert.equal(join.textContent,'JOIN');
+  c.elements.get('lobbyName').value='Zed';c.elements.get('lobbyName').events.input();assert.equal(c.elements.get('callsign').value,'Zed');
+  join.events.click();
+  assert.equal(c.run('joinMode'),'join');assert.equal(c.elements.get('roomInput').value,'ALPHA');assert.equal(sockets.length,1,'joins straight away');
+  c.run('connecting=false');c.elements.get('createRoom').events.click();
   assert.equal(c.run('joinMode'),'create');assert.equal(c.elements.get('roomInput').readOnly,false);assert.match(c.elements.get('roomInput').value,/^ROOM-/);
+  assert.equal(c.elements.get('callsign').value,'Zed');
+  assert(c.sandbox.document.body.classList.contains('in-room-form'));assert(c.elements.get('arena').classList.contains('room-form-open'));
   c.elements.get('browseRooms').events.click();
   assert.equal(c.sandbox.document.body.classList.contains('in-room-form'),false);
   assert.equal(c.elements.get('arena').classList.contains('room-form-open'),false);
   assert.equal(c.elements.get('roomBrowser').hidden,false);
 });
 
-test('full and vanished rooms cannot be joined; request failures provide a retry message',async()=>{
-  const c=client();c.run('joined=false;selectedRoom="FULL"');
-  c.sandbox.fetch=async()=>({ok:true,json:async()=>({rooms:[{code:'FULL',capacity:4,available:0,players:[]}]})});
-  await c.run('refreshRooms()');assert.equal(c.elements.get('joinSelected').disabled,true);
-  c.sandbox.fetch=async()=>({ok:true,json:async()=>({rooms:[]})});
-  await c.run('refreshRooms()');assert.equal(c.elements.get('roomDetails').hidden,true);assert.equal(c.elements.get('joinSelected').disabled,true);
+test('full and ended rooms cannot be joined; empty lists and request failures explain what to do',async()=>{
+  const {c,rooms}=lobbyClient();
+  rooms([{code:'FULL',capacity:4,available:0,phase:'playing',players:[]},{code:'DONE',capacity:4,available:0,phase:'postgame',players:[]}]);
+  await c.run('refreshRooms()');
+  const [full,done]=c.elements.get('roomList').children.map(row=>row.children[1]);
+  assert.deepEqual([full.textContent,full.disabled,done.textContent,done.disabled],['FULL',true,'ENDED',true]);
+  rooms([]);await c.run('refreshRooms()');
+  assert.equal(c.elements.get('roomList').children.length,0);assert.match(c.elements.get('roomListStatus').textContent,/Quick Play creates one/);
   c.sandbox.fetch=async()=>{throw Error('offline');};await c.run('refreshRooms()');
   assert.match(c.elements.get('roomListStatus').textContent,/Tap Refresh/);
+});
+
+test('Quick Play joins the best open room in the chosen mode, or creates one',async()=>{
+  const {c,sockets,rooms}=lobbyClient();
+  rooms([{code:'BUSY',phase:'playing',available:1,capacity:4,settings:{mode:'ffa'},players:[]},{code:'WAIT',phase:'waiting',available:3,capacity:4,settings:{mode:'ffa'},players:[]},
+    {code:'VOTE',phase:'results',available:2,capacity:4,settings:{mode:'ffa'},players:[]},{code:'TEAM',phase:'waiting',available:3,capacity:4,settings:{mode:'teams'},players:[]}]);
+  await c.run('quickPlay()');assert.equal(c.run('joinMode'),'join');assert.equal(c.elements.get('roomInput').value,'WAIT');
+  c.run('connecting=false');rooms([{code:'BUSY',phase:'playing',available:1,capacity:4,settings:{mode:'ffa'},players:[]}]);
+  await c.run('quickPlay()');assert.equal(c.elements.get('roomInput').value,'BUSY');
+  c.run('connecting=false');rooms([]);await c.run('quickPlay()');
+  assert.equal(c.run('joinMode'),'create');assert.match(c.elements.get('roomInput').value,/^ROOM-/);assert.equal(sockets.length,3);
 });
 
 test('mobile play uses a compact viewport and restores the page on leaving or switching input',()=>{
@@ -389,7 +410,7 @@ test('how to play turns pages with arrows, dots, keys and swipes, blocks driving
 });
 
 test('your own hits flare the screen edges, shake, buzz and show damage numbers',()=>{
-  const c=client(false),buzz=[];c.sandbox.clearTimeout=()=>{};c.sandbox.history={replaceState(){}};c.sandbox.window.navigator={vibrate:pattern=>buzz.push(pattern)};
+  const c=client(false),buzz=[];c.sandbox.setTimeout=()=>0;c.sandbox.clearTimeout=()=>{};c.sandbox.history={replaceState(){}};c.sandbox.window.navigator={vibrate:pattern=>buzz.push(pattern)};
   c.run("sound=true;playEffect=()=>true;tanks=[{id:'me',x:100,y:100,hp:9},{id:'other',x:400,y:100,hp:6}]");
   c.run("applySnapshot({phase:'playing',players:[{id:'me',slot:0,x:100,y:100,hp:9,life:1,connected:true},{id:'other',slot:1,x:400,y:100,hp:6,life:1,connected:true}],shells:[],events:[{id:1,type:'hit',player:'other',x:400,y:100,slot:1,damage:4}]})");
   assert.equal(c.run('hurt'),0,'hits on other tanks do not flare your screen');assert.equal(c.run('floaters.at(-1).text'),'-4');assert.equal(buzz.length,0);
@@ -400,4 +421,17 @@ test('your own hits flare the screen edges, shake, buzz and show damage numbers'
   c.run('sound=false;feelHit(false,1)');assert.equal(buzz.length,2,'Effects Off also silences vibration');
   c.run('draw=()=>{};frame(0);frame(2000)');assert(c.run('hurt')<1,'the flare fades');
   c.run("socket.close=()=>{};leave()");assert.equal(c.run('hurt'),0);assert.equal(c.run('floaters.length'),0);
+});
+
+test('kills appear in a short feed, streaks get a banner, and the result card shows a scoreboard',()=>{
+  const c=client(false);c.sandbox.setTimeout=()=>0;c.sandbox.clearTimeout=()=>{};c.run('playEffect=()=>true');
+  const players=[{id:'me',name:'Me',slot:0,x:100,y:100,hp:10,life:1,connected:true,kills:3,deaths:1,shots:20,hits:9},{id:'b',name:'Bo',slot:1,x:400,y:100,hp:0,life:1,connected:true,kills:1,deaths:3,shots:12,hits:3}];
+  c.run(`applySnapshot({phase:'playing',players:${JSON.stringify(players)},shells:[],events:[{id:1,type:'destroyed',player:'b',by:'me',streak:3,x:400,y:100,slot:1,damage:1}]})`);
+  const item=c.elements.get('killFeed').children[0];
+  assert.deepEqual(item.children.filter(x=>typeof x!=='string').map(x=>x.textContent),['Me','Bo']);assert.equal(item.className,'mine');
+  assert.equal(c.elements.get('streakBanner').hidden,false);assert.equal(c.elements.get('streakBanner').textContent,'You are on fire! 🔥');
+  c.run(`latest={phase:'results',winner:{id:'me',name:'Me'},rematchIn:15,rematchVotes:['b'],rematchNeeded:2,settings:{mode:'ffa'},players:${JSON.stringify(players)}};updateRoomPhase(latest)`);
+  const rows=c.elements.get('resultsRows').children;
+  assert.deepEqual(rows.map(r=>r.children.map(cell=>cell.textContent)),[['Me ★','3','1','45%'],['Bo','1','3','25%']].map(r=>r.map((v,i)=>i?Number.isNaN(+v)?v:+v:v)));
+  assert.equal(c.elements.get('resultsVotes').textContent,'1 / 2 votes needed for a rematch');
 });
