@@ -35,8 +35,8 @@ function createGameServer({ingress=false,publicUrl=''}={}){
     }
     if(url.pathname==='/rooms'){
       const available=[...rooms.values()].filter(room=>room.players.size>0).map(room=>({
-        code:room.code,capacity:maxPlayers,available:room.phase==='postgame'?0:maxPlayers-room.players.size,settings:room.settings,phase:room.phase,
-        players:[...room.players.values()].map(({name,slot,connected,team})=>({name,slot,connected,team}))
+        code:room.code,capacity:maxPlayers,available:room.phase==='postgame'?0:maxPlayers-room.humans().length,settings:room.settings,phase:room.phase,
+        players:[...room.players.values()].map(({name,slot,connected,team,bot})=>({name,slot,connected,team,bot}))
       })).sort((a,b)=>a.code.localeCompare(b.code));
       res.setHeader('Content-Type','application/json');res.end(JSON.stringify({rooms:available}));return;
     }
@@ -106,6 +106,7 @@ function createGameServer({ingress=false,publicUrl=''}={}){
       if(session.ws!==ws)return;
       if(msg.type==='start')session.room.start(session.player);
       if(msg.type==='rematch')session.room.voteRematch(session.player);
+      if(msg.type==='bot')session.room.botCommand(session.player,msg);
       if(msg.type==='input')session.room.setInput(session.player,msg);
       if(msg.type==='ping')send(ws,{type:'pong',sent:msg.sent});
       if(msg.type==='leave'){session.room.remove(session.player);if(session.room.players.size===0)rooms.delete(session.room.code);sessions.delete(session.token);ws.close(1000,'Left room');}

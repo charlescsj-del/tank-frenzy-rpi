@@ -239,10 +239,17 @@ function updateRoomPhase(data){
     const mine=data.ownerId===myId,owner=data.players.find(p=>p.id===data.ownerId);
     $('startGame').hidden=!mine;$('startGame').disabled=!mine;
     $('waitingTitle').textContent='Room '+data.room;
-    $('waitingMessage').textContent=mine?'Invite your friends. Press Start Game when everyone is ready.':'Waiting for '+(owner?.name||'a player')+' to start the game.';
+    const bots=data.players.filter(p=>p.bot).length,skill=data.botSkill||'normal';
+    $('botControls').hidden=!mine;$('addBot').disabled=data.players.length>=FIELD.maxPlayers;$('removeBot').disabled=!bots;
+    if($('botSkill').value!==skill)$('botSkill').value=skill;
+    $('waitingMessage').textContent=mine?(data.players.length===1?'Playing alone? Add bots or invite friends, then press Start Game.':'Press Start Game when everyone is ready.')+(bots?' Bots: '+skill+'.':'')
+      :'Waiting for '+(owner?.name||'a player')+' to start the game.'+(bots?' Bots: '+skill+'.':'');
   }
   if(roomPhase!==data.phase){roomPhase=data.phase;release();updateTouchControls();resize();syncMusic();}
 }
+$('addBot').addEventListener('click',()=>send({type:'bot',action:'add'}));
+$('removeBot').addEventListener('click',()=>send({type:'bot',action:'remove'}));
+$('botSkill').addEventListener('change',()=>send({type:'bot',action:'skill',skill:$('botSkill').value}));
 $('startGame').addEventListener('click',()=>{if(joined&&latest?.phase==='waiting'&&latest.ownerId===myId){enterFullscreen();release();send({type:'start'});}});
 $('rematch').addEventListener('click',()=>{if(joined&&latest?.phase==='results'&&latest.rematchIn>0&&!latest.rematchVotes?.includes(myId)){send({type:'rematch'});$('rematch').disabled=true;}});
 // The round is over, so leaving from the result card needs no extra confirmation.

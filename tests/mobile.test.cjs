@@ -435,3 +435,17 @@ test('kills appear in a short feed, streaks get a banner, and the result card sh
   assert.deepEqual(rows.map(r=>r.children.map(cell=>cell.textContent)),[['Me ★','3','1','45%'],['Bo','1','3','25%']].map(r=>r.map((v,i)=>i?Number.isNaN(+v)?v:+v:v)));
   assert.equal(c.elements.get('resultsVotes').textContent,'1 / 2 votes needed for a rematch');
 });
+
+test('the room starter sees bot controls that send add, remove and skill commands',()=>{
+  const c=client(false);
+  const state=(players,owner='me')=>c.run(`latest={room:'BOTS',phase:'waiting',ownerId:'${owner}',botSkill:'hard',players:${JSON.stringify(players)}};updateRoomPhase(latest)`);
+  const me={id:'me',name:'Me',slot:0,connected:true},bot={id:'b',name:'🤖 Bolt',slot:1,connected:true,bot:true};
+  state([me]);assert.equal(c.elements.get('botControls').hidden,false);assert.equal(c.elements.get('removeBot').disabled,true);
+  assert.match(c.elements.get('waitingMessage').textContent,/Playing alone\? Add bots/);
+  c.elements.get('addBot').events.click();assert.equal(JSON.stringify(c.sent.at(-1)),JSON.stringify({type:'bot',action:'add'}));
+  state([me,bot]);assert.equal(c.elements.get('removeBot').disabled,false);assert.equal(c.elements.get('botSkill').value,'hard');
+  c.elements.get('removeBot').events.click();assert.equal(JSON.stringify(c.sent.at(-1)),JSON.stringify({type:'bot',action:'remove'}));
+  c.elements.get('botSkill').value='easy';c.elements.get('botSkill').events.change();assert.equal(JSON.stringify(c.sent.at(-1)),JSON.stringify({type:'bot',action:'skill',skill:'easy'}));
+  state([me,bot,{...bot,id:'c',slot:2},{...bot,id:'d',slot:3}]);assert.equal(c.elements.get('addBot').disabled,true);
+  state([me,bot],'someone-else');assert.equal(c.elements.get('botControls').hidden,true);assert.match(c.elements.get('waitingMessage').textContent,/Bots: hard/);
+});
