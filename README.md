@@ -2,7 +2,7 @@
 
 Install Tank Frenzy as a Home Assistant app (formerly called an add-on). The Pi hosts the multiplayer game; players use Safari, Edge, Chrome, or another modern browser on their phones, tablets, or computers. Rendering and sound run on each player's device.
 
-Based on **Tank Frenzy v1.8.0** from the [main game repository](https://github.com/charlescsj-del/tank-frenzy/commit/936d4d743a3ba46f3e7524a93e94da83b9343038), with the v1.9.0–1.12.0 updates made here: computer-controlled bots, a one-screen room browser with Quick Play and one-tap Join, a paged How to Play guide with screenshots, fiery hit effects, a kill feed with streaks, an end-of-match scoreboard, majority rematch votes, a halo around your own tank, automatic fullscreen and Add to Home Screen support. Includes the animated winner screen, compact phone Create/Join forms, and approved music and effects. The Pi app provides separate Home Assistant sidebar and LAN listeners.
+Based on **Tank Frenzy v1.8.0** from the [main game repository](https://github.com/charlescsj-del/tank-frenzy/commit/936d4d743a3ba46f3e7524a93e94da83b9343038), with the v1.9.0–1.13.0 updates made here: an all-time leaderboard saved on the Pi, Home Assistant notifications for new rooms, computer-controlled bots, a one-screen room browser with Quick Play and one-tap Join, a paged How to Play guide with screenshots, fiery hit effects, a kill feed with streaks, an end-of-match scoreboard, majority rematch votes, a halo around your own tank, automatic fullscreen and Add to Home Screen support. Includes the animated winner screen, compact phone Create/Join forms, and approved music and effects. The Pi app provides separate Home Assistant sidebar and LAN listeners.
 
 ## Install
 
@@ -29,7 +29,9 @@ Set **Configuration → public_url** to your LAN address, for example `http://19
 
 Port `8765` is the game port and does not require a Home Assistant login. Change or disable its host mapping under **Network** if needed; update `public_url` to match. The internal ingress port `8099` is not published on the host. Disabling the game port still permits sidebar play.
 
-Music starts after the first tap/click, according to browser autoplay rules. Sound comes from the playing device, not the Pi's audio output. After a win, a rematch starts when a majority of connected players (both, with two players) vote within 20 seconds; otherwise the finished result remains until players leave. Scores and rooms are held in memory and reset when the app restarts.
+Music starts after the first tap/click, according to browser autoplay rules. Sound comes from the playing device, not the Pi's audio output. After a win, a rematch starts when a majority of connected players (both, with two players) vote within 20 seconds; otherwise the finished result remains until players leave. Rooms and match scores are held in memory and reset when the app restarts; the 🏆 all-time leaderboard is saved in the app's `/data` folder.
+
+Set **Configuration → notify_service** (for example `notify.mobile_app_your_phone`) to get a Home Assistant notification whenever someone opens a room.
 
 **Add to Home Screen:** on iPhone/iPad open the game in Safari and choose **Share → Add to Home Screen**; the game then opens full screen without browser bars. Android Chrome offers **Add to Home screen** too, but opens it as a normal full-screen app only over HTTPS (for example through a reverse proxy set as `public_url`); over plain LAN HTTP it adds a shortcut that opens in the browser.
 
@@ -52,6 +54,6 @@ docker run --rm -p 8765:8765 tank-frenzy-rpi
 
 Run the build on the intended architecture (or use Docker Buildx with `--platform linux/arm64`). The repository includes CI for tests and ARM64/AMD64 container builds. A physical Pi/Home Assistant installation and mobile play must still be checked on the target device; automated tests do not establish Pi performance under load.
 
-App package version: **1.12.0**. Game version: **1.12.0**. Bump `config.yaml` for future app updates and keep the Dockerfile default build version in sync.
+App package version: **1.13.0**. Game version: **1.13.0**. Bump `config.yaml` for future app updates and keep the Dockerfile default build version in sync.
 
 The How to Play screenshots in `tutorial/` are rendered by the game itself. After a visual change, run `npm start` and then `npx -y -p playwright node tools/tutorial-screenshots.cjs` to regenerate them (set `ONLY=win.webp` for one image).

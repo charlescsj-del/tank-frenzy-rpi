@@ -6,7 +6,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const WebSocket=require('ws');
 const {createGameServer}=require('../server.cjs');
-const {readOptions}=require('../addon.cjs');
+const {readOptions,homeAssistantNotifier}=require('../addon.cjs');
 const Music=require('../music.js');
 const SoundBank=require('../sound-bank.js');
 
@@ -63,7 +63,7 @@ test('ingress serves prefix-safe assets and shares live multiplayer rooms with L
 test('app options accept LAN and HTTPS addresses and reject unsafe or ambiguous invitations',()=>{
   const dir=fs.mkdtempSync(path.join(__dirname,'tank-options-')),file=path.join(dir,'options.json');
   try{
-    assert.deepEqual(readOptions(file),{ingress:true,publicUrl:''});
+    assert.deepEqual(readOptions(file),{ingress:true,publicUrl:'',notifyService:''});
     for(const value of ['http://192.168.1.50:8765/','https://game.example/']){
       fs.writeFileSync(file,JSON.stringify({public_url:value}));assert.equal(readOptions(file).publicUrl,value.slice(0,-1));
     }
@@ -71,4 +71,29 @@ test('app options accept LAN and HTTPS addresses and reject unsafe or ambiguous 
       fs.writeFileSync(file,JSON.stringify({public_url:value}));assert.throws(()=>readOptions(file));
     }
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('notify_service accepts Home Assistant service names and rejects anything else',()=>{
+  const dir=fs.mkdtempSync(path.join(__dirname,'tank-notify-')),file=path.join(dir,'options.json');
+  try{
+    for(const [value,expected] of [['notify.mobile_app_pixel','mobile_app_pixel'],['notify','notify'],['',''],[' family_phones ','family_phones']]){
+      fs.writeFileSync(file,JSON.stringify({notify_service:value}));assert.equal(readOptions(file).notifyService,expected);
+    }
+    for(const value of ['notify.Phone','../api','notify.a b','http://x']){fs.writeFileSync(file,JSON.stringify({notify_service:value}));assert.throws(()=>readOptions(file));}
+  }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('room notifications call the Supervisor notify API with the invite link, at most once a minute',async()=>{
+  const calls=[];let clock=0;const log={error:(...m)=>calls.push(['error',...m])};
+  const fetchImpl=async(url,init)=>{calls.push([url,init]);return {ok:true,status:200};};
+  assert.equal(homeAssistantNotifier('',{token:'t',fetchImpl}),null,'disabled without a service');
+  assert.equal(homeAssistantNotifier('phone',{token:'',fetchImpl}),null,'disabled without Supervisor access');
+  const notify=homeAssistantNotifier('mobile_app_pixel',{token:'secret',fetchImpl,now:()=>clock,log});
+  assert.equal(await notify({code:'QUARRY',name:'Ann',mode:'teams',url:'http://pi.local:8765/?room=QUARRY'}),true);
+  const [url,init]=calls[0],body=JSON.parse(init.body);
+  assert.equal(url,'http://supervisor/core/api/services/notify/mobile_app_pixel');assert.equal(init.headers.Authorization,'Bearer secret');
+  assert.match(body.message,/Ann opened room QUARRY \(2 vs 2\)/);assert.equal(body.data.url,'http://pi.local:8765/?room=QUARRY');
+  clock=30000;assert.equal(await notify({code:'B',name:'Bo',mode:'ffa',url:''}),false);assert.equal(calls.length,1,'throttled');
+  clock=61000;const failing=homeAssistantNotifier('x',{token:'t',fetchImpl:async()=>{throw Error('offline');},now:()=>clock,log});
+  assert.equal(await failing({code:'C',name:'Cy',mode:'ffa',url:''}),false);assert.equal(calls.at(-1)[0],'error','failures are logged, not thrown');
 });

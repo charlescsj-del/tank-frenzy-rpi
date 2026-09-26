@@ -6,6 +6,7 @@ const os=require('node:os');
 const {randomBytes}=require('node:crypto');
 const {WebSocketServer,WebSocket}=require('ws');
 const {Room}=require('./game-server.cjs');
+const {Leaderboard}=require('./leaderboard.cjs');
 const {maxPlayers}=require('./shared.js');
 const ingressRequest=Symbol('supervisor ingress');
 function lanAddresses(){
@@ -17,8 +18,8 @@ function ingressBase(req){
   const prefix=req.headers?.['x-ingress-path'];
   return typeof prefix==='string'&&/^\/api\/hassio_ingress\/[A-Za-z0-9_-]+\/?$/.test(prefix)?prefix.replace(/\/$/,'')+'/':null;
 }
-function createGameServer({ingress=false,publicUrl=''}={}){
-  const rooms=new Map(),sessions=new Map();
+function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoomCreated=null}={}){
+  const rooms=new Map(),sessions=new Map(),leaderboard=new Leaderboard(leaderboardFile);
   const files={'/':['index.html','text/html'],'/index.html':['index.html','text/html'],'/client.js':['client.js','text/javascript'],'/shared.js':['shared.js','text/javascript'],'/sound-bank.js':['sound-bank.js','text/javascript'],'/music.js':['music.js','text/javascript'],'/audio/cartoon-v1.mp3':['audio/cartoon-v1.mp3','audio/mpeg'],'/mode-banner.webp':['mode-banner.webp','image/webp']};
   for(const name of ['iron-advance','overdrive','steel-pressure'])files[`/audio/music-${name}-v1.mp3`]=[`audio/music-${name}-v1.mp3`,'audio/mpeg'];
   for(const name of ['fire-a','ricochet-c','pickup-a','explosion-c'])files[`/audio/effects-${name}-v1.mp3`]=[`audio/effects-${name}-v1.mp3`,'audio/mpeg'];
@@ -39,6 +40,9 @@ function createGameServer({ingress=false,publicUrl=''}={}){
         players:[...room.players.values()].map(({name,slot,connected,team,bot})=>({name,slot,connected,team,bot}))
       })).sort((a,b)=>a.code.localeCompare(b.code));
       res.setHeader('Content-Type','application/json');res.end(JSON.stringify({rooms:available}));return;
+    }
+    if(url.pathname==='/leaderboard'){
+      res.setHeader('Content-Type','application/json');res.end(JSON.stringify({players:leaderboard.top(10),persistent:!!leaderboardFile}));return;
     }
     if(url.pathname==='/network-info'){
       const port=server.address().port;
@@ -94,11 +98,13 @@ function createGameServer({ingress=false,publicUrl=''}={}){
           if(msg.mode==='create'&&rooms.has(code)&&rooms.get(code).players.size>0){send(ws,{type:'error',message:'That room already exists. Choose another code or browse rooms to join it.'});ws.close();return;}
           if(msg.mode==='join'&&(!rooms.has(code)||rooms.get(code).players.size===0)){send(ws,{type:'error',message:'That room is no longer available. Browse rooms or create a new one.'});ws.close();return;}
           if(rooms.has(code)&&rooms.get(code).players.size===0)rooms.delete(code);
+          const created=!rooms.has(code);
           if(!rooms.has(code)){if(rooms.size>=32){send(ws,{type:'error',message:'Server is full. Try an existing room.'});ws.close();return;}rooms.set(code,new Room(code,msg.settings));}
           const room=rooms.get(code);const name=typeof msg.name==='string'?msg.name.replace(/[\x00-\x1f<>]/g,'').trim().slice(0,16):'';
           if(room.phase==='postgame'){send(ws,{type:'error',message:'This match has ended and its rematch window closed. Choose another room or create a new one.'});ws.close();return;}
           const player=room.add(name);if(!player){send(ws,{type:'error',message:'Room full (4 players). Choose another room code.'});ws.close();return;}
           session={room,player,token:randomBytes(24).toString('hex'),ws};sessions.set(session.token,session);
+          if(created)try{onRoomCreated?.({code,name:player.name,mode:room.settings.mode,url:publicUrl?publicUrl+'/?room='+encodeURIComponent(code):''});}catch{/* Notifications never block play. */}
         }
         session.ws=ws;clearTimeout(joinTimeout);send(ws,{type:'welcome',id:session.player.id,token:session.token,slot:session.player.slot,room:code,seq:session.player.seq});send(ws,session.room.snapshot());return;
       }
@@ -120,14 +126,16 @@ function createGameServer({ingress=false,publicUrl=''}={}){
     if(++tick%2===0){
       for(const room of rooms.values()){
         if(room.players.size===0){rooms.delete(room.code);continue;}
+        // Record each finished match once, when its winner first appears.
+        if(room.winner&&!room.recorded){room.recorded=true;leaderboard.record(room);}else if(!room.winner)room.recorded=false;
         const snapshot=room.snapshot();for(const session of sessions.values())if(session.room===room&&session.player.connected)send(session.ws,snapshot);room.events=[];
       }
       for(const [token,s]of sessions)if(!s.room.players.has(s.player.id))sessions.delete(token);
     }
   },1000/60);
   const heartbeat=setInterval(()=>{for(const ws of wss.clients){if(!ws.alive){ws.terminate();continue;}ws.alive=false;ws.ping();}},5000);
-  async function close(){clearInterval(timer);clearInterval(heartbeat);for(const ws of wss.clients)ws.terminate();await new Promise(resolve=>wss.close(resolve));await new Promise(resolve=>server.close(resolve));if(ingressServer)await new Promise(resolve=>ingressServer.close(resolve));}
-  return {server,ingressServer,wss,rooms,close};
+  async function close(){leaderboard.save();clearInterval(timer);clearInterval(heartbeat);for(const ws of wss.clients)ws.terminate();await new Promise(resolve=>wss.close(resolve));await new Promise(resolve=>server.close(resolve));if(ingressServer)await new Promise(resolve=>ingressServer.close(resolve));}
+  return {server,ingressServer,wss,rooms,leaderboard,close};
 }
 if(require.main===module){
   const game=createGameServer(),port=Number(process.env.PORT)||8765;

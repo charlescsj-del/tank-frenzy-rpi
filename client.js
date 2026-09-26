@@ -16,7 +16,7 @@ let socket=null,myId=null,token=null,joined=false,connecting=false,intentional=f
 let latest=null,lastEvent=0,seq=0,rosterSignature='',pointer={x:500,y:330,active:false},firing=false,lastSnapshot=0;
 let roomCode=(new URL(location.href).searchParams.get('room')||'').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,16),networkBase=appBase.href.replace(/\/$/,'');
 let lobbyVisible=false,lobbyRooms=[],joinMode=null,roomRequest=0;
-let selectedGameMode='ffa',leaveDialogOpen=false,tutorialOpen=false,tutorialReturn=null;
+let selectedGameMode='ffa',leaveDialogOpen=false,tutorialOpen=false,tutorialReturn=null,leaderboardOpen=false;
 let roundAudioMap=null,resultAudioKey=null,countdownAudioKey=null,activePower=null,lastMenuSound=-Infinity;
 let music=true,musicPlayer,waitingSignature='',resultsSignature='',roomPhase=null,nextHeartbeat=0;
 try{sound=localStorage.getItem('tank-frenzy-sfx')!=='off';music=localStorage.getItem('tank-frenzy-music')!=='off';}catch{/* Storage can be unavailable in private browsing. */}
@@ -337,6 +337,25 @@ function closeTutorial(){
   tutorialReturn?.focus?.({preventScroll:true});tutorialReturn=null;
 }
 $('howToPlay').addEventListener('click',openTutorial);
+// All-time leaderboard, kept by the server (saved on the Pi in the Home Assistant app).
+async function openLeaderboard(){
+  release();leaderboardOpen=true;$('leaderboard').hidden=false;document.body.classList.add('tutorial-open');$('closeLeaderboard').focus();
+  $('leaderboardRows').replaceChildren();$('leaderboardNote').textContent='Loading…';
+  try{
+    const response=await fetch(appUrl('leaderboard'));if(!response.ok)throw Error();
+    const data=await response.json();
+    data.players.forEach((p,i)=>{
+      const row=document.createElement('tr');
+      for(const value of [i<3?['🥇','🥈','🥉'][i]:i+1,p.name,p.wins,p.matches,p.kills,(p.kills/Math.max(1,p.deaths)).toFixed(1)]){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}
+      $('leaderboardRows').append(row);
+    });
+    $('leaderboardNote').textContent=(data.players.length?'':'No finished matches yet. Win one to get on the board! ')+(data.persistent?'Saved on the Pi across restarts.':'Resets when the game server restarts.');
+  }catch{$('leaderboardNote').textContent='Could not load the leaderboard. Try again in a moment.';}
+}
+function closeLeaderboard(){leaderboardOpen=false;$('leaderboard').hidden=true;if(!tutorialOpen)document.body.classList.remove('tutorial-open');}
+$('leaderboardButton').addEventListener('click',openLeaderboard);
+$('closeLeaderboard').addEventListener('click',closeLeaderboard);
+$('leaderboard').addEventListener('click',e=>{if(e.target===$('leaderboard'))closeLeaderboard();});
 $('closeTutorial').addEventListener('click',closeTutorial);
 $('tutorialPrev').addEventListener('click',()=>showTutorialPage(tutorialPage-1));
 $('tutorialNext').addEventListener('click',()=>{if(tutorialPage===tutorialPages.length-1)closeTutorial();else showTutorialPage(tutorialPage+1);});
@@ -388,7 +407,7 @@ canvas.addEventListener('pointermove',aimAt);
 canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.button!==0||!joined)return;e.preventDefault();canvas.focus({preventScroll:true});canvas.setPointerCapture(e.pointerId);aimAt(e);audioReady=true;firing=true;sendInput();});
 for(const type of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(type,()=>{firing=false;sendInput();});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-window.addEventListener('keydown',e=>{if(e.code==='Escape'){release();if(tutorialOpen){closeTutorial();return;}if(leaveDialogOpen){closeLeaveDialog();return;}if(expanded)setExpanded(false);}if(tutorialOpen&&(e.code==='ArrowRight'||e.code==='ArrowLeft')){e.preventDefault();showTutorialPage(tutorialPage+(e.code==='ArrowRight'?1:-1));return;}if(tutorialOpen||leaveDialogOpen||!joined||e.target instanceof HTMLInputElement)return;if(moveKeys.has(e.code)){e.preventDefault();keys.add(e.code);if(!e.repeat)sendInput();}});
+window.addEventListener('keydown',e=>{if(e.code==='Escape'){release();if(leaderboardOpen){closeLeaderboard();return;}if(tutorialOpen){closeTutorial();return;}if(leaveDialogOpen){closeLeaveDialog();return;}if(expanded)setExpanded(false);}if(tutorialOpen&&(e.code==='ArrowRight'||e.code==='ArrowLeft')){e.preventDefault();showTutorialPage(tutorialPage+(e.code==='ArrowRight'?1:-1));return;}if(leaderboardOpen||tutorialOpen||leaveDialogOpen||!joined||e.target instanceof HTMLInputElement)return;if(moveKeys.has(e.code)){e.preventDefault();keys.add(e.code);if(!e.repeat)sendInput();}});
 window.addEventListener('keyup',e=>{if(moveKeys.has(e.code)){keys.delete(e.code);sendInput();}});
 window.addEventListener('blur',release);
 document.addEventListener('visibilitychange',()=>{if(document.hidden){release();stopCueSounds();}syncMusic();});
