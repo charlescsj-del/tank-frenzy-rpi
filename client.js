@@ -13,7 +13,7 @@ let touchAim=null,expanded=false,mapOverview=false;
 let cssW=1120,cssH=610,scale=1,offsetX=0,offsetY=0;
 let tanks=[],shells=[],particles=[],tracks=[],pickups=[],beams=[],pickupFlashes=[],floaters=[],rings=[],hurt=0,shake=0,last=0,sound=true,audioReady=false,audioContext,soundBank;
 let socket=null,myId=null,token=null,joined=false,spectating=false,connecting=false,intentional=false,retry=0,retryTimer;
-let latest=null,lastEvent=0,seq=0,rosterSignature='',pointer={x:500,y:330,active:false},firing=false,lastSnapshot=0;
+let latest=null,lastEvent=0,seq=0,rosterSignature='',battleSignature='',pointer={x:500,y:330,active:false},firing=false,lastSnapshot=0;
 let roomCode=(new URL(location.href).searchParams.get('room')||'').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,16),networkBase=appBase.href.replace(/\/$/,'');
 let lobbyVisible=false,lobbyRooms=[],joinMode=null,roomRequest=0;
 let selectedGameMode='ffa',leaveDialogOpen=false,tutorialOpen=false,tutorialReturn=null,leaderboardOpen=false;
@@ -24,9 +24,30 @@ const cueVoices=new Set();
 $('roomInput').value=roomCode;$('roomCode').textContent=roomCode||'—';
 $('versionBadge').textContent='v'+FIELD.version;
 $('versionBadge').setAttribute('aria-label','Tank Frenzy version '+FIELD.version);
+let heroPaused=false;
+$('heroMotion').addEventListener('click',()=>{
+  heroPaused=!heroPaused;document.body.classList.toggle('hero-paused',heroPaused);
+  $('heroMotion').setAttribute('aria-pressed',String(heroPaused));
+  $('heroMotion').setAttribute('aria-label',heroPaused?'Play artwork animation':'Pause artwork animation');
+  $('heroMotion').title=heroPaused?'Play artwork animation':'Pause artwork animation';
+});
+function syncHeroVisibility(){document.body.classList.toggle('hero-suspended',Boolean(document.hidden));}
+syncHeroVisibility();
 function status(text){$('status').textContent=spectating?'👁 WATCHING (HIDDEN) · '+text:text;}
+function resetResultDamage(){
+  $('resultDamage').hidden=true;
+  $('resultStatsToggle').setAttribute('aria-expanded','false');
+  $('resultStatsToggle').textContent='SHOW DAMAGE ▾';
+}
+$('resultStatsToggle').addEventListener('click',()=>{
+  const open=$('resultDamage').hidden;
+  $('resultDamage').hidden=!open;
+  $('resultStatsToggle').setAttribute('aria-expanded',String(open));
+  $('resultStatsToggle').textContent=open?'HIDE DAMAGE ▴':'SHOW DAMAGE ▾';
+});
 function networkMessage(title,text,form=false){
   if(form)leaveFullscreen();
+  resetResultDamage();
   $('waitingRoom').hidden=true;$('countdown').hidden=true;$('results').hidden=true;$('arena').classList.toggle('waiting-room',false);
   document.body.classList.toggle('in-lobby',false);document.body.classList.toggle('in-room-form',form);
   $('arena').classList.toggle('lobby-open',false);$('arena').classList.toggle('room-form-open',form);
@@ -39,9 +60,14 @@ function showRoomForm(code,mode=null){
   joinMode=mode;$('roomInput').value=code;$('roomInput').readOnly=mode==='join';
   networkMessage(mode==='create'?'Create an arena.':'Join '+code+'.',mode==='create'?'Choose an arena code and enter your callsign.':'Enter your callsign to join the battle.',true);
   $('action').textContent=mode==='create'?'CREATE & JOIN':'JOIN ARENA';
-  $('gameMode').value=selectedGameMode;$('bounceOption').checked=true;$('powersOption').checked=true;$('targetScore').value=FIELD.targetScore;
+  $('gameMode').value=selectedGameMode;$('bounceOption').checked=true;$('powersOption').checked=true;$('targetScore').value=FIELD.targetScore;syncTargetScore();
   window.scrollTo?.(0,0);
 }
+function syncTargetScore(){$('targetScoreValue').textContent=String($('targetScore').value);}
+$('targetScore').addEventListener('input',syncTargetScore);
+for(const [id,step] of [['targetScoreLess',-1],['targetScoreMore',1]])$(id).addEventListener('click',()=>{
+  const slider=$('targetScore');slider.value=Math.max(5,Math.min(50,Number(slider.value)+step));syncTargetScore();
+});
 function selectGameMode(mode){selectedGameMode=mode;$('ffaMode').setAttribute('aria-pressed',String(mode==='ffa'));$('teamMode').setAttribute('aria-pressed',String(mode==='teams'));renderRooms();}
 $('ffaMode').addEventListener('click',()=>selectGameMode('ffa'));
 $('teamMode').addEventListener('click',()=>selectGameMode('teams'));
@@ -98,7 +124,7 @@ for(const id of ['lobbyName','callsign'])$(id).addEventListener('input',()=>reme
 function joinRoomNow(code,mode='join'){
   enterFullscreen();audioReady=true;
   joinMode=mode;$('roomInput').value=code;$('roomInput').readOnly=mode==='join';
-  if(mode==='create'){$('gameMode').value=selectedGameMode;$('bounceOption').checked=true;$('powersOption').checked=true;$('targetScore').value=FIELD.targetScore;}
+  if(mode==='create'){$('gameMode').value=selectedGameMode;$('bounceOption').checked=true;$('powersOption').checked=true;$('targetScore').value=FIELD.targetScore;syncTargetScore();}
   connect();
 }
 // Quick Play prefers a waiting room, then the fullest open one, in the chosen mode; otherwise it makes a room.
@@ -226,6 +252,7 @@ function updateRoomPhase(data){
   $('waitingRoom').hidden=!waiting;$('arena').classList.toggle('waiting-room',waiting);
   $('countdown').hidden=!countdown;
   $('results').hidden=!(results||postgame);
+  if(!results&&!postgame&&!$('resultDamage').hidden)resetResultDamage();
   if(countdown){const number=String(Math.max(1,Math.ceil(data.countdownIn)));if($('countdownNumber').textContent!==number)$('countdownNumber').textContent=number;}
   if(results||postgame){
     const won=data.settings?.mode==='teams'?data.players.find(p=>p.id===myId)?.team===data.winner.team:myId===data.winner.id;
@@ -235,9 +262,9 @@ function updateRoomPhase(data){
     const connected=data.players.filter(p=>p.connected),votes=data.rematchVotes||[],voted=votes.includes(myId);
     const needed=data.rematchNeeded||connected.length,ready=votes.filter(id=>connected.some(p=>p.id===id)).length;
     $('resultsVotes').textContent=postgame?'The rematch window has closed.':ready+' / '+needed+' votes needed for a rematch';
-    const board=JSON.stringify([data.settings?.mode,data.winner.team,data.teamScores,data.players.map(p=>[p.id,p.team,p.kills,p.deaths,p.shots,p.hits])]);
+    const board=JSON.stringify([data.settings?.mode,data.winner.team,data.teamScores,data.players.map(p=>[p.id,p.team,p.kills,p.deaths,p.damageDealt,p.shots,p.hits])]);
     if(board!==resultsSignature){
-      resultsSignature=board;$('resultsRows').replaceChildren();
+      resultsSignature=board;$('resultsRows').replaceChildren();$('resultDamageRows').replaceChildren();
       const teams=data.settings?.mode==='teams';
       for(const team of teams?[0,1]:[null]){
         if(teams){
@@ -245,11 +272,19 @@ function updateRoomPhase(data){
           const title=document.createElement('th');title.scope='rowgroup';title.colSpan=4;
           title.textContent=(team===0?'ORANGE':'BLUE')+' TEAM · '+(data.teamScores?.[team]??0)+' KILLS'+(data.winner.team===team?' · WINNER ★':'');
           heading.append(title);$('resultsRows').append(heading);
+          const damageHeading=document.createElement('tr');damageHeading.className=heading.className;
+          const damageTitle=document.createElement('th');damageTitle.scope='rowgroup';damageTitle.colSpan=2;damageTitle.textContent=(team===0?'ORANGE':'BLUE')+' TEAM';
+          damageHeading.append(damageTitle);$('resultDamageRows').append(damageHeading);
         }
         for(const p of data.players.filter(p=>!teams||p.team===team).sort((a,b)=>b.kills-a.kills||a.deaths-b.deaths)){
         const row=document.createElement('tr');if(p.id===myId)row.className='me';
         const cells=[p.name+(p.id===myId?' ★':''),p.kills,p.deaths,p.shots?Math.round(100*Math.min(p.hits,p.shots)/p.shots)+'%':'—'].map(value=>{const cell=document.createElement('td');cell.textContent=value;return cell;});
         cells[0].style.color=colors[p.slot];row.append(...cells);$('resultsRows').append(row);
+        const damageRow=document.createElement('tr');if(p.id===myId)damageRow.className='me';
+        for(const value of [p.name+(p.id===myId?' ★':''),Number.isFinite(p.damageDealt)?p.damageDealt:'—']){
+          const cell=document.createElement('td');cell.textContent=value;damageRow.append(cell);
+        }
+        $('resultDamageRows').append(damageRow);
         }
       }
     }
@@ -288,6 +323,35 @@ $('resultsLeave').addEventListener('click',leave);
 function updateHud(data){
   const count=data.players.filter(p=>p.connected).length;
   $('roomCount').textContent=count+' / 4 PLAYERS';
+  const battling=data.phase==='playing';
+  $('battleHud').hidden=!battling;
+  $('arenaHeader').classList.toggle('has-battle-hud',battling);
+  if(battling){
+    const goal=data.settings?.targetScore||FIELD.targetScore;
+    const mine=data.players.find(p=>p.id===myId);
+    const teams=data.settings?.mode==='teams';
+    const score=teams?(data.teamScores?.[mine?.team]??0):(mine?.kills??0);
+    const battleState=JSON.stringify([myId,goal,teams,score,data.teamScores,data.players.map(p=>[p.id,p.name,p.slot,p.team,p.hp,p.kills,p.connected])]);
+    if(battleState!==battleSignature){
+      battleSignature=battleState;
+      const progress=$('battleProgress');progress.replaceChildren();
+      const main=document.createElement('strong');main.textContent=teams?'TEAM '+score+' / '+goal:'YOU '+score+' / '+goal;
+      const remaining=document.createElement('small');remaining.textContent=Math.max(0,goal-score)+' KILLS TO WIN';
+      progress.append(main,remaining);
+      const opponents=$('battleOpponents');opponents.replaceChildren();
+      for(const player of data.players.filter(p=>p.id!==myId)){
+        const ally=teams&&player.team===mine?.team;
+        const chip=document.createElement('div');chip.className='battle-opponent'+(ally?' ally':'')+(!player.connected?' offline':'');chip.style.setProperty('--tank',colors[player.slot]);
+        chip.title=(ally?'Teammate ':'Opponent ')+player.name+': '+player.kills+' kills, '+player.hp+' / '+FIELD.maxHealth+' health';
+        const name=document.createElement('span');name.className='battle-opponent-name';name.textContent=(ally?'★ ':'')+player.name;
+        const kills=document.createElement('span');kills.className='battle-opponent-score';kills.textContent=player.kills+' K';
+        const health=document.createElement('span');health.className='battle-health';health.setAttribute('aria-label',player.hp+' / '+FIELD.maxHealth+' health');
+        const fill=document.createElement('span');fill.style.width=Math.max(0,Math.min(100,100*player.hp/FIELD.maxHealth))+'%';health.append(fill);
+        const hp=document.createElement('span');hp.className='battle-opponent-hp';hp.textContent=player.hp+'/'+FIELD.maxHealth;
+        chip.append(name,kills,health,hp);opponents.append(chip);
+      }
+    }
+  }
   const signature=JSON.stringify(data.players.map(p=>[p.id,p.name,p.slot,p.hp,p.kills,p.deaths,p.connected,p.team]));
   if(signature!==rosterSignature){
     rosterSignature=signature;$('roster').replaceChildren();
@@ -457,7 +521,7 @@ canvas.addEventListener('contextmenu',e=>e.preventDefault());
 window.addEventListener('keydown',e=>{if(e.code==='Escape'){release();if(leaderboardOpen){closeLeaderboard();return;}if(tutorialOpen){closeTutorial();return;}if(leaveDialogOpen){closeLeaveDialog();return;}if(expanded)setExpanded(false);}if(tutorialOpen&&(e.code==='ArrowRight'||e.code==='ArrowLeft')){e.preventDefault();showTutorialPage(tutorialPage+(e.code==='ArrowRight'?1:-1));return;}if(leaderboardOpen||tutorialOpen||leaveDialogOpen||!joined||e.target instanceof HTMLInputElement)return;if(moveKeys.has(e.code)){e.preventDefault();keys.add(e.code);if(!e.repeat)sendInput();}});
 window.addEventListener('keyup',e=>{if(moveKeys.has(e.code)){keys.delete(e.code);sendInput();}});
 window.addEventListener('blur',release);
-document.addEventListener('visibilitychange',()=>{if(document.hidden){release();stopCueSounds();}syncMusic();});
+document.addEventListener('visibilitychange',()=>{syncHeroVisibility();if(document.hidden){release();stopCueSounds();}syncMusic();});
 window.addEventListener('pagehide',()=>{release();stopCueSounds();musicPlayer?.stop();send({type:'leave'});});
 window.addEventListener('beforeunload',e=>{if(joined){e.preventDefault();e.returnValue='';}});
 
@@ -469,6 +533,18 @@ function resetStick(name){
   if(id!==null&&zone.hasPointerCapture(id))zone.releasePointerCapture(id);
   if(id!==null&&pad.hasPointerCapture(id))pad.releasePointerCapture(id);
 }
+function finishStickPointer(id){
+  let changed=false;
+  for(const name of ['move','aim'])if(sticks[name].id===id){resetStick(name);changed=true;}
+  if(changed)sendInput();
+}
+function clearReleasedTouches(e){
+  // Some mobile browsers lose the captured pointerup when the finger leaves a control.
+  if(!touchMedia.matches||e.touches.length||sticks.move.id===null&&sticks.aim.id===null)return;
+  resetStick('move');resetStick('aim');sendInput();
+}
+for(const type of ['pointerup','pointercancel'])window.addEventListener(type,e=>finishStickPointer(e.pointerId));
+for(const type of ['touchend','touchcancel'])window.addEventListener(type,clearReleasedTouches);
 function updateStick(name,e){
   const stick=sticks[name],pad=$(name+'Stick'),rect=pad.getBoundingClientRect();
   const radius=rect.width*.32,dx=e.clientX-(stick.center?.x??rect.left+rect.width/2),dy=e.clientY-(stick.center?.y??rect.top+rect.height/2);
@@ -497,10 +573,7 @@ for(const name of ['move','aim']){
   for(const target of [pad,zone]){
     target.addEventListener('pointerdown',e=>down(e,target));
     target.addEventListener('pointermove',e=>{if(sticks[name].id===e.pointerId){e.preventDefault();updateStick(name,e);}});
-    for(const type of ['pointerup','pointercancel','lostpointercapture'])target.addEventListener(type,e=>{
-    if(sticks[name].id!==e.pointerId)return;
-    resetStick(name);sendInput();
-    });
+    for(const type of ['pointerup','pointercancel','lostpointercapture'])target.addEventListener(type,e=>finishStickPointer(e.pointerId));
   }
   pad.addEventListener('contextmenu',e=>e.preventDefault());
   zone.addEventListener('contextmenu',e=>e.preventDefault());

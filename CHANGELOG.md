@@ -2,6 +2,59 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 19.2.2 — Tank Frenzy v19.2.2
+
+- Bring the tested lobby artwork to production: independent tank sprites over a clean quarry, recoil, muzzle flame, expanding burst ring, sparks and smoke, and shaded shells that fly at a constant speed before fading out.
+- Add a compact live battle strip for your kills, kills remaining to win, and every other tank’s kills and health. Team matches use the combined team score and mark teammates.
+- Keep the artwork pause control, hidden-tab pause and reduced-motion behavior. Purple shots pass behind the foreground blue tank.
+
+## 19.2.2
+
+- Ship the new WebP background and transparent tank atlas with the game, serve them through the static allowlist, and exercise the responsive animation in browser CI.
+- Preserve the production Home Assistant slug `tank_frenzy`, host port `8765`, app name and leaderboard data across the upgrade.
+
+Preview build notes from dev follow below.
+
+## App 19.2.2-dev — Tank Frenzy v19.2.2-dev
+
+- Fade each flying shell gradually over the final part of its flight while retaining its uniform travel speed.
+- Strengthen the muzzle burst with a brighter layered flame, an expanding shock ring and extra sparks, visible only during firing.
+
+## 19.2.2-dev
+
+- Animate opacity separately from a linear projectile transform; keep pause and reduced-motion behavior for the new blast ring.
+
+## App 19.2.1-dev — Tank Frenzy v19.2.1-dev
+
+- Separate the quarry background and transparent tank silhouettes so recoil has no duplicate tank underneath.
+- Add short flickering muzzle flames, sparks and fading smoke; draw shaded pointed shells at a constant speed.
+- Layer the distant tanks and their shots behind the foreground tanks so purple shells pass behind the blue tank.
+
+## 19.2.1-dev
+
+- Reuse one transparent sprite atlas and one clean background; animate only browser transforms and opacity, with pause and reduced-motion support.
+
+## App 19.2.0-dev — Tank Frenzy v19.2.0-dev
+
+- Remove the baked-in flashes from the lobby picture so tanks only appear to fire during animated shots.
+- Give each tank stronger recoil; show larger shells traveling more slowly between volleys.
+- Keep a live battle strip on screen with your kills, kills left to win, and every other tank's kills and health; team games track the team score and mark allies.
+- Keep the pause control and reduced-motion behavior, with all effects rendered in the browser.
+
+## 19.2.0-dev
+
+- Serve a clean idle WebP image as the animated hero's background while preserving the original illustration for reference.
+
+## App 19.1.0-dev — Tank Frenzy v19.1.0-dev
+
+- Animate the existing lobby artwork with gentle tank recoil, staggered muzzle flashes and shell streaks.
+- Add an artwork pause control; stop motion outside the lobby, in hidden tabs and when reduced motion is requested.
+- Align the game badge, health endpoint and Home Assistant app version using the MAJOR.MINOR.PATCH-dev convention.
+
+## 19.1.0-dev
+
+- Use SVG masks and CSS transforms with the existing banner asset; add no server simulation or animation downloads.
+
 ## App 1.18.0 — Tank Frenzy v1.18.0
 
 - Use transparent left/right touch zones with floating thumb indicators, and keep the live aim line steady during laser shots.
