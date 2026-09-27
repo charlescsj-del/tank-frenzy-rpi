@@ -328,6 +328,37 @@ test('overview fits the whole board and toggles back without changing touch aim'
   assert.equal(c.elements.get('viewMode').textContent,'FULL MAP');
 });
 
+test('close-view arrows track off-screen enemies, avoid allies and disappear in overview or after a win',()=>{
+  const c=client();
+  c.run(`cssW=390;cssH=620;tanks=[
+    {id:'me',name:'Me',x:800,y:520,hp:10,team:0},
+    {id:'ally',name:'Friend',x:1500,y:520,hp:10,team:0},
+    {id:'right',name:'Rival',x:1500,y:520,hp:10,team:1},
+    {id:'top',name:'Scout',x:800,y:10,hp:10,team:1},
+    {id:'near',name:'Near',x:820,y:520,hp:10,team:1},
+    {id:'dead',name:'Dead',x:10,y:520,hp:0,team:1}];
+    latest={phase:'playing',settings:{mode:'teams'}};updateCamera()`);
+  let markers=JSON.parse(c.run('JSON.stringify(enemyMarkers())'));
+  assert.deepEqual(markers.map(m=>m.id),['right','top']);
+  assert(markers.find(m=>m.id==='right').x>300,'right-side enemy points to the right edge');
+  assert(markers.find(m=>m.id==='top').y<100,'upper enemy points to the upper edge');
+  c.run("tanks.push({id:'right2',name:'Second',x:1510,y:525,hp:10,team:1})");
+  markers=JSON.parse(c.run('JSON.stringify(enemyMarkers())'));
+  assert(Math.hypot(markers[0].x-markers[2].x,markers[0].y-markers[2].y)>=34,'nearby arrows spread so both are visible');
+  c.run('mapOverview=true;updateCamera()');assert.equal(c.run('enemyMarkers().length'),0);
+  c.run('mapOverview=false;latest.phase="results"');assert.equal(c.run('enemyMarkers().length'),0);
+  c.run('latest.phase="playing";tanks[0].hp=0');assert.equal(c.run('enemyMarkers().length'),0);
+  c.run('tanks[0].hp=10;spectating=true');assert.equal(c.run('enemyMarkers().length'),0);
+  const desktop=client(false);desktop.run("latest={phase:'playing',settings:{mode:'ffa'}};tanks.push({id:'foe',x:1500,y:500,hp:10});updateCamera()");
+  assert.equal(desktop.run('enemyMarkers().length'),0);
+});
+
+test('two-player and free-for-all off-screen opponents each receive a marker',()=>{
+  const c=client();c.run("cssW=390;cssH=620;tanks=[{id:'me',x:800,y:520,hp:10},{id:'foe',name:'Rival',x:1500,y:520,hp:10}];latest={phase:'playing',settings:{mode:'ffa'}};updateCamera()");
+  assert.equal(c.run('enemyMarkers().length'),1);
+  c.run('tanks[1].x=820');assert.equal(c.run('enemyMarkers().length'),0);
+});
+
 test('desktop camera and mouse unprojection remain unchanged',()=>{
   const c=client(false);c.run('cssW=1120;cssH=610;updateCamera()');
   assert.equal(c.run('scale'),1);assert.equal(c.run('offsetX'),0);assert.equal(c.run('offsetY'),0);
@@ -434,6 +465,20 @@ test('kills appear in a short feed, streaks get a banner, and the result card sh
   const rows=c.elements.get('resultsRows').children;
   assert.deepEqual(rows.map(r=>r.children.map(cell=>cell.textContent)),[['Me ★','3','1','45%'],['Bo','1','3','25%']].map(r=>r.map((v,i)=>i?Number.isNaN(+v)?v:+v:v)));
   assert.equal(c.elements.get('resultsVotes').textContent,'1 / 2 votes needed for a rematch');
+});
+
+test('2 vs 2 results split players into Orange and Blue groups with team scores',()=>{
+  const c=client(false),players=[
+    {id:'me',name:'Me',slot:0,team:0,kills:2,deaths:1,shots:10,hits:5,connected:true},
+    {id:'blue',name:'Blue',slot:1,team:1,kills:7,deaths:4,shots:20,hits:8,connected:true},
+    {id:'ally',name:'Friend',slot:2,team:0,kills:8,deaths:2,shots:20,hits:10,connected:true},
+    {id:'blue2',name:'Scout',slot:3,team:1,kills:1,deaths:5,shots:10,hits:2,connected:true}
+  ];
+  c.run(`latest={phase:'results',settings:{mode:'teams'},winner:{id:'ally',name:'Orange team',team:0},teamScores:[10,8],players:${JSON.stringify(players)},rematchVotes:[],rematchIn:14};updateRoomPhase(latest)`);
+  const rows=c.elements.get('resultsRows').children;
+  assert.deepEqual(rows.map(r=>r.children[0].textContent),['ORANGE TEAM · 10 KILLS · WINNER ★','Friend','Me ★','BLUE TEAM · 8 KILLS','Blue','Scout']);
+  assert.equal(rows[0].children[0].colSpan,4);assert.equal(rows[3].children[0].scope,'rowgroup');
+  c.run('latest.teamScores=[10,9];updateRoomPhase(latest)');assert.match(c.elements.get('resultsRows').children[3].children[0].textContent,/9 KILLS/);
 });
 
 test('the room starter sees bot controls that send add, remove and skill commands',()=>{
