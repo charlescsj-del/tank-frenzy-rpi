@@ -33,7 +33,7 @@ function homeAssistantNotifier(service,{token=process.env.SUPERVISOR_TOKEN,fetch
     try{
       const response=await fetchImpl(`http://supervisor/core/api/services/notify/${service}`,{method:'POST',
         headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
-        body:JSON.stringify({title:'Tank Frenzy',message:`${name} opened room ${code} (${mode==='teams'?'2 vs 2':'Free-for-All'}). Join the battle!`,data:url?{url,clickAction:url}:{}})});
+        body:JSON.stringify({title:'Tank Frenzy',message:`${name} opened arena ${code} (${mode==='teams'?'2 vs 2':'Free-for-All'}). Join the battle!`,data:url?{url,clickAction:url}:{}})});
       if(!response.ok)log.error(`Tank Frenzy: notify.${service} returned ${response.status}`);
       return response.ok;
     }catch(error){log.error('Tank Frenzy: notification failed:',error.message);return false;}

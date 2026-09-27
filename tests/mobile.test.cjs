@@ -43,6 +43,16 @@ test('two thumbs move and aim independently, retain relative aim, and stop indiv
   assert.equal(c.sent.at(-1).x,0);
 });
 
+test('each half of the screen accepts a floating touch and releases independently',()=>{
+  const c=client(),left=c.elements.get('moveZone'),right=c.elements.get('aimZone');
+  left.events.pointerdown(c.event(1,50,50));right.events.pointerdown(c.event(2,50,50));
+  assert.equal(c.sent.at(-1).fire,false,'touching the aim half alone does not fire');
+  left.events.pointermove(c.event(1,82,50));right.events.pointermove(c.event(2,50,18));c.run('sendInput()');
+  assert.equal(c.sent.at(-1).x,1);assert.equal(c.sent.at(-1).fire,true);
+  left.events.pointerup(c.event(1));assert.equal(c.sent.at(-1).x,0);assert.equal(c.sent.at(-1).fire,true);
+  right.events.pointercancel(c.event(2));assert.equal(c.sent.at(-1).fire,false);
+});
+
 test('dead zone, captured pointer loss, blur, rotation and input mode changes clear controls',()=>{
   const c=client(),move=c.elements.get('moveStick'),aim=c.elements.get('aimStick');
   aim.events.pointerdown(c.event(2,52,50));assert.equal(c.sent.at(-1).fire,false);
@@ -117,6 +127,13 @@ test('laser starts at the rendered muzzle despite movement and newer touch aim',
   assert.equal(c.run('geometry.start.x'),840,'old beam does not attach to a respawned tank');assert.equal(c.run('geometry.start.y'),520);
   c.run("tanks=[];laserEvent.endX=826;laserEvent.muzzleDistance=26;geometry=laserGeometry(laserEvent)");
   assert.equal(c.run('geometry.start.x'),826);assert.equal(c.run('geometry.end.x'),826,'nearby cover clips both muzzle and beam');
+});
+
+test('an active laser flash does not turn the current aim guide backward',()=>{
+  const c=client();
+  c.run("latest={phase:'playing'};beams=[{player:'me',tankLife:1,originX:100,originY:100,endX:400,endY:100}];touchAim={x:0,y:-1};tanks=[{id:'me',x:100,y:100,aim:0,life:1}]");
+  assert.equal(c.run('currentTurretAim(tanks[0])'),-Math.PI/2);
+  c.run('touchAim=null;tanks[0].aim=Math.PI/4');assert.equal(c.run('currentTurretAim(tanks[0])'),Math.PI/4);
 });
 
 test('one centerline for every weapon starts at the muzzle and follows every aim direction',()=>{
@@ -231,13 +248,23 @@ test('rooms list players inline with a one-tap Join; the saved name is shared; c
   join.events.click();
   assert.equal(c.run('joinMode'),'join');assert.equal(c.elements.get('roomInput').value,'ALPHA');assert.equal(sockets.length,1,'joins straight away');
   c.run('connecting=false');c.elements.get('createRoom').events.click();
-  assert.equal(c.run('joinMode'),'create');assert.equal(c.elements.get('roomInput').readOnly,false);assert.match(c.elements.get('roomInput').value,/^ROOM-/);
+  assert.equal(c.run('joinMode'),'create');assert.equal(c.elements.get('roomInput').readOnly,false);assert.match(c.elements.get('roomInput').value,/^ARENA-/);
   assert.equal(c.elements.get('callsign').value,'Zed');
   assert(c.sandbox.document.body.classList.contains('in-room-form'));assert(c.elements.get('arena').classList.contains('room-form-open'));
   c.elements.get('browseRooms').events.click();
   assert.equal(c.sandbox.document.body.classList.contains('in-room-form'),false);
   assert.equal(c.elements.get('arena').classList.contains('room-form-open'),false);
   assert.equal(c.elements.get('roomBrowser').hidden,false);
+});
+
+test('creator sends the selected win target while quick play starts at ten',()=>{
+  const c=client(),sockets=[];c.sandbox.setTimeout=()=>0;c.sandbox.clearTimeout=()=>{};
+  c.sandbox.WebSocket=class{static OPEN=1;constructor(){this.listeners={};this.sent=[];sockets.push(this);}addEventListener(name,handler){this.listeners[name]=handler;}send(data){this.sent.push(JSON.parse(data));}close(){}};
+  c.run('joined=false;connecting=false');c.elements.get('createRoom').events.click();
+  c.elements.get('targetScore').value='25';c.run('connect()');sockets[0].listeners.open();
+  assert.equal(sockets[0].sent[0].settings.targetScore,25);
+  c.run('connecting=false');c.elements.get('targetScore').value='42';c.run("joinRoomNow('NEW','create')");sockets[1].listeners.open();
+  assert.equal(sockets[1].sent[0].settings.targetScore,10);
 });
 
 test('full and ended rooms cannot be joined; empty lists and request failures explain what to do',async()=>{
@@ -260,7 +287,7 @@ test('Quick Play joins the best open room in the chosen mode, or creates one',as
   c.run('connecting=false');rooms([{code:'BUSY',phase:'playing',available:1,capacity:4,settings:{mode:'ffa'},players:[]}]);
   await c.run('quickPlay()');assert.equal(c.elements.get('roomInput').value,'BUSY');
   c.run('connecting=false');rooms([]);await c.run('quickPlay()');
-  assert.equal(c.run('joinMode'),'create');assert.match(c.elements.get('roomInput').value,/^ROOM-/);assert.equal(sockets.length,3);
+  assert.equal(c.run('joinMode'),'create');assert.match(c.elements.get('roomInput').value,/^ARENA-/);assert.equal(sockets.length,3);
 });
 
 test('mobile play uses a compact viewport and restores the page on leaving or switching input',()=>{
@@ -317,7 +344,7 @@ test('overview fits the whole board and toggles back without changing touch aim'
   const c=client();c.run('cssW=874;cssH=290;touchAim={x:0,y:-1};updateCamera()');
   const closeScale=c.run('scale');
   c.elements.get('viewMode').events.click();
-  assert.equal(c.elements.get('viewMode').textContent,'CLOSE VIEW');
+  assert.equal(c.elements.get('viewMode').attributes['aria-label'],'Close view');
   assert(c.run('scale')<closeScale);
   assert(c.run('project(0,0).x*scale+offsetX')>=23.99);
   assert(c.run('project(0,0).y*scale+offsetY')>=23.99);
@@ -325,7 +352,7 @@ test('overview fits the whole board and toggles back without changing touch aim'
   assert(c.run('project(W,H).y*scale+offsetY')<=266.01);
   c.run('sendInput()');assert.equal(c.sent.at(-1).aimY,-50);
   c.elements.get('viewMode').events.click();assert.equal(c.run('scale'),closeScale);
-  assert.equal(c.elements.get('viewMode').textContent,'FULL MAP');
+  assert.equal(c.elements.get('viewMode').attributes['aria-label'],'Full map');
 });
 
 test('close-view arrows track off-screen enemies, avoid allies and disappear in overview or after a win',()=>{
@@ -374,9 +401,9 @@ test('fullscreen enters/exits and unavailable or rejected requests use a reversi
       doc.exitFullscreen=async()=>{doc.fullscreenElement=null;c.documentEvents.fullscreenchange();};
     }else if(mode==='rejected')arena.requestFullscreen=async()=>{throw new Error('Denied');};
     const toggle=c.elements.get('fullscreen').events.click;
-    await toggle();assert.equal(c.elements.get('fullscreen').textContent,'EXIT FULL SCREEN');
+    await toggle();assert.equal(c.elements.get('fullscreen').attributes['aria-label'],'Exit full screen');
     assert.equal(arena.classList.contains('expanded'),mode!=='supported');
-    await toggle();assert.equal(c.elements.get('fullscreen').textContent,'FULL SCREEN');
+    await toggle();assert.equal(c.elements.get('fullscreen').attributes['aria-label'],'Full screen');
     assert.equal(arena.classList.contains('expanded'),false);
     assert.equal(doc.body.classList.contains('arena-expanded'),false);
   }
@@ -522,9 +549,9 @@ test('a watch link opens the match as a hidden spectator with a Stop watching bu
   const ws=sockets.at(-1);ws.listeners.open();assert.equal(JSON.stringify(ws.sent[0]),JSON.stringify({type:'spectate',room:'ALPHA',pass:'abc123'}));
   ws.listeners.message({data:JSON.stringify({type:'spectating',room:'ALPHA'})});
   assert.equal(c.run('spectating'),true);assert(c.sandbox.document.body.classList.contains('spectating'));
-  assert.equal(c.elements.get('leave').textContent,'STOP WATCHING');assert.equal(c.elements.get('thumbControls').hidden,true,'no controls for spectators');
+  assert.equal(c.elements.get('leave').attributes['aria-label'],'Stop watching');assert.equal(c.elements.get('thumbControls').hidden,true,'no controls for spectators');
   c.run("status('LIVE BATTLE')");assert.match(c.elements.get('status').textContent,/^👁 WATCHING \(HIDDEN\) · LIVE BATTLE/);
   const before=c.sent.length;c.run('sendInput()');assert.equal(c.sent.length,before,'spectators never send input');
   c.run('socket.close=()=>{}');c.elements.get('leave').events.click();
-  assert.equal(c.run('spectating'),false);assert.equal(c.elements.get('leave').textContent,'LEAVE ROOM');assert(c.sandbox.document.body.classList.contains('in-lobby'));
+  assert.equal(c.run('spectating'),false);assert.equal(c.elements.get('leave').attributes['aria-label'],'Leave arena');assert(c.sandbox.document.body.classList.contains('in-lobby'));
 });

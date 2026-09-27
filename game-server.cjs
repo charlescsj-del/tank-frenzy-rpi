@@ -23,7 +23,7 @@ function rayBox(x,y,dx,dy,w){
   return near;
 }
 class Room {
-  constructor(code,options={}){this.code=code;this.settings=Object.freeze({mode:options?.mode==='teams'?'teams':'ffa',bouncing:options?.bouncing!==false,powers:options?.powers!==false});this.phase='waiting';this.countdownUntil=0;this.ownerId=null;this.teamScores=[0,0];this.pickups=[];this.pickupId=0;this.nextPickup=6;this.map=generateMap();this.players=new Map();this.shells=[];this.events=[];this.time=0;this.eventId=0;this.shellId=0;this.winner=null;this.botSkill='normal';this.rematchUntil=0;this.rematchVotes=new Set();}
+  constructor(code,options={}){this.code=code;this.settings=Object.freeze({mode:options?.mode==='teams'?'teams':'ffa',bouncing:options?.bouncing!==false,powers:options?.powers!==false,targetScore:Number.isInteger(options?.targetScore)&&options.targetScore>=5&&options.targetScore<=50?options.targetScore:F.targetScore});this.phase='waiting';this.countdownUntil=0;this.ownerId=null;this.teamScores=[0,0];this.pickups=[];this.pickupId=0;this.nextPickup=6;this.map=generateMap();this.players=new Map();this.shells=[];this.events=[];this.time=0;this.eventId=0;this.shellId=0;this.winner=null;this.botSkill='normal';this.rematchUntil=0;this.rematchVotes=new Set();}
   emit(type,data){this.events.push({id:++this.eventId,type,...data});}
   humans(){return [...this.players.values()].filter(p=>!p.bot);}
   add(name,{bot=false}={}){
@@ -114,7 +114,7 @@ class Room {
     if(!attacker)return;
     attacker.kills++;
     const teams=this.settings.mode==='teams',score=teams?++this.teamScores[attacker.team]:attacker.kills;
-    if(score>=F.targetScore){this.winner={id:attacker.id,team:attacker.team,name:teams?(attacker.team===0?'Orange team':'Blue team'):attacker.name};this.phase='results';this.rematchUntil=this.time+20;this.rematchVotes.clear();this.shells=[];this.pickups=[];}
+    if(score>=this.settings.targetScore){this.winner={id:attacker.id,team:attacker.team,name:teams?(attacker.team===0?'Orange team':'Blue team'):attacker.name};this.phase='results';this.rematchUntil=this.time+20;this.rematchVotes.clear();this.shells=[];this.pickups=[];}
   }
   spawnPickup(){
     if(!this.settings.powers||this.pickups.length>=2)return;

@@ -22,10 +22,23 @@ test('damage dealt counts real enemy health lost, not laser overkill or blocked 
 
 test('room defaults and balanced teams preserve reserved slots',()=>{
   const r=arena({mode:'teams'}),ps=Array.from({length:4},()=>r.add('P'));
-  assert.deepEqual(r.settings,{mode:'teams',bouncing:true,powers:true});
+  assert.deepEqual(r.settings,{mode:'teams',bouncing:true,powers:true,targetScore:10});
   assert.deepEqual(ps.map(p=>p.team),[0,1,0,1]);r.disconnect(ps[0]);assert.equal(r.add('Full'),null);
   r.players.delete(ps[1].id);assert.equal(r.add('Replacement').team,1);
-  assert.deepEqual(arena({mode:'invalid'}).settings,{mode:'ffa',bouncing:true,powers:true});
+  assert.deepEqual(arena({mode:'invalid'}).settings,{mode:'ffa',bouncing:true,powers:true,targetScore:10});
+});
+
+test('arena win target is bounded and decides the winning kill for either mode',()=>{
+  for(const invalid of [0,4,51,5.5,'5',null,Infinity])assert.equal(arena({targetScore:invalid}).settings.targetScore,10);
+  for(const mode of ['ffa','teams']){
+    const r=arena({mode,targetScore:5}),attacker=r.add('Attacker'),enemy=r.add('Enemy');
+    r.phase='playing';attacker.kills=3;
+    if(mode==='teams')r.teamScores[attacker.team]=3;
+    enemy.shieldUntil=0;r.damage(enemy,attacker.id,10);assert.equal(r.phase,'playing');
+    r.spawn(enemy);enemy.shieldUntil=0;r.damage(enemy,attacker.id,10);
+    assert.equal(r.phase,'results');assert.equal(r.settings.targetScore,5);
+  }
+  assert.equal(arena({targetScore:50}).settings.targetScore,50);
 });
 
 test('friendly shells pass teammates and team kills produce a shared victory',()=>{

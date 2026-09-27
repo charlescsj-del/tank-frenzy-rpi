@@ -98,9 +98,9 @@ test('leaving or expired reservations remove rooms from discovery',()=>{
 });
 
 test('the creator sets rules and later joiners cannot overwrite them',()=>{
-  const s=server();s.join('TEAMS','create','Host',null,{mode:'teams',bouncing:false,powers:false});
-  s.join('TEAMS','join','Guest',null,{mode:'ffa',bouncing:true,powers:true});
-  const room=s.list().body.rooms[0];assert.deepEqual(room.settings,{mode:'teams',bouncing:false,powers:false});
+  const s=server();s.join('TEAMS','create','Host',null,{mode:'teams',bouncing:false,powers:false,targetScore:25});
+  s.join('TEAMS','join','Guest',null,{mode:'ffa',bouncing:true,powers:true,targetScore:5});
+  const room=s.list().body.rooms[0];assert.deepEqual(room.settings,{mode:'teams',bouncing:false,powers:false,targetScore:25});
   assert.deepEqual(room.players.map(p=>p.team),[0,1]);
 });
 
@@ -185,7 +185,7 @@ test('/admin is hidden without a password, asks for one, and shows and ends room
   assert.equal(again.system.sampledAt,state.system.sampledAt,'admin viewers share a stable resource sample');
   assert.equal((await s.read('/admin/close?room=ALPHA',{method:'POST',headers:auth('tank-secret')})).status,404,'needs the admin header');
   assert.equal((await s.read('/admin/close?room=ALPHA',{method:'POST',headers:{...auth('tank-secret'),'x-tank-admin':'1'}})).status,204);
-  assert(!s.game.rooms.has('ALPHA'));assert.equal(ann.messages.at(-1).title,'Room closed');assert.equal(ann.readyState,3);
+  assert(!s.game.rooms.has('ALPHA'));assert.equal(ann.messages.at(-1).title,'Arena closed');assert.equal(ann.readyState,3);
   assert.equal((await s.read('/admin/close?room=ALPHA',{method:'POST',headers:{...auth('tank-secret'),'x-tank-admin':'1'}})).status,404);
 });
 
@@ -230,5 +230,5 @@ test('hidden spectators watch a room without appearing to its players, and leave
   assert.equal(JSON.parse(JSON.stringify(room.snapshot())).players.length,2,'players never receive the spectator');
   spy.emit('message',JSON.stringify({type:'join',room:'ALPHA',name:'Sneaky'}));assert.equal(room.players.size,2,'a spectator socket cannot also join');
   await s.read('/admin/close?room=ALPHA',{method:'POST',headers:auth});
-  assert.equal(spy.messages.at(-1).title,'Room closed');assert.equal(spy.readyState,3);assert.equal(ann.messages.at(-1).title,'Room closed');
+  assert.equal(spy.messages.at(-1).title,'Arena closed');assert.equal(spy.readyState,3);assert.equal(ann.messages.at(-1).title,'Arena closed');
 });
