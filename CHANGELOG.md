@@ -2,6 +2,16 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 19.1.0-dev — Tank Frenzy v19.1.0-dev
+
+- Animate the existing lobby artwork with gentle tank recoil, staggered muzzle flashes and shell streaks.
+- Add an artwork pause control; stop motion outside the lobby, in hidden tabs and when reduced motion is requested.
+- Align the game badge, health endpoint and Home Assistant app version using the MAJOR.MINOR.PATCH-dev convention.
+
+## 19.1.0-dev
+
+- Use SVG masks and CSS transforms with the existing banner asset; add no server simulation or animation downloads.
+
 ## App 1.18.0 — Tank Frenzy v1.18.0
 
 - Use transparent left/right touch zones with floating thumb indicators, and keep the live aim line steady during laser shots.

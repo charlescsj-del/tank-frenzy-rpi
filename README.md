@@ -4,7 +4,7 @@ This `dev` branch is the test installation. Add `https://github.com/charlescsj-d
 
 Install Tank Frenzy as a Home Assistant app (formerly called an add-on). The Pi hosts the multiplayer game; players use Safari, Edge, Chrome, or another modern browser on their phones, tablets, or computers. Rendering and sound run on each player's device.
 
-**Tank Frenzy v1.18.0**, developed directly in this repository. Touch play uses translucent controls across the left and right halves of the screen; creators can choose a 5–50 kill win target. Mobile close view points toward off-screen opponents; 2 vs 2 marks allies and enemies and groups match results by team. The persistent leaderboard shows damage dealt and deaths. The Pi app provides separate Home Assistant sidebar and LAN listeners.
+**Tank Frenzy v19.1.0-dev**, developed directly in this repository. Touch play uses translucent controls across the left and right halves of the screen; creators can choose a 5–50 kill win target. Mobile close view points toward off-screen opponents; 2 vs 2 marks allies and enemies and groups match results by team. The persistent leaderboard shows damage dealt and deaths. The Pi app provides separate Home Assistant sidebar and LAN listeners.
 
 ## Install
 
@@ -37,7 +37,7 @@ Set **Configuration → notify_service** (for example `notify.mobile_app_your_ph
 
 **Add to Home Screen:** on iPhone/iPad open the game in Safari and choose **Share → Add to Home Screen**; the game then opens full screen without browser bars. Android Chrome offers **Add to Home screen** too, but opens it as a normal full-screen app only over HTTPS (for example through a reverse proxy set as `public_url`); over plain LAN HTTP it adds a shortcut that opens in the browser.
 
-See [DOCS.md](DOCS.md) for local installation, options (including the private admin page), updates and troubleshooting, and [GAMEPLAY.md](GAMEPLAY.md) for controls and game rules. Contributors: [CLAUDE.md](CLAUDE.md) covers the architecture, network protocol, test harness and release checklist.
+See [DOCS.md](DOCS.md) for local installation, options (including the private admin page), updates and troubleshooting, and [GAMEPLAY.md](GAMEPLAY.md) for controls and game rules. Contributors: [AGENTS.md](AGENTS.md) covers the architecture, network protocol, test harness and release checklist.
 
 ## Development and verification
 
@@ -56,6 +56,6 @@ docker run --rm -p 8765:8765 tank-frenzy-rpi
 
 Run the build on the intended architecture (or use Docker Buildx with `--platform linux/arm64`). The repository includes CI for tests and ARM64/AMD64 container builds. A physical Pi/Home Assistant installation and mobile play must still be checked on the target device; automated tests do not establish Pi performance under load.
 
-App package version: **1.18.0**. Game version: **1.18.0**. Releases bump the version in several files at once; see the release checklist in [CLAUDE.md](CLAUDE.md).
+App package version: **19.1.0-dev**. Game version: **19.1.0-dev**. Releases bump the version in several files at once; see the release checklist in [AGENTS.md](AGENTS.md).
 
 The How to Play screenshots in `tutorial/` are rendered by the game itself. After a visual change, run `npm start` and then `npx -y -p playwright node tools/tutorial-screenshots.cjs` to regenerate them (set `ONLY=win.webp` for one image).

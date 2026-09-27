@@ -24,6 +24,15 @@ const cueVoices=new Set();
 $('roomInput').value=roomCode;$('roomCode').textContent=roomCode||'—';
 $('versionBadge').textContent='v'+FIELD.version;
 $('versionBadge').setAttribute('aria-label','Tank Frenzy version '+FIELD.version);
+let heroPaused=false;
+$('heroMotion').addEventListener('click',()=>{
+  heroPaused=!heroPaused;document.body.classList.toggle('hero-paused',heroPaused);
+  $('heroMotion').setAttribute('aria-pressed',String(heroPaused));
+  $('heroMotion').setAttribute('aria-label',heroPaused?'Play artwork animation':'Pause artwork animation');
+  $('heroMotion').title=heroPaused?'Play artwork animation':'Pause artwork animation';
+});
+function syncHeroVisibility(){document.body.classList.toggle('hero-suspended',Boolean(document.hidden));}
+syncHeroVisibility();
 function status(text){$('status').textContent=spectating?'👁 WATCHING (HIDDEN) · '+text:text;}
 function resetResultDamage(){
   $('resultDamage').hidden=true;
@@ -483,7 +492,7 @@ canvas.addEventListener('contextmenu',e=>e.preventDefault());
 window.addEventListener('keydown',e=>{if(e.code==='Escape'){release();if(leaderboardOpen){closeLeaderboard();return;}if(tutorialOpen){closeTutorial();return;}if(leaveDialogOpen){closeLeaveDialog();return;}if(expanded)setExpanded(false);}if(tutorialOpen&&(e.code==='ArrowRight'||e.code==='ArrowLeft')){e.preventDefault();showTutorialPage(tutorialPage+(e.code==='ArrowRight'?1:-1));return;}if(leaderboardOpen||tutorialOpen||leaveDialogOpen||!joined||e.target instanceof HTMLInputElement)return;if(moveKeys.has(e.code)){e.preventDefault();keys.add(e.code);if(!e.repeat)sendInput();}});
 window.addEventListener('keyup',e=>{if(moveKeys.has(e.code)){keys.delete(e.code);sendInput();}});
 window.addEventListener('blur',release);
-document.addEventListener('visibilitychange',()=>{if(document.hidden){release();stopCueSounds();}syncMusic();});
+document.addEventListener('visibilitychange',()=>{syncHeroVisibility();if(document.hidden){release();stopCueSounds();}syncMusic();});
 window.addEventListener('pagehide',()=>{release();stopCueSounds();musicPlayer?.stop();send({type:'leave'});});
 window.addEventListener('beforeunload',e=>{if(joined){e.preventDefault();e.returnValue='';}});
 
