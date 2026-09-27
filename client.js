@@ -495,6 +495,18 @@ function resetStick(name){
   if(id!==null&&zone.hasPointerCapture(id))zone.releasePointerCapture(id);
   if(id!==null&&pad.hasPointerCapture(id))pad.releasePointerCapture(id);
 }
+function finishStickPointer(id){
+  let changed=false;
+  for(const name of ['move','aim'])if(sticks[name].id===id){resetStick(name);changed=true;}
+  if(changed)sendInput();
+}
+function clearReleasedTouches(e){
+  // Some mobile browsers lose the captured pointerup when the finger leaves a control.
+  if(!touchMedia.matches||e.touches.length||sticks.move.id===null&&sticks.aim.id===null)return;
+  resetStick('move');resetStick('aim');sendInput();
+}
+for(const type of ['pointerup','pointercancel'])window.addEventListener(type,e=>finishStickPointer(e.pointerId));
+for(const type of ['touchend','touchcancel'])window.addEventListener(type,clearReleasedTouches);
 function updateStick(name,e){
   const stick=sticks[name],pad=$(name+'Stick'),rect=pad.getBoundingClientRect();
   const radius=rect.width*.32,dx=e.clientX-(stick.center?.x??rect.left+rect.width/2),dy=e.clientY-(stick.center?.y??rect.top+rect.height/2);
@@ -523,10 +535,7 @@ for(const name of ['move','aim']){
   for(const target of [pad,zone]){
     target.addEventListener('pointerdown',e=>down(e,target));
     target.addEventListener('pointermove',e=>{if(sticks[name].id===e.pointerId){e.preventDefault();updateStick(name,e);}});
-    for(const type of ['pointerup','pointercancel','lostpointercapture'])target.addEventListener(type,e=>{
-    if(sticks[name].id!==e.pointerId)return;
-    resetStick(name);sendInput();
-    });
+    for(const type of ['pointerup','pointercancel','lostpointercapture'])target.addEventListener(type,e=>finishStickPointer(e.pointerId));
   }
   pad.addEventListener('contextmenu',e=>e.preventDefault());
   zone.addEventListener('contextmenu',e=>e.preventDefault());

@@ -66,6 +66,22 @@ test('dead zone, captured pointer loss, blur, rotation and input mode changes cl
   assert.equal(c.sent.at(-1).x,0);assert.equal(c.elements.get('thumbControls').hidden,true);
 });
 
+test('aim and fire recover when mobile touch releases are missed by the control',()=>{
+  const c=client(),move=c.elements.get('moveZone'),aim=c.elements.get('aimZone');
+  aim.events.pointerdown(c.event(2,50,50));aim.events.pointermove(c.event(2,82,50));
+  c.run('sendInput()');assert.equal(c.sent.at(-1).fire,true);
+  c.windowEvents.pointerup({pointerId:2});
+  assert.equal(c.sent.at(-1).fire,false);assert.equal(c.run('sticks.aim.id'),null);
+  aim.events.pointerdown(c.event(3,50,50));aim.events.pointermove(c.event(3,82,50));
+  move.events.pointerdown(c.event(4,50,50));move.events.pointermove(c.event(4,82,50));
+  c.windowEvents.touchend({touches:[{}]});assert.equal(c.run('sticks.aim.id'),3,'one remaining finger must keep its control');
+  c.windowEvents.touchend({touches:[]});
+  assert.equal(c.sent.at(-1).fire,false);assert.equal(c.sent.at(-1).x,0);
+  assert.equal(c.run('sticks.aim.id'),null);assert.equal(c.run('sticks.move.id'),null);
+  aim.events.pointerdown(c.event(5,50,50));aim.events.pointermove(c.event(5,82,50));
+  c.windowEvents.touchcancel({touches:[]});assert.equal(c.sent.at(-1).fire,false);
+});
+
 test('desktop hides thumb controls; touch controls wait for joining',()=>{
   const desktop=client(false);
   assert.equal(desktop.elements.get('thumbControls').hidden,true);
