@@ -31,7 +31,7 @@ class Room {
     if(this.players.size>=F.maxPlayers&&!bot){const seat=[...this.players.values()].reverse().find(p=>p.bot);if(seat)this.players.delete(seat.id);}
     if(this.players.size>=F.maxPlayers)return null;
     const slot=Array.from({length:F.maxPlayers},(_,i)=>i).find(i=>![...this.players.values()].some(p=>p.slot===i));
-    const p={id:randomUUID(),slot,bot,name:bot?'🤖 '+Bots.botNames[slot*2+Math.floor(Math.random()*2)]:name||F.palette[slot].name,x:0,y:0,a:0,aim:0,hp:F.maxHealth,kills:0,deaths:0,shots:0,hits:0,streak:0,cool:0,respawnAt:0,shieldUntil:0,connected:true,disconnectedAt:0,input:neutral(),lastInput:this.time,seq:-1,life:0};
+    const p={id:randomUUID(),slot,bot,name:bot?'🤖 '+Bots.botNames[slot*2+Math.floor(Math.random()*2)]:name||F.palette[slot].name,x:0,y:0,a:0,aim:0,hp:F.maxHealth,kills:0,deaths:0,damageDealt:0,shots:0,hits:0,streak:0,cool:0,respawnAt:0,shieldUntil:0,connected:true,disconnectedAt:0,input:neutral(),lastInput:this.time,seq:-1,life:0};
     const teams=[0,1].map(team=>[...this.players.values()].filter(t=>t.team===team).length);
     p.team=this.settings.mode==='teams'?(teams[0]<=teams[1]?0:1):null;
     if(this.phase==='waiting'&&!bot)this.ownerId??=p.id;
@@ -74,7 +74,7 @@ class Room {
     const votes=[...this.rematchVotes].filter(id=>this.players.get(id)?.connected).length;
     if(votes<this.rematchNeeded())return;
     this.winner=null;this.rematchUntil=0;this.rematchVotes.clear();this.teamScores=[0,0];this.map=generateMap();
-    for(const player of this.players.values()){player.kills=0;player.deaths=0;player.shots=0;player.hits=0;player.streak=0;}
+    for(const player of this.players.values()){player.kills=0;player.deaths=0;player.damageDealt=0;player.shots=0;player.hits=0;player.streak=0;}
     this.beginCountdown();this.emit('restart',{});
   }
   beginCountdown(){
@@ -105,8 +105,8 @@ class Room {
     if(this.phase!=='playing')return;
     const attacker=this.players.get(owner);
     if(p.hp<=0||this.invulnerable(p)||(attacker&&this.friendly(attacker,p)))return;
-    p.hp=Math.max(0,p.hp-amount);const dead=p.hp===0;
-    if(attacker)attacker.hits++;
+    const dealt=Math.min(p.hp,amount);p.hp=Math.max(0,p.hp-amount);const dead=p.hp===0;
+    if(attacker){attacker.hits++;if(attacker!==p)attacker.damageDealt+=dealt;}
     if(dead){p.streak=0;if(attacker)attacker.streak++;}
     this.emit(dead?'destroyed':'hit',{x:p.x,y:p.y,slot:p.slot,player:p.id,damage:amount,...(dead&&attacker?{by:attacker.id,streak:attacker.streak}:{})});
     if(!dead)return;

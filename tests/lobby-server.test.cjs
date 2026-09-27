@@ -194,9 +194,11 @@ test('players get the country Cloudflare reports, and the leaderboard filters by
   assert.equal(countryOf({headers:{'cf-ipcountry':'my'}}),'MY');
   for(const bad of ['XX','T1','','Malaysia'])assert.equal(countryOf({headers:{'cf-ipcountry':bad}}),'');
   const s=server(),board=s.game.leaderboard,{Room}=require('../game-server.cjs');
-  const r=new Room('LB'),a=r.add('Ann'),b=r.add('Bo');a.country='MY';b.country='SG';a.kills=10;r.winner={id:a.id,name:'Ann'};board.record(r);
+  const r=new Room('LB'),a=r.add('Ann'),b=r.add('Bo');a.country='MY';b.country='SG';a.kills=10;a.damageDealt=83;a.deaths=2;r.winner={id:a.id,name:'Ann'};board.record(r);
   const read=async query=>JSON.parse((await s.read('/leaderboard'+query)).body.toString());
   assert.deepEqual((await read('?period=day')).players.map(p=>p.name),['Ann','Bo']);
+  assert.equal((await read('?period=day')).players[0].damageDealt,83);
+  assert.equal((await read('?period=day')).players[0].deaths,2);
   assert.deepEqual((await read('?period=week&country=sg')).players.map(p=>p.name),['Bo']);
   assert.deepEqual((await read('')).countries,[{code:'MY',players:1},{code:'SG',players:1}]);
 });
