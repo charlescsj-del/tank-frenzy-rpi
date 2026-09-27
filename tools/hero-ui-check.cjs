@@ -10,23 +10,29 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
   await page.goto('http://127.0.0.1:'+game.server.address().port);await page.locator('.hero-art').waitFor({state:'visible'});
   await page.waitForFunction(()=>document.querySelector('.hero-tank').getAnimations().length>0);
   assert.equal(await page.locator('#versionBadge').textContent(),'v'+require(root+'/shared.js').version);
-  const motion=page.locator('.hero-tank').first(),flash=page.locator('.hero-burst').first();
-  assert.equal(await page.locator('#heroBackdrop').getAttribute('href'),'./mode-banner-idle.webp');
-  assert(await page.evaluate(async()=>{const response=await fetch('./mode-banner-idle.webp');return response.ok&&response.headers.get('content-type')?.includes('image/webp');}),'clean artwork loads');
+  const motion=page.locator('#heroLayer-orange .hero-tank'),flash=page.locator('#heroLayer-orange .hero-burst');
+  assert.equal(await page.locator('#heroBackdrop').getAttribute('href'),'./hero-quarry.webp');
+  for(const asset of ['hero-quarry.webp','hero-tanks.webp'])assert(await page.evaluate(async asset=>{const response=await fetch('./'+asset);return response.ok&&response.headers.get('content-type')?.includes('image/webp');},asset),'layer asset loads: '+asset);
+  assert.equal(await page.locator('use[href="#heroBackdrop"]').count(),0,'recoil never copies the background');
+  assert(await page.evaluate(()=>!!(document.getElementById('heroLayer-purple').compareDocumentPosition(document.getElementById('heroLayer-blue'))&Node.DOCUMENT_POSITION_FOLLOWING)),'blue tank paints over distant purple shots');
+  const alpha=await page.evaluate(async()=>{const bitmap=await createImageBitmap(await (await fetch('./hero-tanks.webp')).blob());const c=document.createElement('canvas');c.width=bitmap.width;c.height=bitmap.height;const ctx=c.getContext('2d');ctx.drawImage(bitmap,0,0);return [[1000,300],[300,150],[300,300]].map(([x,y])=>ctx.getImageData(x,y,1,1).data[3]);});
+  assert.equal(alpha[0],0);assert.equal(alpha[1],0);assert(alpha[2]>250,'tank is opaque but the surrounding quarry is transparent');
   const before=await motion.evaluate(el=>el.getAnimations()[0].currentTime);await page.waitForTimeout(200);
   assert(await motion.evaluate(el=>el.getAnimations()[0].currentTime)>before,'tank animation advances');
   await page.locator('#heroMotion').click();assert.equal(await page.locator('#heroMotion').getAttribute('aria-pressed'),'true');
   await page.waitForFunction(()=>{const a=document.querySelector('.hero-tank').getAnimations()[0];return a.playState==='paused'&&!a.pending;});
   const paused=await motion.evaluate(el=>el.getAnimations()[0].currentTime);await page.waitForTimeout(150);
   assert(Math.abs(await motion.evaluate(el=>el.getAnimations()[0].currentTime)-paused)<1,'pause stops animation');
-  const shell=page.locator('.hero-shell').first();
+  const shell=page.locator('#heroLayer-orange .hero-shell');
   await page.evaluate(()=>document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=0)));
   assert.equal(await flash.evaluate(el=>getComputedStyle(el).opacity),'0','no flash between shots');
   assert.equal(await shell.evaluate(el=>getComputedStyle(el).opacity),'0','no shell between shots');
-  const bulletAt=async ms=>page.evaluate(ms=>{const el=document.querySelector('.hero-shell');el.getAnimations()[0].currentTime=ms;return {opacity:Number(getComputedStyle(el).opacity),x:new DOMMatrixReadOnly(getComputedStyle(el).transform).m41};},ms);
-  const early=await bulletAt(1400),late=await bulletAt(2400);
-  assert(early.opacity>.8&&late.opacity>.8&&late.x>early.x+100,'large shell travels visibly for over a second');
-  assert.equal(await shell.locator('circle[r="17"]').count(),1,'shell has a larger visible core');
+  const bulletAt=async(name,ms)=>page.evaluate(({name,ms})=>{const el=document.querySelector('#heroLayer-'+name+' .hero-shell');const delay=parseFloat(getComputedStyle(el).animationDelay)*1000;el.getAnimations()[0].currentTime=delay+ms;return {opacity:Number(getComputedStyle(el).opacity),x:new DOMMatrixReadOnly(getComputedStyle(el).transform).m41};},{name,ms});
+  for(const name of ['orange','green','blue','purple']){
+    const a=await bulletAt(name,1000),b=await bulletAt(name,1500),c=await bulletAt(name,2000);
+    assert(a.opacity>.99&&c.opacity>.99);assert(Math.abs(b.x-a.x-100)<.1&&Math.abs(c.x-b.x-100)<.1,name+' shell travels at constant 200 art pixels/second');
+  }
+  assert.equal(await shell.locator('use[href="#heroProjectile"]').count(),1,'shell uses the pointed shaded projectile');
   // Freeze a firing moment for repeatable responsive screenshots.
   for(const [width,height] of [[1440,900],[390,844],[844,390]]){
    await page.setViewportSize({width,height});
@@ -37,6 +43,9 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
    await page.screenshot({path:out+'/lobby-'+width+'.png',fullPage:true});
    if(width===390){await page.evaluate(()=>document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=0)));await page.screenshot({path:out+'/lobby-idle-390.png',fullPage:true});}
   }
+  await page.setViewportSize({width:1440,height:900});
+  await page.evaluate(()=>{document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=0));document.querySelectorAll('#heroLayer-purple .hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=6100));});
+  await page.screenshot({path:out+'/lobby-purple-behind-blue.png',fullPage:true});
   await page.locator('#heroMotion').click();assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'running');
   await page.locator('#createRoom').click();assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'paused','animation pauses outside lobby');
   await page.locator('#browseRooms').click();

@@ -2,6 +2,16 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 19.2.1-dev — Tank Frenzy v19.2.1-dev
+
+- Separate the quarry background and transparent tank silhouettes so recoil has no duplicate tank underneath.
+- Add short flickering muzzle flames, sparks and fading smoke; draw shaded pointed shells at a constant speed.
+- Layer the distant tanks and their shots behind the foreground tanks so purple shells pass behind the blue tank.
+
+## 19.2.1-dev
+
+- Reuse one transparent sprite atlas and one clean background; animate only browser transforms and opacity, with pause and reduced-motion support.
+
 ## App 19.2.0-dev — Tank Frenzy v19.2.0-dev
 
 - Remove the baked-in flashes from the lobby picture so tanks only appear to fire during animated shots.
