@@ -78,6 +78,13 @@ Harness quirks:
 
 ## Release checklist
 
+Use `MAJOR.MINOR.PATCH` for the game/app version:
+- Increment **MAJOR** for a breaking or substantial redesign; reset MINOR and PATCH to 0.
+- Increment **MINOR** for a new feature; reset PATCH to 0.
+- Increment **PATCH** for a bug fix or small correction that adds no feature.
+- Choose the bump from the largest change in a release. For example, after `19.0.0`, a feature is `19.1.0`, a fix is `19.0.1`, and a major change is `20.0.0`.
+- For the separate dev Home Assistant app, append exactly `-dev` to the three-part version, without another numeric suffix. Each installable dev update advances the appropriate numeric part: for example, `19.0.0-dev` followed by `19.0.1-dev` for a fix. When promoting to production, remove the suffix and sync every versioned file in the checklist below. Documentation-only edits do not require a version bump.
+
 Every user-visible release bumps the version in all of these:
 1. `shared.js` (`version`), `package.json`, `package-lock.json` (top-level `version` and `packages[""].version`).
 2. `config.yaml` `version` (Supervisor only offers an update when this changes) and `Dockerfile` `ARG BUILD_VERSION`.
