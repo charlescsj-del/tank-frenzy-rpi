@@ -146,11 +146,11 @@ function card(code){
       const {pass}=await response.json();
       const target=base+'?spectate='+encodeURIComponent(code)+'&pass='+encodeURIComponent(pass);
       if(tab)tab.location.href=target;else location.href=target;
-    }catch{tab?.close();alert('That room has ended.');refresh();}
+    }catch{tab?.close();alert('That arena has ended.');refresh();}
   });
-  const end=el('button',{className:'danger',type:'button',textContent:'End room'});
+  const end=el('button',{className:'danger',type:'button',textContent:'End arena'});
   end.addEventListener('click',async()=>{
-    if(!confirm('End room '+code+'? Everyone in it returns to the room browser.'))return;
+    if(!confirm('End arena '+code+'? Everyone in it returns to the arena browser.'))return;
     await fetch(adminRoot+'/close?room='+encodeURIComponent(code),{method:'POST',headers:{'X-Tank-Admin':'1'}});refresh();
   });
   actions.append(open,end);
@@ -176,11 +176,11 @@ function render(state){
   const humans=state.rooms.flatMap(r=>r.players).filter(p=>!p.bot&&p.connected).length,bots=state.rooms.flatMap(r=>r.players).filter(p=>p.bot).length;
   $('meta').textContent='v'+state.version+' · updated '+new Date().toLocaleTimeString();
   renderResources(state.system);
-  $('stats').replaceChildren(...[['Rooms',state.rooms.length],['Players online',humans],['Bots',bots],['Uptime',time(state.uptime)]]
+  $('stats').replaceChildren(...[['Arenas',state.rooms.length],['Players online',humans],['Bots',bots],['Uptime',time(state.uptime)]]
     .map(([label,value])=>el('div',{className:'stat'},el('b',{textContent:value}),el('small',{textContent:label}))));
   const live=new Set(state.rooms.map(r=>r.code));
   for(const [code,entry] of cards)if(!live.has(code)){entry.node.remove();cards.delete(code);}
-  if(!state.rooms.length){$('rooms').replaceChildren(el('p',{className:'empty',textContent:'No rooms right now. Rooms appear here as soon as someone creates one.'}));return;}
+  if(!state.rooms.length){$('rooms').replaceChildren(el('p',{className:'empty',textContent:'No arenas right now. Arenas appear here as soon as someone creates one.'}));return;}
   $('rooms').querySelector('.empty,.error')?.remove();
   for(const room of state.rooms){
     const {node,head,canvas,table}=card(room.code);

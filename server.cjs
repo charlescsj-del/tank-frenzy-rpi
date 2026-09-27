@@ -79,8 +79,8 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
     if(req.method==='POST'&&route==='/close'&&req.headers['x-tank-admin']==='1'){
       const room=rooms.get(String(url.searchParams.get('room')||''));
       if(!room){res.writeHead(404);res.end();return;}
-      for(const [token,session] of sessions)if(session.room===room){send(session.ws,{type:'error',title:'Room closed',message:'The host closed this room. Pick another room or create a new one.'});session.ws.close(1000,'Room closed');sessions.delete(token);}
-      closeSpectators(room,'Room closed','You ended this room.');rooms.delete(room.code);res.writeHead(204);res.end();return;
+      for(const [token,session] of sessions)if(session.room===room){send(session.ws,{type:'error',title:'Arena closed',message:'The host closed this arena. Pick another arena or create a new one.'});session.ws.close(1000,'Arena closed');sessions.delete(token);}
+      closeSpectators(room,'Arena closed','You ended this arena.');rooms.delete(room.code);res.writeHead(204);res.end();return;
     }
     res.writeHead(404);res.end();
   }
@@ -150,7 +150,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
       if(!msg||typeof msg!=='object')return;
       if(msg.type==='spectate'&&!session&&!spectators.has(ws)){
         const pass=watchPasses.get(String(msg.pass||'')),room=pass&&pass.expires>Date.now()&&rooms.get(pass.code);
-        if(!room||room.code!==String(msg.room||'')){send(ws,{type:'error',title:'Cannot watch this room',message:'The watch link expired or the room has ended. Open a new one from the admin page.'});ws.close();return;}
+        if(!room||room.code!==String(msg.room||'')){send(ws,{type:'error',title:'Cannot watch this arena',message:'The watch link expired or the arena has ended. Open a new one from the admin page.'});ws.close();return;}
         clearTimeout(joinTimeout);spectators.set(ws,{room});send(ws,{type:'spectating',room:room.code});sendRaw(ws,encodeState(room.snapshot()));return;
       }
       if(spectators.has(ws))return;
@@ -163,14 +163,14 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
           session.player.connected=true;session.player.pendingShot=false;session.player.input={x:0,y:0,aimX:session.player.x+100,aimY:session.player.y,fire:false};session.player.lastInput=session.room.time;
         }
         else{
-          if(msg.mode==='create'&&rooms.has(code)&&rooms.get(code).players.size>0){send(ws,{type:'error',message:'That room already exists. Choose another code or browse rooms to join it.'});ws.close();return;}
-          if(msg.mode==='join'&&(!rooms.has(code)||rooms.get(code).players.size===0)){send(ws,{type:'error',message:'That room is no longer available. Browse rooms or create a new one.'});ws.close();return;}
+          if(msg.mode==='create'&&rooms.has(code)&&rooms.get(code).players.size>0){send(ws,{type:'error',message:'That arena already exists. Choose another code or browse arenas to join it.'});ws.close();return;}
+          if(msg.mode==='join'&&(!rooms.has(code)||rooms.get(code).players.size===0)){send(ws,{type:'error',message:'That arena is no longer available. Browse arenas or create a new one.'});ws.close();return;}
           if(rooms.has(code)&&rooms.get(code).players.size===0)rooms.delete(code);
           const created=!rooms.has(code);
           if(!rooms.has(code)){if(rooms.size>=32){send(ws,{type:'error',message:'Server is full. Try an existing room.'});ws.close();return;}rooms.set(code,new Room(code,msg.settings));}
           const room=rooms.get(code);const name=typeof msg.name==='string'?msg.name.replace(/[\x00-\x1f<>]/g,'').trim().slice(0,16):'';
-          if(room.phase==='postgame'){send(ws,{type:'error',message:'This match has ended and its rematch window closed. Choose another room or create a new one.'});ws.close();return;}
-          const player=room.add(name);if(!player){send(ws,{type:'error',message:'Room full (4 players). Choose another room code.'});ws.close();return;}
+          if(room.phase==='postgame'){send(ws,{type:'error',message:'This match has ended and its rematch window closed. Choose another arena or create a new one.'});ws.close();return;}
+          const player=room.add(name);if(!player){send(ws,{type:'error',message:'Arena full (4 players). Choose another arena code.'});ws.close();return;}
           player.country=country;session={room,player,token:randomBytes(24).toString('hex'),ws};sessions.set(session.token,session);
           if(created)try{onRoomCreated?.({code,name:player.name,mode:room.settings.mode,url:publicUrl?publicUrl+'/?room='+encodeURIComponent(code):''});}catch{/* Notifications never block play. */}
         }

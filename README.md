@@ -2,7 +2,7 @@
 
 Install Tank Frenzy as a Home Assistant app (formerly called an add-on). The Pi hosts the multiplayer game; players use Safari, Edge, Chrome, or another modern browser on their phones, tablets, or computers. Rendering and sound run on each player's device.
 
-**Tank Frenzy v1.17.0**, developed directly in this repository. Mobile close view points toward off-screen opponents; 2 vs 2 shows clear ally/enemy markers and groups match results by team. The persistent leaderboard shows damage dealt and deaths alongside wins, matches, kills and K/D. Includes CPU and memory gauges, Pi load averages, live room monitoring, hidden spectating, bots, Quick Play, a visual tutorial, majority rematches, and music and effects. The Pi app provides separate Home Assistant sidebar and LAN listeners.
+**Tank Frenzy v1.18.0**, developed directly in this repository. Touch play uses translucent controls across the left and right halves of the screen; creators can choose a 5–50 kill win target. Mobile close view points toward off-screen opponents; 2 vs 2 marks allies and enemies and groups match results by team. The persistent leaderboard shows damage dealt and deaths. The Pi app provides separate Home Assistant sidebar and LAN listeners.
 
 ## Install
 
@@ -23,7 +23,7 @@ The first install downloads a Node image and installs one JavaScript dependency.
 
 ## Play with friends
 
-Use the direct LAN address for the best mobile/full-screen experience and invite links. Create a room, ask friends to open the same address, then join the room. Supports up to four players per room. The sidebar is available through Home Assistant's authenticated ingress.
+Use the direct LAN address for the best mobile/full-screen experience and invite links. Create an arena, ask friends to open the same address, then join it. Supports up to four players per arena. The creator can set a win count from 5 to 50 (default 10). The sidebar is available through Home Assistant's authenticated ingress.
 
 Set **Configuration → public_url** to your LAN address, for example `http://192.168.1.50:8765`, so **Copy Invite** also produces a usable LAN link when you open the game through the sidebar. Leave it empty to use the address currently open in the browser. Temporary ingress URLs require a Home Assistant session and are not suitable as permanent invitations.
 
@@ -54,6 +54,6 @@ docker run --rm -p 8765:8765 tank-frenzy-rpi
 
 Run the build on the intended architecture (or use Docker Buildx with `--platform linux/arm64`). The repository includes CI for tests and ARM64/AMD64 container builds. A physical Pi/Home Assistant installation and mobile play must still be checked on the target device; automated tests do not establish Pi performance under load.
 
-App package version: **1.17.0**. Game version: **1.17.0**. Releases bump the version in several files at once; see the release checklist in [CLAUDE.md](CLAUDE.md).
+App package version: **1.18.0**. Game version: **1.18.0**. Releases bump the version in several files at once; see the release checklist in [CLAUDE.md](CLAUDE.md).
 
 The How to Play screenshots in `tutorial/` are rendered by the game itself. After a visual change, run `npm start` and then `npx -y -p playwright node tools/tutorial-screenshots.cjs` to regenerate them (set `ONLY=win.webp` for one image).

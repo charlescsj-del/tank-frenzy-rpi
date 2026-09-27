@@ -92,7 +92,7 @@ test('room notifications call the Supervisor notify API with the invite link, at
   assert.equal(await notify({code:'QUARRY',name:'Ann',mode:'teams',url:'http://pi.local:8765/?room=QUARRY'}),true);
   const [url,init]=calls[0],body=JSON.parse(init.body);
   assert.equal(url,'http://supervisor/core/api/services/notify/mobile_app_pixel');assert.equal(init.headers.Authorization,'Bearer secret');
-  assert.match(body.message,/Ann opened room QUARRY \(2 vs 2\)/);assert.equal(body.data.url,'http://pi.local:8765/?room=QUARRY');
+  assert.match(body.message,/Ann opened arena QUARRY \(2 vs 2\)/);assert.equal(body.data.url,'http://pi.local:8765/?room=QUARRY');
   clock=30000;assert.equal(await notify({code:'B',name:'Bo',mode:'ffa',url:''}),false);assert.equal(calls.length,1,'throttled');
   clock=61000;const failing=homeAssistantNotifier('x',{token:'t',fetchImpl:async()=>{throw Error('offline');},now:()=>clock,log});
   assert.equal(await failing({code:'C',name:'Cy',mode:'ffa',url:''}),false);assert.equal(calls.at(-1)[0],'error','failures are logged, not thrown');

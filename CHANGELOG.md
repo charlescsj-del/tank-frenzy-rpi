@@ -2,6 +2,13 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 1.18.0 — Tank Frenzy v1.18.0
+
+- Use transparent left/right touch zones with floating thumb indicators, and keep the live aim line steady during laser shots.
+- Put in-game actions behind a compact icon menu; hide the arena code during play and use "arena" in player-facing text.
+- Let arena creators set a 5–50 kill win target, default 10, for free-for-all or team matches.
+- Center and shrink the mobile tutorial card and add safe-area space above the iPhone lobby logo.
+
 ## App 1.17.0 — Tank Frenzy v1.17.0
 
 - Point mobile close-view players toward off-screen opponents with labeled arrows at the view edge; hide arrows in Full Map, for allies and destroyed tanks, and after a match.
@@ -93,6 +100,11 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 - Keep assets, sound, room discovery and WebSockets under the ingress prefix; support a configured invitation URL.
 - Include installation/update instructions and CI container builds for both architectures.
 - Verify 88 automated checks, including mixed ingress/LAN multiplayer. Physical Pi play still requires target-device verification.
+
+## 1.18.0
+
+- Validate the per-arena kill target on the server; include it in discovery and snapshots, and use it for winning and rematches.
+- Keep existing `?room=` links and WebSocket fields compatible while changing interface terminology.
 
 ## 1.17.0
 
