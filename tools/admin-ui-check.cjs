@@ -40,6 +40,7 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   await page.screenshot({path:out+'/admin-disconnected.png',fullPage:true});
   await page.unroute('**/private-test/state');await page.evaluate(async()=>{refreshing=false;await refresh();clearTimeout(timer);refreshing=true});
   assert.equal(await page.locator('#freshness').getAttribute('data-stale'),'false');assert(await page.locator('.room').count()>0);
+  game.rooms.delete(room.code);
   const player=room.players.values().next().value;player.kills=3;player.deaths=2;player.damageDealt=27;room.winner={id:player.id,name:player.name};game.leaderboard.record(room);
   await page.goto(base+'/');await page.locator('#leaderboardButton').click();
   assert.deepEqual(await page.locator('#leaderboard thead th').allTextContents(),['#','Player','Wins','Matches','Kills','Damage','Deaths','K/D']);
