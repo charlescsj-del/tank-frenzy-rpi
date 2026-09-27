@@ -1,4 +1,6 @@
-# Tank Frenzy for Home Assistant / Raspberry Pi
+# Tank Frenzy Dev for Home Assistant / Raspberry Pi
+
+This `dev` branch is the test installation. Add `https://github.com/charlescsj-del/tank-frenzy-rpi#dev` to the Home Assistant app store. Install **Tank Frenzy Dev** alongside production; it has its own app identity, data and leaderboard. Its default host port is **8766**, and it starts manually. Set its `public_url` to your dev subdomain after routing that hostname to the Pi on port 8766. Bump `config.yaml`'s dev version for each preview update. Promote tested source changes to `main` separately; do not merge this dev-only app manifest into production.
 
 Install Tank Frenzy as a Home Assistant app (formerly called an add-on). The Pi hosts the multiplayer game; players use Safari, Edge, Chrome, or another modern browser on their phones, tablets, or computers. Rendering and sound run on each player's device.
 
