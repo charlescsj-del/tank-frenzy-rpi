@@ -14,8 +14,9 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
   const before=await motion.evaluate(el=>el.getAnimations()[0].currentTime);await page.waitForTimeout(200);
   assert(await motion.evaluate(el=>el.getAnimations()[0].currentTime)>before,'tank animation advances');
   await page.locator('#heroMotion').click();assert.equal(await page.locator('#heroMotion').getAttribute('aria-pressed'),'true');
+  await page.waitForFunction(()=>{const a=document.querySelector('.hero-tank').getAnimations()[0];return a.playState==='paused'&&!a.pending;});
   const paused=await motion.evaluate(el=>el.getAnimations()[0].currentTime);await page.waitForTimeout(150);
-  assert(Math.abs(await motion.evaluate(el=>el.getAnimations()[0].currentTime)-paused)<25,'pause stops animation');
+  assert(Math.abs(await motion.evaluate(el=>el.getAnimations()[0].currentTime)-paused)<1,'pause stops animation');
   // Freeze a firing moment for repeatable responsive screenshots.
   for(const [width,height] of [[1440,900],[390,844],[844,390]]){
    await page.setViewportSize({width,height});
