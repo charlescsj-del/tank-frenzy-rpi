@@ -26,7 +26,7 @@ The complete repository must be inside `/addons/tank_frenzy`, with `config.yaml`
 - **Network → 8765/tcp**: Host port for LAN players. Default: `8765`. Set a different free host port if occupied, or disable to use only Home Assistant ingress.
 - **Show in sidebar**: Opens the game through Home Assistant authentication. The dedicated ingress listener accepts only the Supervisor proxy at `172.30.32.2`.
 
-The app has no HA configuration/media mappings. It uses the Home Assistant API only to send the optional notifications. `/data` holds Supervisor options and `leaderboard.json`: all-time totals (wins, matches, kills, deaths and country by player name, at most 200 names) plus the last 62 days of match results, which power the Today, This week and This month views. It is saved about a second after every finished match and again when the app stops, written to a temporary file first so a power cut cannot corrupt it. It survives app restarts, updates and Pi reboots, and is included in Home Assistant backups of the app; uninstalling the app deletes it. Delete the file with the app stopped to reset the leaderboard. Days and weeks (Monday to Sunday) follow Home Assistant's time zone. Rooms and matches in progress are not persisted: app restarts/updates end active matches.
+The app has no HA configuration/media mappings. It uses the Home Assistant API only to send the optional notifications. `/data` holds Supervisor options and `leaderboard.json`: all-time totals (wins, matches, kills, damage dealt, deaths and country by player name, at most 200 names) plus the last 62 days of match results, which power the Today, This week and This month views. It is saved about a second after every finished match and again when the app stops, written to a temporary file first so a power cut cannot corrupt it. It survives app restarts, updates and Pi reboots, and is included in Home Assistant backups of the app; uninstalling the app deletes it. Existing leaderboard files keep their scores, but damage from matches before v1.16.0 was not recorded and starts at zero. Delete the file with the app stopped to reset the leaderboard. Days and weeks (Monday to Sunday) follow Home Assistant's time zone. Rooms and matches in progress are not persisted: app restarts/updates end active matches.
 
 ## Reading the admin resource charts
 
@@ -41,7 +41,7 @@ The app has no HA configuration/media mappings. It uses the Home Assistant API o
 1. The app log should show listeners on game port `8765` and internal ingress port `8099`.
 2. Open **Web UI**: the lobby, banner and room list should load.
 3. Open `http://YOUR_PI_IP:8765` on two devices. Create and join one room, start a round, move, shoot, and confirm sound after interacting.
-4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `1.15.0`.
+4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `1.16.0`.
 5. Test an invitation generated from the sidebar after setting `public_url`.
 
 ## Updates

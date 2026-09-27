@@ -8,6 +8,18 @@ const F=require('../shared.js');
 function arena(options){const r=new Room('POWER',options);r.map.walls=[];return r;}
 function power(r,p,type){p.power=type;p.powerUntil=r.time+10;p.cool=0;}
 
+test('damage dealt counts real enemy health lost, not laser overkill or blocked hits',()=>{
+  const r=arena({mode:'teams'}),a=r.add('A'),enemy=r.add('Enemy'),friend=r.add('Friend');
+  enemy.shieldUntil=friend.shieldUntil=0;
+  r.damage(enemy,a.id,4);assert.equal(a.damageDealt,4);
+  r.damage(friend,a.id,4);assert.equal(a.damageDealt,4,'teammate is not damaged');
+  enemy.shieldUntil=r.time+2;r.damage(enemy,a.id,4);assert.equal(a.damageDealt,4,'spawn shield blocks damage');
+  enemy.shieldUntil=0;power(r,enemy,'immortal');r.damage(enemy,a.id,4);assert.equal(a.damageDealt,4,'immortal blocks damage');
+  enemy.power=null;r.damage(enemy,a.id,4);assert.equal(a.damageDealt,8);
+  r.damage(enemy,a.id,4);assert.equal(a.damageDealt,10,'only remaining two health count');assert.equal(enemy.deaths,1);
+  r.damage(enemy,a.id,4);assert.equal(a.damageDealt,10,'dead tank cannot be damaged twice');
+});
+
 test('room defaults and balanced teams preserve reserved slots',()=>{
   const r=arena({mode:'teams'}),ps=Array.from({length:4},()=>r.add('P'));
   assert.deepEqual(r.settings,{mode:'teams',bouncing:true,powers:true});

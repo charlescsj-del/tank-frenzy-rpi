@@ -372,7 +372,7 @@ async function loadLeaderboard(){
     const data=await response.json();if(request!==leaderboardRequest)return;
     data.players.forEach((p,i)=>{
       const row=document.createElement('tr');
-      for(const value of [i<3?['🥇','🥈','🥉'][i]:i+1,p.name+(p.country?' '+flagOf(p.country):''),p.wins,p.matches,p.kills,(p.kills/Math.max(1,p.deaths)).toFixed(1)]){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}
+      for(const value of [i<3?['🥇','🥈','🥉'][i]:i+1,p.name+(p.country?' '+flagOf(p.country):''),p.wins,p.matches,p.kills,p.damageDealt??0,p.deaths,(p.kills/Math.max(1,p.deaths)).toFixed(1)]){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}
       $('leaderboardRows').append(row);
     });
     const regions=[['','All regions'],...(data.countries||[]).map(c=>[c.code,flagOf(c.code)+' '+regionName(c.code)+' ('+c.players+')'])];

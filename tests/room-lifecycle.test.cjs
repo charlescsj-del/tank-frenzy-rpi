@@ -41,12 +41,13 @@ test('all-disconnected waiting room recovers a starter on reconnect and expires 
 test('a win freezes play and requires every connected player to vote for a rematch within 20 seconds',()=>{
   const {r,a}=running(),b=r.add('B');b.shieldUntil=0;a.kills=9;
   r.damage(b,a.id,10);assert(r.winner);assert.equal(r.phase,'results');assert.equal(r.snapshot().rematchIn,20);
+  assert.equal(a.damageDealt,10);
   const oldMap=r.map.id,x=a.x;input(r,a);r.step(10);assert.equal(a.x,x);assert.equal(r.phase,'results');assert.equal(r.winner.id,a.id);
   assert.equal(r.voteRematch(a),true);assert.equal(r.voteRematch(a),false,'duplicate votes are ignored');
   assert.equal(r.phase,'results');assert.deepEqual(r.snapshot().rematchVotes,[a.id]);
   assert.equal(r.voteRematch(b),true);assert.equal(r.phase,'countdown');assert.equal(r.winner,null);
   assert.equal(r.snapshot().countdownIn,3);assert.equal(r.snapshot().rematchIn,0);assert.equal(r.snapshot().rematchVotes.length,0);
-  assert.notEqual(r.map.id,oldMap);assert.equal(a.kills,0);assert.equal(b.deaths,0);assert.equal(b.hp,10);assert.equal(r.ownerId,null);
+  assert.notEqual(r.map.id,oldMap);assert.equal(a.kills,0);assert.equal(a.damageDealt,0);assert.equal(b.deaths,0);assert.equal(b.hp,10);assert.equal(r.ownerId,null);
   input(r,a);const nextX=a.x;r.step(2.9);assert.equal(a.x,nextX);assert.equal(r.phase,'countdown');r.step(.11);assert.equal(r.phase,'playing');
 });
 

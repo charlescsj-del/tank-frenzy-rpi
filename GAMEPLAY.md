@@ -2,7 +2,7 @@
 
 A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarry, rounded menus and bold lettering. Choose Free-for-All or 2 vs 2 and invite your friends.
 
-Current release: **v1.15.0**, also shown in the top-left corner of the room browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [CLAUDE.md](CLAUDE.md).
+Current release: **v1.16.0**, also shown in the top-left corner of the room browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [CLAUDE.md](CLAUDE.md).
 
 The private admin page uses **system CPU and memory gauges**, with the game's CPU and resident memory shown separately. Pi load shows 1-, 5- and 15-minute averages, values per CPU core and a 60-second history collected while the page is open. Core-count reference markers make load easier to interpret. Resource readings refresh once a second and are marked stale when disconnected; room views still refresh twice a second. See [DOCS.md](DOCS.md) for measurement details.
 
@@ -85,7 +85,7 @@ Maps are 1600 by 1040 world units (about 2.5 times the previous area). Each room
 - Leaving the tab stops your controls, but other players keep playing.
 - A brief connection loss reserves your tank for 15 seconds and reconnects automatically. Reloading or leaving creates a new player session.
 
-The server owns movement, collision, firing cooldowns, health, scoring, and respawns. Browsers send input over WebSocket and render shared snapshots. No user accounts or database are required; rooms and match state reset when the server stops (only the leaderboard is saved, and only in the Home Assistant app).
+The server owns movement, collision, firing cooldowns, health, scoring, and respawns. Browsers send input over WebSocket and render shared snapshots. No user accounts or database are required; rooms and match state reset when the server stops (only the leaderboard is saved, and only in the Home Assistant app). The leaderboard lists wins, matches, kills, damage dealt (actual enemy health lost, not laser overkill), deaths and K/D for all time or recent periods. Old matches retain their scores and deaths, but damage dealt before v1.16.0 cannot be recovered and counts as zero.
 
 ## Checks
 

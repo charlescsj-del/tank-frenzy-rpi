@@ -16,7 +16,7 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   await page.waitForTimeout(1200);
   const state=await page.evaluate(async()=>{const value=await fetch(adminRoot+'/state').then(r=>r.json());clearTimeout(timer);refreshing=true;return value;});
   assert(state.system.memory.totalBytes===null||state.system.memory.totalBytes>0);assert(state.system.game.rssBytes===null||state.system.game.rssBytes>0);console.log('Live authenticated endpoint passed.');
-  const fixture={...state,version:'1.15.0',uptime:26780,system:{sampledAt:100000,cores:4,cpuPercent:36.4,memory:{usedPercent:61.2,totalBytes:4*1073741824,usedBytes:2.448*1073741824,availableBytes:1.552*1073741824,basis:'available'},load:[1.48,1.02,.86],game:{cpuPercent:16.2,rssBytes:72*1048576}}};
+  const fixture={...state,version:'1.16.0',uptime:26780,system:{sampledAt:100000,cores:4,cpuPercent:36.4,memory:{usedPercent:61.2,totalBytes:4*1073741824,usedBytes:2.448*1073741824,availableBytes:1.552*1073741824,basis:'available'},load:[1.48,1.02,.86],game:{cpuPercent:16.2,rssBytes:72*1048576}}};
   await page.evaluate(state=>{for(let i=0;i<=65;i++){state.system.sampledAt=100000+i*1000;state.system.load[0]=i===65?1.48:.7+i*.01+Math.sin(i/7)*.3;render(state)}},fixture);
   assert.equal(await page.locator('#cpuValue').textContent(),'36%');assert.match(await page.locator('#gameCpu').textContent(),/16.2% of one core/);
   assert.equal(await page.locator('#memoryValue').textContent(),'61%');assert.equal(await page.locator('#loadRatio1').textContent(),'0.37 per core');
@@ -40,6 +40,14 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   await page.screenshot({path:out+'/admin-disconnected.png',fullPage:true});
   await page.unroute('**/private-test/state');await page.evaluate(async()=>{refreshing=false;await refresh();clearTimeout(timer);refreshing=true});
   assert.equal(await page.locator('#freshness').getAttribute('data-stale'),'false');assert(await page.locator('.room').count()>0);
+  const player=room.players.values().next().value;player.kills=3;player.deaths=2;player.damageDealt=27;room.winner={id:player.id,name:player.name};game.leaderboard.record(room);
+  await page.goto(base+'/');await page.locator('#leaderboardButton').click();
+  assert.deepEqual(await page.locator('#leaderboard thead th').allTextContents(),['#','Player','Wins','Matches','Kills','Damage','Deaths','K/D']);
+  assert.deepEqual(await page.locator('#leaderboardRows tr:first-child td').allTextContents(),['🥇','Commander','1','1','3','27','2','1.5']);
+  await page.setViewportSize({width:390,height:844});
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'phone page must not overflow');
+  assert(await page.locator('.leaderboard-body').evaluate(el=>el.scrollWidth>el.clientWidth),'wide leaderboard scrolls within the dialog on a phone');
+  await page.screenshot({path:out+'/leaderboard-phone.png',fullPage:true});
   assert.deepEqual(errors,[]);console.log('PASS: live endpoint, gauges, core-normalized high load, unknown values, bounded history, stale/recovery states and four responsive widths.');
  }finally{await browser?.close();await game.close();}
 })().catch(e=>{console.error(e);process.exit(1)});

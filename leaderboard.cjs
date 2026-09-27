@@ -4,7 +4,7 @@
 // app the file lives in /data, so it survives restarts, updates and reboots.
 const fs=require('node:fs');
 const nameLimit=200,historyDays=62,matchLimit=20000,day=864e5;
-const blank=name=>({name,wins:0,matches:0,kills:0,deaths:0,country:'',lastPlayed:0});
+const blank=name=>({name,wins:0,matches:0,kills:0,deaths:0,damageDealt:0,country:'',lastPlayed:0});
 
 // Period starts use the server's local time zone (the app gets Home Assistant's).
 function periodStart(period,now=Date.now()){
@@ -21,7 +21,7 @@ class Leaderboard {
     if(!file||!fs.existsSync(file))return;
     try{
       const data=JSON.parse(fs.readFileSync(file,'utf8'));
-      for(const entry of data.players||[])if(typeof entry?.name==='string'&&entry.name.trim())this.entries.set(entry.name.trim().toLowerCase(),{...blank(entry.name.trim()),...entry});
+      for(const entry of data.players||[])if(typeof entry?.name==='string'&&entry.name.trim())this.entries.set(entry.name.trim().toLowerCase(),{...blank(entry.name.trim()),...entry,damageDealt:Number.isFinite(entry.damageDealt)?entry.damageDealt:0});
       this.matches=Array.isArray(data.matches)?data.matches.filter(m=>Number.isFinite(m?.t)&&Array.isArray(m.players)):[];
     }catch(error){console.error('Tank Frenzy: ignoring unreadable leaderboard:',error.message);}
   }
@@ -32,8 +32,9 @@ class Leaderboard {
       const name=String(p.name||'').trim();if(p.bot||!name)continue;
       const key=name.toLowerCase(),won=room.settings.mode==='teams'?p.team!=null&&p.team===winner?.team:p.id===winner?.id;
       const entry=this.entries.get(key)||blank(name),country=p.country||entry.country||'';
-      Object.assign(entry,{name,country,matches:entry.matches+1,wins:entry.wins+(won?1:0),kills:entry.kills+p.kills,deaths:entry.deaths+p.deaths,lastPlayed:now});
-      this.entries.set(key,entry);players.push({name,country,won,kills:p.kills,deaths:p.deaths});
+      const damageDealt=Number.isFinite(p.damageDealt)?p.damageDealt:0;
+      Object.assign(entry,{name,country,matches:entry.matches+1,wins:entry.wins+(won?1:0),kills:entry.kills+p.kills,deaths:entry.deaths+p.deaths,damageDealt:entry.damageDealt+damageDealt,lastPlayed:now});
+      this.entries.set(key,entry);players.push({name,country,won,kills:p.kills,deaths:p.deaths,damageDealt});
     }
     if(players.length)this.matches.push({t:now,mode:room.settings.mode,players});
     this.prune(now);this.scheduleSave();
@@ -47,7 +48,7 @@ class Leaderboard {
     const since=periodStart(period,this.now()),totals=new Map();
     for(const match of this.matches)if(match.t>=since)for(const p of match.players){
       const key=p.name.toLowerCase(),entry=totals.get(key)||blank(p.name);
-      Object.assign(entry,{name:p.name,country:p.country||entry.country,matches:entry.matches+1,wins:entry.wins+(p.won?1:0),kills:entry.kills+p.kills,deaths:entry.deaths+p.deaths});
+      Object.assign(entry,{name:p.name,country:p.country||entry.country,matches:entry.matches+1,wins:entry.wins+(p.won?1:0),kills:entry.kills+p.kills,deaths:entry.deaths+p.deaths,damageDealt:entry.damageDealt+(Number.isFinite(p.damageDealt)?p.damageDealt:0)});
       totals.set(key,entry);
     }
     return [...totals.values()];
@@ -56,7 +57,7 @@ class Leaderboard {
     if(!['day','week','month','all'].includes(period))period='all';
     return this.rows(period).filter(p=>!country||p.country===country)
       .sort((a,b)=>b.wins-a.wins||b.kills-a.kills||a.deaths-b.deaths||a.name.localeCompare(b.name))
-      .slice(0,count).map(({name,country,wins,matches,kills,deaths})=>({name,country,wins,matches,kills,deaths}));
+      .slice(0,count).map(({name,country,wins,matches,kills,deaths,damageDealt})=>({name,country,wins,matches,kills,deaths,damageDealt}));
   }
   // Countries seen in all-time results, most players first, for the region filter.
   countries(){

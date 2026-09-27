@@ -2,6 +2,11 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 1.16.0 — Tank Frenzy v1.16.0
+
+- Add Damage and Deaths columns to the persistent leaderboard, keeping K/D and the existing period and region filters. Damage counts actual enemy health lost, not excess laser damage or hits blocked by shields.
+- Preserve previous leaderboard totals; historical damage that was not recorded starts at zero.
+
 ## App 1.15.0 — Tank Frenzy v1.15.0
 
 - Replace the admin's plain resource numbers with system CPU and memory gauges, showing game usage separately.
@@ -83,6 +88,11 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 - Keep assets, sound, room discovery and WebSockets under the ingress prefix; support a configured invitation URL.
 - Include installation/update instructions and CI container builds for both architectures.
 - Verify 88 automated checks, including mixed ingress/LAN multiplayer. Physical Pi play still requires target-device verification.
+
+## 1.16.0
+
+- Track per-match damage dealt on the server, reset it on rematch, and save it in both all-time totals and recent match logs. Expose damage and deaths in `/leaderboard` without enlarging 30 Hz game snapshots.
+- Migrate old saved leaderboards and match logs without a damage field, defaulting their missing values to zero; add combat, persistence and period regression tests.
 
 ## 1.15.0
 
