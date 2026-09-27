@@ -2,6 +2,17 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 19.2.0-dev — Tank Frenzy v19.2.0-dev
+
+- Remove the baked-in flashes from the lobby picture so tanks only appear to fire during animated shots.
+- Give each tank stronger recoil; show larger shells traveling more slowly between volleys.
+- Keep a live battle strip on screen with your kills, kills left to win, and every other tank's kills and health; team games track the team score and mark allies.
+- Keep the pause control and reduced-motion behavior, with all effects rendered in the browser.
+
+## 19.2.0-dev
+
+- Serve a clean idle WebP image as the animated hero's background while preserving the original illustration for reference.
+
 ## App 19.1.0-dev — Tank Frenzy v19.1.0-dev
 
 - Animate the existing lobby artwork with gentle tank recoil, staggered muzzle flashes and shell streaks.

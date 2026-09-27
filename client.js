@@ -13,7 +13,7 @@ let touchAim=null,expanded=false,mapOverview=false;
 let cssW=1120,cssH=610,scale=1,offsetX=0,offsetY=0;
 let tanks=[],shells=[],particles=[],tracks=[],pickups=[],beams=[],pickupFlashes=[],floaters=[],rings=[],hurt=0,shake=0,last=0,sound=true,audioReady=false,audioContext,soundBank;
 let socket=null,myId=null,token=null,joined=false,spectating=false,connecting=false,intentional=false,retry=0,retryTimer;
-let latest=null,lastEvent=0,seq=0,rosterSignature='',pointer={x:500,y:330,active:false},firing=false,lastSnapshot=0;
+let latest=null,lastEvent=0,seq=0,rosterSignature='',battleSignature='',pointer={x:500,y:330,active:false},firing=false,lastSnapshot=0;
 let roomCode=(new URL(location.href).searchParams.get('room')||'').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,16),networkBase=appBase.href.replace(/\/$/,'');
 let lobbyVisible=false,lobbyRooms=[],joinMode=null,roomRequest=0;
 let selectedGameMode='ffa',leaveDialogOpen=false,tutorialOpen=false,tutorialReturn=null,leaderboardOpen=false;
@@ -323,6 +323,35 @@ $('resultsLeave').addEventListener('click',leave);
 function updateHud(data){
   const count=data.players.filter(p=>p.connected).length;
   $('roomCount').textContent=count+' / 4 PLAYERS';
+  const battling=data.phase==='playing';
+  $('battleHud').hidden=!battling;
+  $('arenaHeader').classList.toggle('has-battle-hud',battling);
+  if(battling){
+    const goal=data.settings?.targetScore||FIELD.targetScore;
+    const mine=data.players.find(p=>p.id===myId);
+    const teams=data.settings?.mode==='teams';
+    const score=teams?(data.teamScores?.[mine?.team]??0):(mine?.kills??0);
+    const battleState=JSON.stringify([myId,goal,teams,score,data.teamScores,data.players.map(p=>[p.id,p.name,p.slot,p.team,p.hp,p.kills,p.connected])]);
+    if(battleState!==battleSignature){
+      battleSignature=battleState;
+      const progress=$('battleProgress');progress.replaceChildren();
+      const main=document.createElement('strong');main.textContent=teams?'TEAM '+score+' / '+goal:'YOU '+score+' / '+goal;
+      const remaining=document.createElement('small');remaining.textContent=Math.max(0,goal-score)+' KILLS TO WIN';
+      progress.append(main,remaining);
+      const opponents=$('battleOpponents');opponents.replaceChildren();
+      for(const player of data.players.filter(p=>p.id!==myId)){
+        const ally=teams&&player.team===mine?.team;
+        const chip=document.createElement('div');chip.className='battle-opponent'+(ally?' ally':'')+(!player.connected?' offline':'');chip.style.setProperty('--tank',colors[player.slot]);
+        chip.title=(ally?'Teammate ':'Opponent ')+player.name+': '+player.kills+' kills, '+player.hp+' / '+FIELD.maxHealth+' health';
+        const name=document.createElement('span');name.className='battle-opponent-name';name.textContent=(ally?'★ ':'')+player.name;
+        const kills=document.createElement('span');kills.className='battle-opponent-score';kills.textContent=player.kills+' K';
+        const health=document.createElement('span');health.className='battle-health';health.setAttribute('aria-label',player.hp+' / '+FIELD.maxHealth+' health');
+        const fill=document.createElement('span');fill.style.width=Math.max(0,Math.min(100,100*player.hp/FIELD.maxHealth))+'%';health.append(fill);
+        const hp=document.createElement('span');hp.className='battle-opponent-hp';hp.textContent=player.hp+'/'+FIELD.maxHealth;
+        chip.append(name,kills,health,hp);opponents.append(chip);
+      }
+    }
+  }
   const signature=JSON.stringify(data.players.map(p=>[p.id,p.name,p.slot,p.hp,p.kills,p.deaths,p.connected,p.team]));
   if(signature!==rosterSignature){
     rosterSignature=signature;$('roster').replaceChildren();

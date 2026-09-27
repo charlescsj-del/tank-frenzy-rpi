@@ -130,6 +130,33 @@ test('ten health fits five pips with half pips for single hits',()=>{
   c.run('hpPlayer.hp=1;updateHud(hpState)');assert.equal(health().children[0].className,'pip half');assert(health().children.slice(1).every(p=>p.className==='pip empty'));
 });
 
+test('battle HUD shows goal, remaining kills, opponent score and live health',()=>{
+  const c=client();
+  c.run(`var battle={phase:'playing',settings:{mode:'ffa',targetScore:12},players:[
+    {id:'me',name:'Pilot',slot:0,hp:9,kills:4,deaths:1,connected:true},
+    {id:'other',name:'Rival',slot:1,hp:7,kills:6,deaths:2,connected:true}]};updateHud(battle)`);
+  const hud=c.elements.get('battleHud'),progress=c.elements.get('battleProgress'),chips=c.elements.get('battleOpponents');
+  assert.equal(hud.hidden,false);assert.equal(progress.children[0].textContent,'YOU 4 / 12');
+  assert.equal(progress.children[1].textContent,'8 KILLS TO WIN');
+  assert.equal(chips.children[0].children[1].textContent,'6 K');
+  assert.equal(chips.children[0].children[3].textContent,'7/10');
+  c.run('battle.players[1].hp=2;battle.players[1].kills=7;updateHud(battle)');
+  assert.equal(chips.children[0].children[1].textContent,'7 K');
+  assert.equal(chips.children[0].children[3].textContent,'2/10');
+  c.run('battle.phase="results";updateHud(battle)');assert.equal(hud.hidden,true);
+});
+
+test('team battle HUD uses team score and identifies an ally',()=>{
+  const c=client();c.run(`updateHud({phase:'playing',settings:{mode:'teams',targetScore:10},teamScores:[6,4],players:[
+    {id:'me',name:'Pilot',slot:0,team:0,hp:10,kills:3,deaths:0,connected:true},
+    {id:'ally',name:'Friend',slot:1,team:0,hp:5,kills:3,deaths:1,connected:true},
+    {id:'enemy',name:'Rival',slot:2,team:1,hp:8,kills:4,deaths:2,connected:true}]})`);
+  const progress=c.elements.get('battleProgress'),chips=c.elements.get('battleOpponents').children;
+  assert.equal(progress.children[0].textContent,'TEAM 6 / 10');assert.equal(progress.children[1].textContent,'4 KILLS TO WIN');
+  assert.equal(chips[0].className,'battle-opponent ally');assert.match(chips[0].children[0].textContent,/Friend/);
+  assert.equal(chips[1].className,'battle-opponent');assert.equal(chips[1].children[3].textContent,'8/10');
+});
+
 test('laser starts at the rendered muzzle despite movement and newer touch aim',()=>{
   const c=client();
   for(const angle of [0,Math.PI/2,Math.PI,-Math.PI/2,.63]){
