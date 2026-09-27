@@ -494,6 +494,21 @@ test('kills appear in a short feed, streaks get a banner, and the result card sh
   assert.equal(c.elements.get('resultsVotes').textContent,'1 / 2 votes needed for a rematch');
 });
 
+test('the match-end damage list opens on tap and closes for the next round',()=>{
+  const c=client(),players=[
+    {id:'me',name:'Me',slot:0,kills:10,deaths:1,shots:20,hits:8,damageDealt:37,connected:true},
+    {id:'b',name:'Bo',slot:1,kills:3,deaths:10,shots:10,hits:4,damageDealt:12,connected:true}
+  ];
+  c.run(`latest={phase:'results',winner:{id:'me',name:'Me'},settings:{mode:'ffa'},players:${JSON.stringify(players)},rematchVotes:[],rematchIn:15};updateRoomPhase(latest)`);
+  const toggle=c.elements.get('resultStatsToggle'),details=c.elements.get('resultDamage');
+  assert.equal(details.hidden,true);assert.equal(toggle.attributes['aria-expanded'],'false');
+  toggle.events.click();assert.equal(details.hidden,false);assert.equal(toggle.attributes['aria-expanded'],'true');
+  assert.deepEqual(c.elements.get('resultDamageRows').children.map(row=>row.children.map(cell=>String(cell.textContent))),[['Me ★','37'],['Bo','12']]);
+  toggle.events.click();assert.equal(details.hidden,true);
+  toggle.events.click();c.run("latest.phase='countdown';updateRoomPhase(latest)");
+  assert.equal(details.hidden,true);assert.equal(toggle.attributes['aria-expanded'],'false');
+});
+
 test('2 vs 2 results split players into Orange and Blue groups with team scores',()=>{
   const c=client(false),players=[
     {id:'me',name:'Me',slot:0,team:0,kills:2,deaths:1,shots:10,hits:5,connected:true},

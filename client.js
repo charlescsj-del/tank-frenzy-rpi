@@ -25,8 +25,20 @@ $('roomInput').value=roomCode;$('roomCode').textContent=roomCode||'—';
 $('versionBadge').textContent='v'+FIELD.version;
 $('versionBadge').setAttribute('aria-label','Tank Frenzy version '+FIELD.version);
 function status(text){$('status').textContent=spectating?'👁 WATCHING (HIDDEN) · '+text:text;}
+function resetResultDamage(){
+  $('resultDamage').hidden=true;
+  $('resultStatsToggle').setAttribute('aria-expanded','false');
+  $('resultStatsToggle').textContent='SHOW DAMAGE ▾';
+}
+$('resultStatsToggle').addEventListener('click',()=>{
+  const open=$('resultDamage').hidden;
+  $('resultDamage').hidden=!open;
+  $('resultStatsToggle').setAttribute('aria-expanded',String(open));
+  $('resultStatsToggle').textContent=open?'HIDE DAMAGE ▴':'SHOW DAMAGE ▾';
+});
 function networkMessage(title,text,form=false){
   if(form)leaveFullscreen();
+  resetResultDamage();
   $('waitingRoom').hidden=true;$('countdown').hidden=true;$('results').hidden=true;$('arena').classList.toggle('waiting-room',false);
   document.body.classList.toggle('in-lobby',false);document.body.classList.toggle('in-room-form',form);
   $('arena').classList.toggle('lobby-open',false);$('arena').classList.toggle('room-form-open',form);
@@ -226,6 +238,7 @@ function updateRoomPhase(data){
   $('waitingRoom').hidden=!waiting;$('arena').classList.toggle('waiting-room',waiting);
   $('countdown').hidden=!countdown;
   $('results').hidden=!(results||postgame);
+  if(!results&&!postgame&&!$('resultDamage').hidden)resetResultDamage();
   if(countdown){const number=String(Math.max(1,Math.ceil(data.countdownIn)));if($('countdownNumber').textContent!==number)$('countdownNumber').textContent=number;}
   if(results||postgame){
     const won=data.settings?.mode==='teams'?data.players.find(p=>p.id===myId)?.team===data.winner.team:myId===data.winner.id;
@@ -235,9 +248,9 @@ function updateRoomPhase(data){
     const connected=data.players.filter(p=>p.connected),votes=data.rematchVotes||[],voted=votes.includes(myId);
     const needed=data.rematchNeeded||connected.length,ready=votes.filter(id=>connected.some(p=>p.id===id)).length;
     $('resultsVotes').textContent=postgame?'The rematch window has closed.':ready+' / '+needed+' votes needed for a rematch';
-    const board=JSON.stringify([data.settings?.mode,data.winner.team,data.teamScores,data.players.map(p=>[p.id,p.team,p.kills,p.deaths,p.shots,p.hits])]);
+    const board=JSON.stringify([data.settings?.mode,data.winner.team,data.teamScores,data.players.map(p=>[p.id,p.team,p.kills,p.deaths,p.damageDealt,p.shots,p.hits])]);
     if(board!==resultsSignature){
-      resultsSignature=board;$('resultsRows').replaceChildren();
+      resultsSignature=board;$('resultsRows').replaceChildren();$('resultDamageRows').replaceChildren();
       const teams=data.settings?.mode==='teams';
       for(const team of teams?[0,1]:[null]){
         if(teams){
@@ -245,11 +258,19 @@ function updateRoomPhase(data){
           const title=document.createElement('th');title.scope='rowgroup';title.colSpan=4;
           title.textContent=(team===0?'ORANGE':'BLUE')+' TEAM · '+(data.teamScores?.[team]??0)+' KILLS'+(data.winner.team===team?' · WINNER ★':'');
           heading.append(title);$('resultsRows').append(heading);
+          const damageHeading=document.createElement('tr');damageHeading.className=heading.className;
+          const damageTitle=document.createElement('th');damageTitle.scope='rowgroup';damageTitle.colSpan=2;damageTitle.textContent=(team===0?'ORANGE':'BLUE')+' TEAM';
+          damageHeading.append(damageTitle);$('resultDamageRows').append(damageHeading);
         }
         for(const p of data.players.filter(p=>!teams||p.team===team).sort((a,b)=>b.kills-a.kills||a.deaths-b.deaths)){
         const row=document.createElement('tr');if(p.id===myId)row.className='me';
         const cells=[p.name+(p.id===myId?' ★':''),p.kills,p.deaths,p.shots?Math.round(100*Math.min(p.hits,p.shots)/p.shots)+'%':'—'].map(value=>{const cell=document.createElement('td');cell.textContent=value;return cell;});
         cells[0].style.color=colors[p.slot];row.append(...cells);$('resultsRows').append(row);
+        const damageRow=document.createElement('tr');if(p.id===myId)damageRow.className='me';
+        for(const value of [p.name+(p.id===myId?' ★':''),Number.isFinite(p.damageDealt)?p.damageDealt:'—']){
+          const cell=document.createElement('td');cell.textContent=value;damageRow.append(cell);
+        }
+        $('resultDamageRows').append(damageRow);
         }
       }
     }

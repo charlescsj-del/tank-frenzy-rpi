@@ -417,6 +417,9 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .results-board tr.team-heading th{padding:5px 8px 3px;border-top:2px solid #e2d9b0;text-align:left;font-size:11px;letter-spacing:.4px}
 .results-board tr.team-heading.orange th{background:#fff0dd;color:#a74f22}
 .results-board tr.team-heading.blue th{background:#e4f5fc;color:#206b9c}
+.result-stats-toggle{min-height:44px;margin:2px auto 8px;padding:8px 16px;border-radius:12px;font:900 12px var(--round-font)}
+.result-damage{max-width:340px;margin:0 auto 8px}
+.result-damage th:last-child,.result-damage td:last-child{text-align:right}
 @media(max-height:440px){.results-tank,.results-eyebrow{display:none}.results-board{margin:2px 0 4px;font-size:11px}.results-board td{padding:1px 6px}}
 /* Compact icon menu. Keep its labels available to assistive technology. */
 .game:not(.lobby-open):not(.room-form-open) .arena-menu-button{display:grid;place-items:center;min-width:44px;min-height:44px;padding:8px}
@@ -494,7 +497,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 <section id="results" class="results-screen" aria-labelledby="resultsTitle" hidden><div class="results-card">
 <svg class="results-tank" viewBox="0 0 120 120" aria-hidden="true"><path d="M60 5 66 20 82 15 77 30 92 40 76 45 78 62 60 54 42 62 44 45 28 40 43 30 38 15 54 20Z" fill="#ffd65a"/><rect x="22" y="73" width="76" height="33" rx="14" fill="#385b43"/><path d="M43 76 55 48h10l12 28" fill="currentColor" stroke="#385b43" stroke-width="5" stroke-linejoin="round"/><rect x="52" y="35" width="16" height="33" rx="5" fill="currentColor" stroke="#385b43" stroke-width="4"/><circle cx="41" cy="90" r="8" fill="#fff3cf"/><circle cx="60" cy="90" r="8" fill="#fff3cf"/><circle cx="79" cy="90" r="8" fill="#fff3cf"/></svg>
 <p class="results-eyebrow">BATTLE COMPLETE!</p><h2 id="resultsTitle">Winner</h2><p id="resultsOutcome" class="results-outcome"></p>
-<table id="resultsBoard" class="results-board"><thead><tr><th scope="col">Player</th><th scope="col">Kills</th><th scope="col">Deaths</th><th scope="col">Hit rate</th></tr></thead><tbody id="resultsRows"></tbody></table><p id="resultsVotes" class="results-note"></p><div class="results-actions"><button id="rematch" class="primary" type="button">REMATCH</button><button id="resultsLeave" class="tool" type="button">LEAVE ARENA</button></div><p id="resultsTimer" class="results-timer"></p>
+<table id="resultsBoard" class="results-board"><thead><tr><th scope="col">Player</th><th scope="col">Kills</th><th scope="col">Deaths</th><th scope="col">Hit rate</th></tr></thead><tbody id="resultsRows"></tbody></table><button id="resultStatsToggle" class="tool result-stats-toggle" type="button" aria-expanded="false" aria-controls="resultDamage">SHOW DAMAGE ▾</button><table id="resultDamage" class="results-board result-damage" aria-label="Damage dealt this match" hidden><thead><tr><th scope="col">Player</th><th scope="col">Damage</th></tr></thead><tbody id="resultDamageRows"></tbody></table><p id="resultsVotes" class="results-note"></p><div class="results-actions"><button id="rematch" class="primary" type="button">REMATCH</button><button id="resultsLeave" class="tool" type="button">LEAVE ARENA</button></div><p id="resultsTimer" class="results-timer"></p>
 </div></section>
 <canvas id="game" width="1120" height="610" tabindex="0" aria-label="Tank arena. Use W A S D to move, point the mouse to aim, and hold left click to fire."></canvas>
 <div id="respawn" role="status" aria-live="polite"></div>
