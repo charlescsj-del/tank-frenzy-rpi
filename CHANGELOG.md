@@ -2,6 +2,15 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 19.2.2-dev — Tank Frenzy v19.2.2-dev
+
+- Fade each flying shell gradually over the final part of its flight while retaining its uniform travel speed.
+- Strengthen the muzzle burst with a brighter layered flame, an expanding shock ring and extra sparks, visible only during firing.
+
+## 19.2.2-dev
+
+- Animate opacity separately from a linear projectile transform; keep pause and reduced-motion behavior for the new blast ring.
+
 ## App 19.2.1-dev — Tank Frenzy v19.2.1-dev
 
 - Separate the quarry background and transparent tank silhouettes so recoil has no duplicate tank underneath.

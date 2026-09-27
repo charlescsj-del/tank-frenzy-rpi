@@ -2,7 +2,7 @@
 
 A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarry, rounded menus and bold lettering. Choose Free-for-All or 2 vs 2 and invite your friends.
 
-Current release: **v19.2.1-dev**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
+Current release: **v19.2.2-dev**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
 
 The private admin page uses **system CPU and memory gauges**, with the game's CPU and resident memory shown separately. Pi load shows 1-, 5- and 15-minute averages, values per CPU core and a 60-second history collected while the page is open. Core-count reference markers make load easier to interpret. Resource readings refresh once a second and are marked stale when disconnected; room views still refresh twice a second. See [DOCS.md](DOCS.md) for measurement details.
 
@@ -102,3 +102,5 @@ Menu artwork: `mode-banner.webp`, generated with the built-in image tool and com
 The lobby artwork uses a clean quarry background and separate transparent tank sprites, so recoil reveals scenery instead of a second tank. Brief muzzle flames, sparks and smoke appear only when firing. Shaded shells travel at the same constant speed, and the distant purple tank's shots pass behind the foreground blue tank. Pause and reduced-motion controls cover every effect.
 
 Layered artwork assets: `hero-quarry.webp` and `hero-tanks.webp`, created with the built-in image editing tool from the original idle banner and compressed to WebP. Background prompt: remove all four tanks, dust and tank shadows; preserve the quarry camera, layout and lighting. Sprite prompt: extract the same four tanks at their original positions on a transparent 2048×768 canvas, with clean silhouettes and no scenery, glow or shadows.
+
+The lobby shells keep a constant speed and gradually fade during the last part of their flight. The muzzle blast briefly adds a broad flame, expanding ring and scattered sparks while the tank fires.
