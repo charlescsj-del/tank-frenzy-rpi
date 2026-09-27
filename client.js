@@ -235,13 +235,22 @@ function updateRoomPhase(data){
     const connected=data.players.filter(p=>p.connected),votes=data.rematchVotes||[],voted=votes.includes(myId);
     const needed=data.rematchNeeded||connected.length,ready=votes.filter(id=>connected.some(p=>p.id===id)).length;
     $('resultsVotes').textContent=postgame?'The rematch window has closed.':ready+' / '+needed+' votes needed for a rematch';
-    const board=JSON.stringify(data.players.map(p=>[p.id,p.kills,p.deaths,p.shots,p.hits]));
+    const board=JSON.stringify([data.settings?.mode,data.winner.team,data.teamScores,data.players.map(p=>[p.id,p.team,p.kills,p.deaths,p.shots,p.hits])]);
     if(board!==resultsSignature){
       resultsSignature=board;$('resultsRows').replaceChildren();
-      for(const p of [...data.players].sort((a,b)=>b.kills-a.kills||a.deaths-b.deaths)){
+      const teams=data.settings?.mode==='teams';
+      for(const team of teams?[0,1]:[null]){
+        if(teams){
+          const heading=document.createElement('tr');heading.className='team-heading '+(team===0?'orange':'blue');
+          const title=document.createElement('th');title.scope='rowgroup';title.colSpan=4;
+          title.textContent=(team===0?'ORANGE':'BLUE')+' TEAM · '+(data.teamScores?.[team]??0)+' KILLS'+(data.winner.team===team?' · WINNER ★':'');
+          heading.append(title);$('resultsRows').append(heading);
+        }
+        for(const p of data.players.filter(p=>!teams||p.team===team).sort((a,b)=>b.kills-a.kills||a.deaths-b.deaths)){
         const row=document.createElement('tr');if(p.id===myId)row.className='me';
         const cells=[p.name+(p.id===myId?' ★':''),p.kills,p.deaths,p.shots?Math.round(100*Math.min(p.hits,p.shots)/p.shots)+'%':'—'].map(value=>{const cell=document.createElement('td');cell.textContent=value;return cell;});
         cells[0].style.color=colors[p.slot];row.append(...cells);$('resultsRows').append(row);
+        }
       }
     }
     $('rematch').disabled=postgame||voted||!joined;
@@ -716,6 +725,50 @@ function updateCamera(){
   offsetY=axis(cssH,topLeft.y,bottomRight.y,focus.y,mapOverview?margin:64,mapOverview?margin:144);
 }
 function project(x,y,z=0){return FIELD.project(x,y,z);}
+function teamRelation(t){
+  if(latest?.settings?.mode!=='teams'||!joined||spectating||t.id===myId)return null;
+  const me=tanks.find(p=>p.id===myId);
+  return me?.team==null||t.team==null?null:me.team===t.team?'ally':'enemy';
+}
+function enemyMarkers(){
+  if(!joined||spectating||!touchMedia.matches||mapOverview||latest?.phase!=='playing')return [];
+  const me=tanks.find(t=>t.id===myId);if(!me||me.hp<=0)return [];
+  const left=64,right=Math.max(left+32,cssW-64),top=72,bottom=Math.max(top+32,cssH-80);
+  const own=project(me.x,me.y),originX=Math.max(left,Math.min(right,own.x*scale+offsetX)),originY=Math.max(top,Math.min(bottom,own.y*scale+offsetY));
+  const radius=35*boardScale*scale,markers=[];
+  for(const t of tanks){
+    if(t.id===myId||t.hp<=0||t.connected===false||teamRelation(t)==='ally'||(latest.settings.mode==='teams'&&teamRelation(t)!=='enemy'))continue;
+    const p=project(t.x,t.y),x=p.x*scale+offsetX,y=p.y*scale+offsetY;
+    if(x>=-radius&&x<=cssW+radius&&y>=-radius&&y<=cssH+radius)continue;
+    const dx=x-originX,dy=y-originY;
+    const limits=[dx<0?(left-originX)/dx:Infinity,dx>0?(right-originX)/dx:Infinity,dy<0?(top-originY)/dy:Infinity,dy>0?(bottom-originY)/dy:Infinity];
+    const edge=limits.indexOf(Math.min(...limits)),fraction=limits[edge];if(!Number.isFinite(fraction))continue;
+    const marker={id:t.id,name:t.name,x:originX+dx*fraction,y:originY+dy*fraction,angle:Math.atan2(dy,dx)};
+    const along=edge<2?'y':'x',min=edge<2?top:left,max=edge<2?bottom:right,initial=marker[along];
+    for(const shift of [0,38,-38,76,-76]){
+      const candidate=Math.max(min,Math.min(max,initial+shift));
+      if(markers.every(other=>Math.hypot(marker.x+(along==='x'?candidate-initial:0)-other.x,marker.y+(along==='y'?candidate-initial:0)-other.y)>=34)){marker[along]=candidate;break;}
+    }
+    markers.push(marker);
+  }
+  return markers;
+}
+function drawEnemyMarkers(){
+  const markers=enemyMarkers();if(!markers.length)return;
+  const dpr=Math.min(devicePixelRatio||1,2);ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.font='900 11px "Trebuchet MS",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  for(const marker of markers){
+    const label='ENEMY · '+marker.name.slice(0,12),width=Math.min(136,ctx.measureText(label).width+18);
+    const x=Math.max(width/2+7,Math.min(cssW-width/2-7,marker.x-Math.cos(marker.angle)*30));
+    const y=Math.max(17,Math.min(cssH-17,marker.y-Math.sin(marker.angle)*30));
+    roundedRect(ctx,x-width/2,y-13,width,26,12,'#fff8e7','#b93f31',2);
+    ctx.fillStyle='#922b22';ctx.fillText(label,x,y,width-14);
+    ctx.save();ctx.translate(marker.x,marker.y);ctx.rotate(marker.angle);
+    ctx.beginPath();ctx.arc(0,0,15,0,Math.PI*2);ctx.fillStyle='#b93f31';ctx.fill();
+    ctx.beginPath();ctx.moveTo(10,0);ctx.lineTo(-5,-7);ctx.lineTo(-2,0);ctx.lineTo(-5,7);ctx.closePath();ctx.fillStyle='#fff8e7';ctx.fill();ctx.restore();
+  }
+  ctx.restore();
+}
 function poly(points,fill,stroke){ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=.8;ctx.stroke();}}
 function line3(points,color,width=1){ctx.beginPath();points.forEach((p,i)=>{const s=project(...p);i?ctx.lineTo(s.x,s.y):ctx.moveTo(s.x,s.y)});ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();}
 function tint(hex,factor){const n=parseInt(hex.slice(1),16);return `rgb(${Math.min(255,Math.round((n>>16)*factor))},${Math.min(255,Math.round((n>>8&255)*factor))},${Math.min(255,Math.round((n&255)*factor))})`;}
@@ -838,7 +891,7 @@ function drawBeams(){
     roundedRect(ctx,p.x-12,p.y-12,24,24,8,'#fff4f0');drawPowerIcon(ctx,'restore',p.x,p.y,23);ctx.restore();
   }
 }
-function draw(){const dpr=Math.min(devicePixelRatio||1,2);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#badc91';ctx.fillRect(0,0,cssW,cssH);ctx.translate(offsetX,offsetY);ctx.scale(scale,scale);ctx.save();if(shake)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);drawGround();drawPickups();const objects=[...walls.map(w=>({depth:project(w.x+w.w/2,w.y+w.h/2).y,draw:()=>drawWall(w)})),...tanks.map(t=>({depth:project(t.x,t.y).y,draw:()=>drawTank(t)})),...shells.map(s=>({depth:project(s.x,s.y).y,draw:()=>drawShell(s)}))];objects.sort((a,b)=>a.depth-b.depth).forEach(o=>o.draw());drawBeams();for(const p of particles){const v=project(p.x,p.y,p.z);ctx.globalAlpha=Math.min(1,p.life/.2);ctx.fillStyle=p.color;ctx.fillRect(v.x,v.y,p.r,p.r);}ctx.globalAlpha=1;drawImpacts();ctx.restore();drawHurtEdge();}
+function draw(){const dpr=Math.min(devicePixelRatio||1,2);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#badc91';ctx.fillRect(0,0,cssW,cssH);ctx.translate(offsetX,offsetY);ctx.scale(scale,scale);ctx.save();if(shake)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);drawGround();drawPickups();const objects=[...walls.map(w=>({depth:project(w.x+w.w/2,w.y+w.h/2).y,draw:()=>drawWall(w)})),...tanks.map(t=>({depth:project(t.x,t.y).y,draw:()=>drawTank(t)})),...shells.map(s=>({depth:project(s.x,s.y).y,draw:()=>drawShell(s)}))];objects.sort((a,b)=>a.depth-b.depth).forEach(o=>o.draw());drawBeams();for(const p of particles){const v=project(p.x,p.y,p.z);ctx.globalAlpha=Math.min(1,p.life/.2);ctx.fillStyle=p.color;ctx.fillRect(v.x,v.y,p.r,p.r);}ctx.globalAlpha=1;drawImpacts();ctx.restore();drawEnemyMarkers();drawHurtEdge();}
 
 function drawImpacts(){
   for(const r of rings){
@@ -883,7 +936,7 @@ function drawHurtEdge(){
   ctx.restore();
 }
 function drawTank(t){
-  const p=project(t.x,t.y),ink='#354e4b';
+  const p=project(t.x,t.y),ink='#354e4b',relation=teamRelation(t);
   const protectedTank=t.hp>0&&(t.shield||(t.power==='immortal'&&t.powerRemaining>0));
   if(t.id===myId&&t.hp>0){
     // A thick translucent halo, outside the spawn fade, so players spot their own tank at once.
@@ -891,6 +944,11 @@ function drawTank(t){
     ctx.save();ctx.beginPath();ctx.arc(p.x,p.y,48*boardScale,0,Math.PI*2);
     ctx.globalAlpha=.62+pulse;ctx.strokeStyle='#fffbe6';ctx.lineWidth=20*boardScale;ctx.stroke();
     ctx.globalAlpha=.72+pulse;ctx.strokeStyle=colors[t.slot];ctx.lineWidth=12*boardScale;ctx.stroke();ctx.restore();
+  }
+  if(relation&&t.hp>0){
+    ctx.save();ctx.beginPath();ctx.arc(p.x,p.y,47*boardScale,0,Math.PI*2);
+    ctx.strokeStyle='#fffbe6';ctx.lineWidth=12*boardScale;ctx.stroke();
+    ctx.strokeStyle=relation==='ally'?'#188468':'#c6372d';ctx.lineWidth=8*boardScale;ctx.stroke();ctx.restore();
   }
   ctx.save();if(protectedTank)ctx.globalAlpha=reducedMotion?.6:.25+.75*(.5+.5*Math.cos(last*Math.PI*2/1400));
   shadow(t.x,t.y,32,27,t.hp<=0?.2:.25);
@@ -927,11 +985,11 @@ function drawTank(t){
   ctx.restore();
   if(t.power&&powerColors[t.power]){const badge=project(t.x+34,t.y-16,30);ctx.beginPath();ctx.arc(badge.x,badge.y,7,0,Math.PI*2);ctx.fillStyle=powerColors[t.power];ctx.fill();drawPowerIcon(ctx,t.power,badge.x,badge.y,12);}
   ctx.restore();
-  const top=project(t.x,t.y-42,28),label=(t.team==null?'':t.team===0?'O · ':'B · ')+t.name+(t.id===myId?' ★':'');
-  ctx.font='bold 10px "Trebuchet MS", sans-serif';
+  const top=project(t.x,t.y-42,28),label=relation?(relation==='ally'?'ALLY · ':'ENEMY · ')+t.name:(t.team==null?'':t.team===0?'O · ':'B · ')+t.name+(t.id===myId?' ★':'');
+  ctx.font='bold 11px "Trebuchet MS", sans-serif';
   const width=(ctx.measureText(label)?.width??label.length*5.7)+12;
-  roundedRect(ctx,top.x-width/2,top.y-11,width,15,5,t.id===myId?'#fff9e6ee':'#ffffffba');
-  ctx.fillStyle=t.team==null?ink:t.team===0?'#ae4c1c':'#226ba5';ctx.textAlign='center';ctx.fillText(label,top.x,top.y);
+  roundedRect(ctx,top.x-width/2,top.y-12,width,17,5,relation==='ally'?'#e3fff1ed':relation==='enemy'?'#fff0e7ed':t.id===myId?'#fff9e6ee':'#ffffffba');
+  ctx.fillStyle=relation==='ally'?'#176d56':relation==='enemy'?'#a72e24':t.team==null?ink:t.team===0?'#ae4c1c':'#226ba5';ctx.textAlign='center';ctx.fillText(label,top.x,top.y);
 }
 function frame(time){
   const dt=Math.min((time-last)/1000||0,.05);last=time;

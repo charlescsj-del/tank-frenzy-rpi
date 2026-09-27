@@ -59,8 +59,8 @@ test('local movement audio, local and opponent firing, and stop/mute behavior',(
 });
 
 test('your own tank has a thick translucent halo; opponents and wrecks do not',()=>{
-  const strokes=[],state={};
-  const context=new Proxy({createLinearGradient:()=>({addColorStop(){}}),measureText:()=>({width:20}),stroke(){strokes.push({...state});}},
+  const strokes=[],labels=[],state={};
+  const context=new Proxy({createLinearGradient:()=>({addColorStop(){}}),measureText:()=>({width:20}),stroke(){strokes.push({...state});},fillText(value){labels.push(value);}},
     {get:(target,key)=>key in target?target[key]:key in state?state[key]:()=>{},set:(target,key,value)=>{state[key]=value;return true;}});
   const element=()=>({style:{setProperty(){}},classList:{add(){},remove(){},toggle(){}},addEventListener(){},setAttribute(){},replaceChildren(){},append(){},focus(){},getBoundingClientRect:()=>({width:1120,height:610}),getContext:()=>context});
   const elements=new Map();
@@ -74,4 +74,11 @@ test('your own tank has a thick translucent halo; opponents and wrecks do not',(
   assert.equal(own.at(-1).strokeStyle,sandbox.FIELD.palette[2].body);
   assert.equal(halo({...base,id:'other'}).length,0);
   assert.equal(halo({...base,id:'me',hp:0}).length,0);
+  vm.runInContext("joined=true;latest={settings:{mode:'teams'}};tanks=[{id:'me',team:0}]",sandbox);
+  strokes.length=0;labels.length=0;vm.runInContext('drawTank('+JSON.stringify({...base,id:'friend',team:0})+')',sandbox);
+  assert(strokes.some(s=>s.strokeStyle==='#188468'&&s.lineWidth===8*sandbox.FIELD.viewScale));
+  assert(labels.some(label=>label.startsWith('ALLY · ')));
+  strokes.length=0;labels.length=0;vm.runInContext('drawTank('+JSON.stringify({...base,id:'foe',team:1})+')',sandbox);
+  assert(strokes.some(s=>s.strokeStyle==='#c6372d'&&s.lineWidth===8*sandbox.FIELD.viewScale));
+  assert(labels.some(label=>label.startsWith('ENEMY · ')));
 });
