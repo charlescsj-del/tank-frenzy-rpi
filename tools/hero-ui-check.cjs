@@ -53,6 +53,16 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
   await page.evaluate(()=>document.body.classList.remove('hero-suspended'));
   await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationName),'none');
   assert.equal(await flash.evaluate(el=>getComputedStyle(el).opacity),'0');assert.equal(await page.locator('#heroMotion').isVisible(),false);
+  // Review the entire composition as well as the cropped responsive lobby.
+  const review=await browser.newPage({viewport:{width:2048,height:768},reducedMotion:'no-preference'});
+  const css=await page.locator('style').textContent(),svg=await page.locator('.hero-art').evaluate(el=>el.outerHTML);
+  await review.setContent('<base href="'+page.url()+'"><style>'+css+' body{margin:0;padding:0;overflow:hidden}.hero-art{display:block!important;width:2048px!important;height:768px!important}</style><body class="in-lobby hero-paused">'+svg+'</body>');
+  await review.evaluate(async()=>{for(const path of ['hero-quarry.webp','hero-tanks.webp']){const img=new Image();img.src=path;await img.decode();}});
+  for(const [name,time] of [['idle',0],['recoil',810],['depth',6100]]){
+    await review.evaluate(({name,time})=>document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=name==='depth'&&!el.closest('#heroLayer-purple')?0:time)),{name,time});
+    await review.screenshot({path:out+'/artwork-'+name+'.png'});
+  }
+  await review.close();
   assert.deepEqual(errors,[]);console.log('Hero movement, flashes, pause, lobby visibility, reduced motion, version badge and responsive layouts passed.');
  }finally{await browser?.close();await game.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
