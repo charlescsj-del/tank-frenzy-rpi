@@ -51,9 +51,14 @@ function showRoomForm(code,mode=null){
   joinMode=mode;$('roomInput').value=code;$('roomInput').readOnly=mode==='join';
   networkMessage(mode==='create'?'Create an arena.':'Join '+code+'.',mode==='create'?'Choose an arena code and enter your callsign.':'Enter your callsign to join the battle.',true);
   $('action').textContent=mode==='create'?'CREATE & JOIN':'JOIN ARENA';
-  $('gameMode').value=selectedGameMode;$('bounceOption').checked=true;$('powersOption').checked=true;$('targetScore').value=FIELD.targetScore;
+  $('gameMode').value=selectedGameMode;$('bounceOption').checked=true;$('powersOption').checked=true;$('targetScore').value=FIELD.targetScore;syncTargetScore();
   window.scrollTo?.(0,0);
 }
+function syncTargetScore(){$('targetScoreValue').textContent=String($('targetScore').value);}
+$('targetScore').addEventListener('input',syncTargetScore);
+for(const [id,step] of [['targetScoreLess',-1],['targetScoreMore',1]])$(id).addEventListener('click',()=>{
+  const slider=$('targetScore');slider.value=Math.max(5,Math.min(50,Number(slider.value)+step));syncTargetScore();
+});
 function selectGameMode(mode){selectedGameMode=mode;$('ffaMode').setAttribute('aria-pressed',String(mode==='ffa'));$('teamMode').setAttribute('aria-pressed',String(mode==='teams'));renderRooms();}
 $('ffaMode').addEventListener('click',()=>selectGameMode('ffa'));
 $('teamMode').addEventListener('click',()=>selectGameMode('teams'));
@@ -110,7 +115,7 @@ for(const id of ['lobbyName','callsign'])$(id).addEventListener('input',()=>reme
 function joinRoomNow(code,mode='join'){
   enterFullscreen();audioReady=true;
   joinMode=mode;$('roomInput').value=code;$('roomInput').readOnly=mode==='join';
-  if(mode==='create'){$('gameMode').value=selectedGameMode;$('bounceOption').checked=true;$('powersOption').checked=true;$('targetScore').value=FIELD.targetScore;}
+  if(mode==='create'){$('gameMode').value=selectedGameMode;$('bounceOption').checked=true;$('powersOption').checked=true;$('targetScore').value=FIELD.targetScore;syncTargetScore();}
   connect();
 }
 // Quick Play prefers a waiting room, then the fullest open one, in the chosen mode; otherwise it makes a room.

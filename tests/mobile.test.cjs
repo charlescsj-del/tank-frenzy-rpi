@@ -261,9 +261,17 @@ test('creator sends the selected win target while quick play starts at ten',()=>
   const c=client(),sockets=[];c.sandbox.setTimeout=()=>0;c.sandbox.clearTimeout=()=>{};
   c.sandbox.WebSocket=class{static OPEN=1;constructor(){this.listeners={};this.sent=[];sockets.push(this);}addEventListener(name,handler){this.listeners[name]=handler;}send(data){this.sent.push(JSON.parse(data));}close(){}};
   c.run('joined=false;connecting=false');c.elements.get('createRoom').events.click();
-  c.elements.get('targetScore').value='25';c.run('connect()');sockets[0].listeners.open();
+  const slider=c.elements.get('targetScore'),readout=c.elements.get('targetScoreValue');
+  assert.equal(readout.textContent,'10');
+  slider.value='25';slider.events.input();assert.equal(readout.textContent,'25');
+  c.elements.get('targetScoreMore').events.click();assert.equal(Number(slider.value),26);
+  c.elements.get('targetScoreLess').events.click();assert.equal(Number(slider.value),25);
+  assert.equal(readout.textContent,'25');
+  c.run('connect()');sockets[0].listeners.open();
   assert.equal(sockets[0].sent[0].settings.targetScore,25);
-  c.run('connecting=false');c.elements.get('targetScore').value='42';c.run("joinRoomNow('NEW','create')");sockets[1].listeners.open();
+  slider.value='50';c.elements.get('targetScoreMore').events.click();assert.equal(Number(slider.value),50);
+  c.run('connecting=false');c.run("joinRoomNow('NEW','create')");sockets[1].listeners.open();
+  assert.equal(readout.textContent,'10');
   assert.equal(sockets[1].sent[0].settings.targetScore,10);
 });
 
