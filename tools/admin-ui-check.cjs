@@ -71,12 +71,36 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   await page.locator('.board').screenshot({path:out+'/admin-leaderboard-phone.png'});await page.setViewportSize({width:1440,height:1000});await page.locator('.board').screenshot({path:out+'/admin-leaderboard.png'});console.log('Admin leaderboard lists and removes names.');
   const touch=await browser.newPage({viewport:{width:390,height:780},hasTouch:true,isMobile:true,deviceScaleFactor:1,reducedMotion:'reduce'});
   touch.on('pageerror',e=>errors.push(e.message));touch.on('console',blocked);await touch.goto(base+'/');
+  await touch.locator('#createRoom').click();
+  for(const [width,height] of [[390,780],[844,390]]){
+    await touch.setViewportSize({width,height});
+    const form=await touch.evaluate(()=>({scroll:document.documentElement.scrollHeight,viewport:innerHeight,action:$('action').getBoundingClientRect().bottom,browse:$('browseRooms').getBoundingClientRect().bottom,settings:$('roomSettings').getBoundingClientRect().bottom}));
+    assert(form.scroll<=form.viewport+2&&form.action<=form.viewport&&form.browse<=form.viewport&&form.settings<=form.viewport,'create arena fits one '+width+'×'+height+' screen: '+JSON.stringify(form));
+    await touch.screenshot({path:out+'/create-arena-'+width+'.png'});
+  }
+  await touch.setViewportSize({width:390,height:780});await touch.locator('#browseRooms').click();
   const combat={type:'state',room:'QUARRY',settings:{mode:'teams',bouncing:true,powers:true},phase:'playing',countdownIn:0,ownerId:null,teamScores:[4,3],pickups:[],map:{id:777,walls:[],spawns:[[90,90],[1510,950],[1510,90],[90,950]]},time:42,winner:null,rematchIn:0,rematchVotes:[],players:[
     {id:'me',name:'Commander',slot:0,team:0,x:800,y:520,a:0,aim:0,hp:10,kills:2,deaths:1,shots:10,hits:5,life:1,connected:true},
     {id:'ally',name:'Moss',slot:2,team:0,x:1510,y:520,a:0,aim:0,hp:10,kills:2,deaths:1,shots:10,hits:5,life:1,connected:true},
     {id:'foe',name:'Glacier',slot:1,team:1,x:1500,y:520,a:0,aim:0,hp:10,kills:2,deaths:2,shots:10,hits:5,life:1,connected:true},
     {id:'foe2',name:'Orchid',slot:3,team:1,x:875,y:550,a:0,aim:0,hp:7,kills:1,deaths:2,shots:10,hits:5,life:1,connected:true}
   ],shells:[],events:[]};
+  await touch.evaluate(state=>{joined=true;myId='me';spectating=false;roomCode='QUARRY';$('overlay').classList.add('hidden');$('arena').classList.remove('lobby-open');document.body.classList.remove('in-lobby');applySnapshot(state);}, {...combat,phase:'waiting',ownerId:'me',players:combat.players.map((p,i)=>({...p,bot:i>0}))});
+  for(const [width,height] of [[390,780],[844,390]]){
+    await touch.setViewportSize({width,height});
+    const waiting=await touch.evaluate(()=>({scroll:document.documentElement.scrollHeight,viewport:innerHeight,panel:$('waitingRoom').getBoundingClientRect().bottom,start:$('startGame').getBoundingClientRect().bottom,bots:$('botControls').getBoundingClientRect().bottom}));
+    assert(waiting.scroll<=waiting.viewport+2&&waiting.panel<=waiting.viewport+2&&waiting.start<=waiting.viewport&&waiting.bots<=waiting.viewport,'four-player waiting room fits one '+width+'×'+height+' screen: '+JSON.stringify(waiting));
+    await touch.screenshot({path:out+'/waiting-bots-'+width+'.png'});
+  }
+  await touch.setViewportSize({width:390,height:780});
+  await touch.evaluate(state=>applySnapshot(state),{...combat,phase:'countdown',countdownIn:3});
+  for(const [width,height] of [[390,780],[844,390]]){
+    await touch.setViewportSize({width,height});
+    const frame=await touch.evaluate(()=>({arena:$('arena').getBoundingClientRect(),stage:document.querySelector('.stage').getBoundingClientRect(),header:$('arenaHeader').getBoundingClientRect(),viewport:innerHeight,scroll:document.documentElement.scrollHeight}));
+    assert(frame.arena.height>=frame.viewport-2&&frame.stage.top<frame.header.bottom-10&&frame.scroll<=frame.viewport+2,'countdown map fills '+width+'×'+height+' screen');
+    await touch.screenshot({path:out+'/countdown-'+width+'.png'});
+  }
+  await touch.setViewportSize({width:390,height:780});
   const view=await touch.evaluate(state=>{joined=true;myId='me';spectating=false;roomCode='QUARRY';$('overlay').classList.add('hidden');$('arena').classList.remove('lobby-open');document.body.classList.remove('in-lobby');applySnapshot(state);resize();draw();return {touch:touchMedia.matches,roles:tanks.map(teamRelation),markers:enemyMarkers()};},combat);
   assert.equal(view.touch,true);assert.deepEqual(view.roles,[null,'ally','enemy','enemy']);assert.deepEqual(view.markers.map(m=>[m.id,m.relation]),[['ally','ally'],['foe','enemy']]);
   assert.equal(await touch.locator('#battleProgress strong').textContent(),'TEAM 4 / 10');
@@ -96,6 +120,8 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   await touch.screenshot({path:out+'/team-close-view-landscape.png',fullPage:true});
   await touch.evaluate(state=>{state.phase='results';state.winner={id:'me',team:0,name:'Orange team'};state.teamScores=[10,6];state.rematchIn=15;state.rematchNeeded=3;applySnapshot(state);draw();},{...combat});
   assert.equal(await touch.locator('#battleHud').isVisible(),false,'opponent health disappears after the match');
+  const resultsFrame=await touch.evaluate(()=>({arena:$('arena').getBoundingClientRect(),stage:document.querySelector('.stage').getBoundingClientRect(),header:$('arenaHeader').getBoundingClientRect(),viewport:innerHeight,scroll:document.documentElement.scrollHeight}));
+  assert(resultsFrame.arena.height>=resultsFrame.viewport-2&&resultsFrame.stage.top<resultsFrame.header.bottom-10&&resultsFrame.scroll<=resultsFrame.viewport+2,'results retain the full-screen map');
   assert.deepEqual(await touch.locator('#resultsRows tr.team-heading th').allTextContents(),['ORANGE TEAM · 10 KILLS · WINNER ★','BLUE TEAM · 6 KILLS']);
   assert.equal(await touch.evaluate(()=>enemyMarkers().length),0);
   await touch.screenshot({path:out+'/team-results-phone.png',fullPage:true});

@@ -2,6 +2,12 @@
 
 Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. For entries through v1.18.0, the original release date was not retained, so the date shown is the archive import date. The 19.x builds were originally distributed under those numbers; their entries below are relabeled as consecutive 1.19.x versions for a consistent history. Git history retains the original package numbers.
 
+## v1.21.0 [2026-09-29]
+
+- Keep the mobile battlefield edge to edge during the countdown and after a match, with the compact status and menu floating over the map.
+- Fit the create and join forms in one phone viewport, using a two-column layout in landscape and retaining internal overflow for unusually short screens.
+- Compact the joined waiting room for four players and bot controls, so the Start Game button stays visible without page scrolling.
+
 ## v1.20.0 [2026-09-29]
 
 - Show teal ALLY arrows for off-screen teammates in 2 vs 2 and keep enemy arrows red.

@@ -515,34 +515,88 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   .lesson>img{max-height:calc(100dvh - 125px)}
 }
 /* The battle map uses the full arena height; only the useful HUD chips cover it. */
-.game.battle-live{position:relative}
-.game.battle-live .arena-header{position:absolute;top:0;left:0;right:0;z-index:4;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;grid-template-rows:auto auto;align-items:start;gap:5px 8px;min-height:0;padding:8px;pointer-events:none;background:none;border:0}
-.game.battle-live .room-strip,.game.battle-live .battle-hud{display:contents}
-.game.battle-live .room-title,.game.battle-live #viewNote,.game.battle-live .roster-card{display:none}
-.game.battle-live .scoreboard{display:flex;grid-column:2;grid-row:1;justify-self:center;min-width:0;max-width:100%;padding:0;gap:0;background:none;border:0;box-shadow:none;overflow:visible}
-.game.battle-live .roster-card.me{display:flex;align-items:center;gap:6px;min-width:0;max-width:100%;padding:6px 10px;border:1px solid #b7c99ca8;border-radius:12px;background:#fff9e8db;box-shadow:0 2px 8px #20362233;overflow:hidden}
-.game.battle-live .roster-name{min-width:0;max-width:150px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.game.battle-live .roster-stats{display:none}
-.game.battle-live .health{margin:0;flex-shrink:0}
-.game.battle-live .battle-progress{grid-column:1;grid-row:1;justify-self:start;max-width:100%;padding:5px 9px;border:1px solid #b7c99ca8;border-radius:11px;background:#fff9e8dc;box-shadow:0 2px 8px #20362233;overflow:hidden;text-overflow:ellipsis;font-size:12px}
-.game.battle-live .battle-opponents{grid-column:1/-1;grid-row:2;justify-self:start;width:max-content;max-width:100%;padding:0;overflow-x:auto;pointer-events:none}
-.game.battle-live .battle-opponent{background:#fffdf0e8;box-shadow:inset 3px 0 var(--tank),0 2px 8px #20362233}
-.game.battle-live .arena-menu-button{grid-column:3;grid-row:1;pointer-events:auto}
-.game.battle-live .room-actions{top:52px;right:8px;pointer-events:auto}
-.game.mobile-active.battle-live .arena-header{position:absolute;top:env(safe-area-inset-top);height:auto;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;grid-template-rows:auto auto;gap:5px 6px;padding:6px 8px;background:none;border:0}
-.game.mobile-active.battle-live .scoreboard{grid-column:2;grid-row:1;justify-self:center;overflow:visible}
-.game.mobile-active.battle-live .roster-card.me{padding:5px 7px;background:#fff9e8df}
-.game.mobile-active.battle-live .battle-progress{grid-column:1;grid-row:1;padding:4px 7px;font-size:11px}
-.game.mobile-active.battle-live .battle-opponents{grid-column:1/-1;grid-row:2;padding:0}
-.game.mobile-active.battle-live .arena-menu-button{grid-column:3;grid-row:1}
-.game.mobile-active.battle-live .room-actions{top:52px}
+.game.battle-field{position:relative}
+.game.battle-field .arena-header{position:absolute;top:0;left:0;right:0;z-index:4;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;grid-template-rows:auto auto;align-items:start;gap:5px 8px;min-height:0;padding:8px;pointer-events:none;background:none;border:0}
+.game.battle-field .room-strip,.game.battle-field .battle-hud{display:contents}
+.game.battle-field .room-title,.game.battle-field #viewNote,.game.battle-field .roster-card{display:none}
+.game.battle-field .scoreboard{display:flex;grid-column:2;grid-row:1;justify-self:center;min-width:0;max-width:100%;padding:0;gap:0;background:none;border:0;box-shadow:none;overflow:visible}
+.game.battle-field .roster-card.me{display:flex;align-items:center;gap:6px;min-width:0;max-width:100%;padding:6px 10px;border:1px solid #b7c99ca8;border-radius:12px;background:#fff9e8db;box-shadow:0 2px 8px #20362233;overflow:hidden}
+.game.battle-field .roster-name{min-width:0;max-width:150px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.game.battle-field .roster-stats{display:none}
+.game.battle-field .health{margin:0;flex-shrink:0}
+.game.battle-field .battle-progress{grid-column:1;grid-row:1;justify-self:start;max-width:100%;padding:5px 9px;border:1px solid #b7c99ca8;border-radius:11px;background:#fff9e8dc;box-shadow:0 2px 8px #20362233;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.game.battle-field .battle-opponents{grid-column:1/-1;grid-row:2;justify-self:start;width:max-content;max-width:100%;padding:0;overflow-x:auto;pointer-events:none}
+.game.battle-field .battle-opponent{background:#fffdf0e8;box-shadow:inset 3px 0 var(--tank),0 2px 8px #20362233}
+.game.battle-field .arena-menu-button{grid-column:3;grid-row:1;pointer-events:auto}
+.game.battle-field .room-actions{top:52px;right:8px;pointer-events:auto}
+.game.mobile-active.battle-field .arena-header{position:absolute;top:env(safe-area-inset-top);height:auto;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;grid-template-rows:auto auto;gap:5px 6px;padding:6px 8px;background:none;border:0}
+.game.mobile-active.battle-field .scoreboard{grid-column:2;grid-row:1;justify-self:center;overflow:visible}
+.game.mobile-active.battle-field .roster-card.me{padding:5px 7px;background:#fff9e8df}
+.game.mobile-active.battle-field .battle-progress{grid-column:1;grid-row:1;padding:4px 7px;font-size:11px}
+.game.mobile-active.battle-field .battle-opponents{grid-column:1/-1;grid-row:2;padding:0}
+.game.mobile-active.battle-field .arena-menu-button{grid-column:3;grid-row:1}
+.game.mobile-active.battle-field .room-actions{top:52px}
 /* Let the battlefield reach the screen edges; keep controls clear of cutouts. */
-.game.mobile-active.battle-live,.game.battle-live:is(:fullscreen,:-webkit-full-screen,.expanded){padding:0}
-.game.battle-live .battlebar{position:absolute;bottom:0;left:0;right:0;z-index:3;padding:2px 12px;background:#e9efcdbb;pointer-events:none}
-.game.battle-live .arena-header{left:max(16px,env(safe-area-inset-left));right:max(16px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));padding:0}
-.game.mobile-active.battle-live .arena-header{left:max(18px,env(safe-area-inset-left));right:max(18px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));padding:0}
-.game.mobile-active.battle-live .battle-progress small{display:none}
-.game.mobile-active.battle-live .room-actions{right:0}
+.game.mobile-active.battle-field,.game.battle-field:is(:fullscreen,:-webkit-full-screen,.expanded){padding:0}
+.game.battle-field .battlebar{position:absolute;bottom:0;left:0;right:0;z-index:3;padding:2px 12px;background:#e9efcdbb;pointer-events:none}
+.game.battle-field .arena-header{left:max(16px,env(safe-area-inset-left));right:max(16px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));padding:0}
+.game.mobile-active.battle-field .arena-header{left:max(18px,env(safe-area-inset-left));right:max(18px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));padding:0}
+.game.mobile-active.battle-field .battle-progress small{display:none}
+.game.mobile-active.battle-field .room-actions{right:0}
+/* Keep the mobile battlefield edge to edge through countdown and results. */
+@media(pointer:coarse) and (hover:none){
+  .game.mobile-active.battle-field .results-screen{padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+  .in-room-form{overflow:hidden}
+  .in-room-form .page{display:flex;flex-direction:column;width:100%;max-width:none;height:100vh;height:100dvh;min-height:0;gap:6px;padding:max(10px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))}
+  .in-room-form .masthead{flex:none;padding:0 0 4px}
+  .in-room-form .intro{display:none}
+  .in-room-form .game{display:flex;flex:1;min-height:0;margin:0}
+  .game.room-form-open .stage{display:flex;flex:1;min-height:0}
+  .game.room-form-open .overlay{display:flex;flex:1;align-items:center;min-height:0;overflow:hidden;padding:6px}
+  .game.room-form-open .dialog{width:min(540px,100%);max-height:100%;margin:auto;overflow-y:auto;padding:12px}
+  .game.room-form-open .dialog>p,.game.room-form-open .room-settings p,.game.room-form-open .target-endpoints{display:none}
+  .game.room-form-open .join-fields{grid-template-columns:1fr 1fr;margin:8px 0;gap:8px}
+  .game.room-form-open .join-fields input{min-height:42px;margin-top:3px}
+  .game.room-form-open .room-settings{margin:5px 0 8px;padding:6px 10px}
+  .game.room-form-open .room-settings label{min-height:36px}
+  .game.room-form-open .target-setting{margin:2px 0 3px}
+  .game.room-form-open #action{width:100%;min-height:44px;padding:8px}
+  .game.room-form-open #browseRooms{min-height:40px;margin-top:8px}
+  .game.waiting-room .waiting-panel{display:grid;place-items:center;min-height:100%;padding:8px}
+  .game.waiting-room .waiting-panel .dialog{width:min(560px,100%);max-height:100%;overflow-y:auto;padding:12px}
+  .game.waiting-room #waitingPlayers{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:8px 0}
+  .game.waiting-room #waitingPlayers li{padding:8px 9px;border-left-width:5px;font-size:12px}
+  .game.waiting-room .bot-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:8px 0}
+  .game.waiting-room .bot-controls .tool{min-width:0;min-height:40px;padding:5px;font-size:11px}
+  .game.waiting-room .bot-controls label{justify-content:center;gap:3px;font-size:10px}
+  .game.waiting-room .bot-controls select{min-width:0;max-width:78px;min-height:40px;padding:4px 2px;font-size:11px}
+  .game.waiting-room #waitingMessage{margin:5px 0;font-size:11px}
+  .game.waiting-room #startGame{min-height:44px}
+  .game.waiting-room #networkLinks{display:none}
+}
+@media(pointer:coarse) and (hover:none) and (max-height:520px){
+  .in-room-form .masthead{display:none}
+  .game.room-form-open .dialog{width:min(780px,100%);padding:6px 10px}
+  .game.room-form-open .dialog h2{font-size:20px;margin:0 0 3px}
+  .game.room-form-open #joinForm{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:4px 10px;align-items:start}
+  .game.room-form-open .join-fields{grid-column:1;grid-row:1;grid-template-columns:1fr;margin:0;gap:3px}
+  .game.room-form-open .join-fields input{min-height:36px;padding:5px}
+  .game.room-form-open .room-settings{grid-column:2;grid-row:1;display:grid;grid-template-columns:1fr 1fr;gap:1px 8px;margin:0;padding:3px 8px}
+  .game.room-form-open .room-settings>label:first-of-type,.game.room-form-open .target-setting{grid-column:1/-1}
+  .game.room-form-open .room-settings label{min-height:30px}
+  .game.room-form-open .room-settings select{min-height:30px}
+  .game.room-form-open .target-heading{font-size:12px}.game.room-form-open .target-heading output{font-size:13px;padding:1px 6px}
+  .game.room-form-open .target-controls button{width:36px;height:36px}.game.room-form-open .room-settings #targetScore{height:28px}
+  .game.room-form-open #action{grid-column:1/-1;grid-row:2;min-height:40px}
+  .game.room-form-open #browseRooms{min-height:36px;margin-top:4px;padding:5px}
+  .game.waiting-room .waiting-panel .dialog{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 10px;width:min(780px,100%);padding:8px 12px}
+  .game.waiting-room .waiting-panel .eyebrow{display:none}
+  .game.waiting-room #waitingTitle{grid-column:1/-1;margin:0;font-size:20px}
+  .game.waiting-room #waitingPlayers{grid-column:1;grid-row:2/5;margin:0}
+  .game.waiting-room .bot-controls{grid-column:2;grid-row:2;margin:0}
+  .game.waiting-room #waitingMessage{grid-column:2;grid-row:3;margin:0}
+  .game.waiting-room #startGame{grid-column:2;grid-row:4;min-height:40px}
+}
 </style>
 </head>
 <body>

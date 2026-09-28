@@ -46,7 +46,7 @@ function networkMessage(title,text,form=false){
   if(form)leaveFullscreen();
   resetResultDamage();
   hideBattleHud();
-  $('waitingRoom').hidden=true;$('countdown').hidden=true;$('results').hidden=true;$('arena').classList.toggle('waiting-room',false);
+  $('waitingRoom').hidden=true;$('countdown').hidden=true;$('results').hidden=true;$('arena').classList.toggle('waiting-room',false);$('arena').classList.remove('battle-field');
   document.body.classList.toggle('in-lobby',false);document.body.classList.toggle('in-room-form',form);
   $('arena').classList.toggle('lobby-open',false);$('arena').classList.toggle('room-form-open',form);
   $('overlay').classList.remove('hidden');$('dialogTitle').textContent=title;$('dialogText').textContent=text;
@@ -248,6 +248,7 @@ function applySnapshot(data){
 function updateRoomPhase(data){
   const waiting=data.phase==='waiting',countdown=data.phase==='countdown',results=data.phase==='results',postgame=data.phase==='postgame';
   $('waitingRoom').hidden=!waiting;$('arena').classList.toggle('waiting-room',waiting);
+  $('arena').classList.toggle('battle-field',!waiting&&(joined||spectating));
   $('countdown').hidden=!countdown;
   $('results').hidden=!(results||postgame);
   if(!results&&!postgame&&!$('resultDamage').hidden)resetResultDamage();
