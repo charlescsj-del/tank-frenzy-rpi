@@ -1085,11 +1085,11 @@ function drawTank(t){
   roundedRect(ctx,top.x-width/2,top.y-12,width,17,5,relation==='ally'?'#e3fff1ed':relation==='enemy'?'#fff0e7ed':t.id===myId?'#fff9e6ee':'#ffffffba');
   ctx.fillStyle=relation==='ally'?'#176d56':relation==='enemy'?'#a72e24':t.team==null?ink:t.team===0?'#ae4c1c':'#226ba5';ctx.textAlign='center';ctx.fillText(label,top.x,top.y);
   if(t.id!==myId&&latest?.phase==='playing'){
-    const w=82*boardScale,h=15*boardScale,x=p.x-w/2,y=p.y+36*boardScale;
+    const w=Math.max(82*boardScale,70/scale),h=Math.max(15*boardScale,16/scale),x=p.x-w/2,y=p.y+Math.max(36*boardScale,28/scale);
     roundedRect(ctx,x,y,w,h,4*boardScale,'#fff9e9e8','#365343',boardScale);
     const ratio=Math.max(0,Math.min(1,t.hp/FIELD.maxHealth));
     if(ratio>0)roundedRect(ctx,x+2*boardScale,y+2*boardScale,(w-4*boardScale)*ratio,h-4*boardScale,3*boardScale,relation==='ally'?'#16866b':relation==='enemy'?'#d55743':colors[t.slot]);
-    ctx.font='900 '+9*boardScale+'px "Trebuchet MS",sans-serif';ctx.textAlign='center';ctx.fillStyle='#233a33';ctx.fillText(t.hp+'/'+FIELD.maxHealth,p.x,y+10.5*boardScale);
+    ctx.font='900 '+Math.max(9*boardScale,11/scale)+'px "Trebuchet MS",sans-serif';ctx.textAlign='center';ctx.fillStyle='#233a33';ctx.fillText(t.hp+'/'+FIELD.maxHealth,p.x,y+h*.75);
   }
 }
 function frame(time){

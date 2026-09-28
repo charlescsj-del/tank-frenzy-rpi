@@ -2,6 +2,10 @@
 
 Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. For entries through v1.18.0, the original release date was not retained, so the date shown is the archive import date.
 
+## v19.6.1 [2026-09-29]
+
+- Keep the health bar and health number below other tanks large enough to read in a narrow phone view.
+
 ## v19.6.0 [2026-09-29]
 
 - Show teal ALLY arrows toward off-screen teammates in 2 vs 2, distinct from red ENEMY arrows.
