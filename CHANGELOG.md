@@ -2,6 +2,10 @@
 
 Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. For entries through v1.18.0, the original release date was not retained, so the date shown is the archive import date.
 
+## v19.5.1 [2026-09-29]
+
+- Compact the admin CPU and memory gauges: keep system and game values visible while removing repeated labels and unused vertical space.
+
 ## v19.5.0 [2026-09-28]
 
 - Let the battlefield fill the active arena while the score, your health, opponent chips and menu float over just the map area they need, including mobile landscape.
