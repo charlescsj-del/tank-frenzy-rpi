@@ -24,6 +24,16 @@ test('countdown lasts three seconds and cannot queue movement, shots or damage',
   r.map.walls=[];input(r,a);a.cool=0;r.step(.01);assert(a.x>x);assert.equal(r.shells.length,1);
 });
 
+test('damage totals reach clients only after a match ends and reset for a rematch',()=>{
+  const r=new Room('DAMAGE'),a=r.add('A'),b=r.add('B');r.start(a);r.step(3);b.shieldUntil=0;
+  r.damage(b,a.id,4);assert.equal(a.damageDealt,4);
+  assert.equal(Object.hasOwn(r.snapshot().players[0],'damageDealt'),false);
+  a.kills=r.settings.targetScore-1;r.damage(b,a.id,6);
+  assert.equal(r.phase,'results');assert.equal(r.snapshot().players[0].damageDealt,10);
+  r.voteRematch(a);r.voteRematch(b);
+  assert.equal(a.damageDealt,0);assert.equal(Object.hasOwn(r.snapshot().players[0],'damageDealt'),false);
+});
+
 test('starter transfers on leave or disconnection before start, never after start',()=>{
   const r=new Room('OWNER'),a=r.add('A'),b=r.add('B'),c=r.add('C');
   r.disconnect(a);assert.equal(r.ownerId,b.id);assert.equal(r.start(a),false);

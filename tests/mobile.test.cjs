@@ -66,6 +66,22 @@ test('dead zone, captured pointer loss, blur, rotation and input mode changes cl
   assert.equal(c.sent.at(-1).x,0);assert.equal(c.elements.get('thumbControls').hidden,true);
 });
 
+test('aim and fire recover when mobile touch releases are missed by the control',()=>{
+  const c=client(),move=c.elements.get('moveZone'),aim=c.elements.get('aimZone');
+  aim.events.pointerdown(c.event(2,50,50));aim.events.pointermove(c.event(2,82,50));
+  c.run('sendInput()');assert.equal(c.sent.at(-1).fire,true);
+  c.windowEvents.pointerup({pointerId:2});
+  assert.equal(c.sent.at(-1).fire,false);assert.equal(c.run('sticks.aim.id'),null);
+  aim.events.pointerdown(c.event(3,50,50));aim.events.pointermove(c.event(3,82,50));
+  move.events.pointerdown(c.event(4,50,50));move.events.pointermove(c.event(4,82,50));
+  c.windowEvents.touchend({touches:[{}]});assert.equal(c.run('sticks.aim.id'),3,'one remaining finger must keep its control');
+  c.windowEvents.touchend({touches:[]});
+  assert.equal(c.sent.at(-1).fire,false);assert.equal(c.sent.at(-1).x,0);
+  assert.equal(c.run('sticks.aim.id'),null);assert.equal(c.run('sticks.move.id'),null);
+  aim.events.pointerdown(c.event(5,50,50));aim.events.pointermove(c.event(5,82,50));
+  c.windowEvents.touchcancel({touches:[]});assert.equal(c.sent.at(-1).fire,false);
+});
+
 test('desktop hides thumb controls; touch controls wait for joining',()=>{
   const desktop=client(false);
   assert.equal(desktop.elements.get('thumbControls').hidden,true);
@@ -112,6 +128,33 @@ test('ten health fits five pips with half pips for single hits',()=>{
   assert(health().children.every(p=>p.className==='pip'));
   c.run('hpPlayer.hp=9;updateHud(hpState)');assert.equal(health().children[4].className,'pip half');assert.equal(health().attributes['aria-label'],'9 / 10 health');
   c.run('hpPlayer.hp=1;updateHud(hpState)');assert.equal(health().children[0].className,'pip half');assert(health().children.slice(1).every(p=>p.className==='pip empty'));
+});
+
+test('battle HUD shows goal, remaining kills, opponent score and live health',()=>{
+  const c=client();
+  c.run(`var battle={phase:'playing',settings:{mode:'ffa',targetScore:12},players:[
+    {id:'me',name:'Pilot',slot:0,hp:9,kills:4,deaths:1,connected:true},
+    {id:'other',name:'Rival',slot:1,hp:7,kills:6,deaths:2,connected:true}]};updateHud(battle)`);
+  const hud=c.elements.get('battleHud'),progress=c.elements.get('battleProgress'),chips=c.elements.get('battleOpponents');
+  assert.equal(hud.hidden,false);assert.equal(progress.children[0].textContent,'YOU 4 / 12');
+  assert.equal(progress.children[1].textContent,'8 KILLS TO WIN');
+  assert.equal(chips.children[0].children[1].textContent,'6 K');
+  assert.equal(chips.children[0].children[3].textContent,'7/10');
+  c.run('battle.players[1].hp=2;battle.players[1].kills=7;updateHud(battle)');
+  assert.equal(chips.children[0].children[1].textContent,'7 K');
+  assert.equal(chips.children[0].children[3].textContent,'2/10');
+  c.run('battle.phase="results";updateHud(battle)');assert.equal(hud.hidden,true);
+});
+
+test('team battle HUD uses team score and identifies an ally',()=>{
+  const c=client();c.run(`updateHud({phase:'playing',settings:{mode:'teams',targetScore:10},teamScores:[6,4],players:[
+    {id:'me',name:'Pilot',slot:0,team:0,hp:10,kills:3,deaths:0,connected:true},
+    {id:'ally',name:'Friend',slot:1,team:0,hp:5,kills:3,deaths:1,connected:true},
+    {id:'enemy',name:'Rival',slot:2,team:1,hp:8,kills:4,deaths:2,connected:true}]})`);
+  const progress=c.elements.get('battleProgress'),chips=c.elements.get('battleOpponents').children;
+  assert.equal(progress.children[0].textContent,'TEAM 6 / 10');assert.equal(progress.children[1].textContent,'4 KILLS TO WIN');
+  assert.equal(chips[0].className,'battle-opponent ally');assert.match(chips[0].children[0].textContent,/Friend/);
+  assert.equal(chips[1].className,'battle-opponent');assert.equal(chips[1].children[3].textContent,'8/10');
 });
 
 test('laser starts at the rendered muzzle despite movement and newer touch aim',()=>{
@@ -261,9 +304,17 @@ test('creator sends the selected win target while quick play starts at ten',()=>
   const c=client(),sockets=[];c.sandbox.setTimeout=()=>0;c.sandbox.clearTimeout=()=>{};
   c.sandbox.WebSocket=class{static OPEN=1;constructor(){this.listeners={};this.sent=[];sockets.push(this);}addEventListener(name,handler){this.listeners[name]=handler;}send(data){this.sent.push(JSON.parse(data));}close(){}};
   c.run('joined=false;connecting=false');c.elements.get('createRoom').events.click();
-  c.elements.get('targetScore').value='25';c.run('connect()');sockets[0].listeners.open();
+  const slider=c.elements.get('targetScore'),readout=c.elements.get('targetScoreValue');
+  assert.equal(readout.textContent,'10');
+  slider.value='25';slider.events.input();assert.equal(readout.textContent,'25');
+  c.elements.get('targetScoreMore').events.click();assert.equal(Number(slider.value),26);
+  c.elements.get('targetScoreLess').events.click();assert.equal(Number(slider.value),25);
+  assert.equal(readout.textContent,'25');
+  c.run('connect()');sockets[0].listeners.open();
   assert.equal(sockets[0].sent[0].settings.targetScore,25);
-  c.run('connecting=false');c.elements.get('targetScore').value='42';c.run("joinRoomNow('NEW','create')");sockets[1].listeners.open();
+  slider.value='50';c.elements.get('targetScoreMore').events.click();assert.equal(Number(slider.value),50);
+  c.run('connecting=false');c.run("joinRoomNow('NEW','create')");sockets[1].listeners.open();
+  assert.equal(readout.textContent,'10');
   assert.equal(sockets[1].sent[0].settings.targetScore,10);
 });
 
@@ -492,6 +543,21 @@ test('kills appear in a short feed, streaks get a banner, and the result card sh
   const rows=c.elements.get('resultsRows').children;
   assert.deepEqual(rows.map(r=>r.children.map(cell=>cell.textContent)),[['Me ★','3','1','45%'],['Bo','1','3','25%']].map(r=>r.map((v,i)=>i?Number.isNaN(+v)?v:+v:v)));
   assert.equal(c.elements.get('resultsVotes').textContent,'1 / 2 votes needed for a rematch');
+});
+
+test('the match-end damage list opens on tap and closes for the next round',()=>{
+  const c=client(),players=[
+    {id:'me',name:'Me',slot:0,kills:10,deaths:1,shots:20,hits:8,damageDealt:37,connected:true},
+    {id:'b',name:'Bo',slot:1,kills:3,deaths:10,shots:10,hits:4,damageDealt:12,connected:true}
+  ];
+  c.run(`latest={phase:'results',winner:{id:'me',name:'Me'},settings:{mode:'ffa'},players:${JSON.stringify(players)},rematchVotes:[],rematchIn:15};updateRoomPhase(latest)`);
+  const toggle=c.elements.get('resultStatsToggle'),details=c.elements.get('resultDamage');
+  assert.equal(details.hidden,true);assert.equal(toggle.attributes['aria-expanded'],'false');
+  toggle.events.click();assert.equal(details.hidden,false);assert.equal(toggle.attributes['aria-expanded'],'true');
+  assert.deepEqual(c.elements.get('resultDamageRows').children.map(row=>row.children.map(cell=>String(cell.textContent))),[['Me ★','37'],['Bo','12']]);
+  toggle.events.click();assert.equal(details.hidden,true);
+  toggle.events.click();c.run("latest.phase='countdown';updateRoomPhase(latest)");
+  assert.equal(details.hidden,true);assert.equal(toggle.attributes['aria-expanded'],'false');
 });
 
 test('2 vs 2 results split players into Orange and Blue groups with team scores',()=>{

@@ -2,11 +2,13 @@
 
 A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarry, rounded menus and bold lettering. Choose Free-for-All or 2 vs 2 and invite your friends.
 
-Current release: **v1.18.0**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [CLAUDE.md](CLAUDE.md).
+Current release: **v19.2.2**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
 
 The private admin page uses **system CPU and memory gauges**, with the game's CPU and resident memory shown separately. Pi load shows 1-, 5- and 15-minute averages, values per CPU core and a 60-second history collected while the page is open. Core-count reference markers make load easier to interpret. Resource readings refresh once a second and are marked stale when disconnected; room views still refresh twice a second. See [DOCS.md](DOCS.md) for measurement details.
 
 See [SOUND_DESIGN.md](SOUND_DESIGN.md) for the approved cartoon arcade audio direction and implementation notes.
+
+The main-screen illustration animates with tank recoil, brief muzzle flashes and slow flying shells between shots. Use its pause button to stop or resume it. Reduced-motion preferences keep the illustration still. Animation pauses when the lobby or browser tab is hidden.
 
 ## Rooms
 
@@ -58,7 +60,7 @@ Maps are 1600 by 1040 world units (about 2.5 times the previous area). Each room
 - **Leave Room** asks for confirmation; cancelling keeps you in the match. Browsers may also show their standard warning when closing or refreshing during play (mobile browser behavior varies). Tank destruction has a louder bass impact; Effects Off still mutes it.
 
 - Phones and tablets with a primary touch input use the transparent left half to move and right half to aim and fire: touch anywhere in a half, then drag. A translucent stick appears under each thumb. Release to stop. Mouse/keyboard browsers keep the desktop controls, even in a narrow window.
-- During touch play, the arena fills the available browser height. A single 44px top row shows the player count, your name and health, and an icon menu; it hides the arena code while playing. Open the menu for fullscreen, invite, leave, music/effects and view controls. A close camera follows your tank so tanks and nearby cover stay large. Living opponents outside the close view get labeled direction arrows at its edge; arrows disappear in Full Map, after a win, or while respawning. Choose **Full Map** for an overview and **Close View** to return; this changes only your view, not movement, aiming, or the shared map. Landscape gives you a wider view. Leaving the arena restores the page.
+- During touch play, the arena fills the available browser height. While battling, a compact two-row header shows your kills and kills left to win, your name and health, and scrollable chips with the other tanks' kills and current health. In 2 vs 2, the goal uses your team's kills and a star marks your teammate. The arena code stays hidden while playing. Open the icon menu for fullscreen, invite, leave, music/effects and view controls. A close camera follows your tank so tanks and nearby cover stay large. Living opponents outside the close view get labeled direction arrows at its edge; arrows disappear in Full Map, after a win, or while respawning. Choose **Full Map** for an overview and **Close View** to return; this changes only your view, not movement, aiming, or the shared map. Landscape gives you a wider view. Leaving the arena restores the page.
 - Pressing **Create & Join**, **Join Arena** or **Start Game** puts the arena in fullscreen automatically where the browser allows it (iPhone Safari does not; touch play still fills the browser view). Leaving the room exits fullscreen.
 - Getting hit flares flames around the screen edges and shakes the view, harder for a laser or when destroyed. A −1/−4 damage number rises above every tank that takes damage, and destroyed tanks throw smoke and a shockwave ring. Android phones vibrate on your own hits (Effects Off disables it). At 3 health or less the edges keep smouldering until you heal or respawn. Reduced-motion settings keep the flames still and skip the shake.
 - Every destruction appears for a few seconds in a kill feed at the top right ("Alice 💥 Bo"; your own kills and deaths are outlined). Three kills in a row without being destroyed shows "… is on fire! 🔥", five "… is unstoppable! ⚡", seven "… is a tank legend! 👑". Streaks reset when you are destroyed and on a rematch.
@@ -96,3 +98,9 @@ Server work is bounded: at most 32 rooms, and per room 144 active shells / 36 pe
 Rendering, icon/fade animation, countdown display and audio playback run in each browser. Waiting/countdown phases and start authorization use the existing server tick and snapshot; no extra simulation timers are added. Waiting rooms skip combat simulation. The Start Game command is checked against the connected starter on the server. The tank collision shapes, aiming and compact 44px touch header are unchanged.
 
 Menu artwork: `mode-banner.webp`, generated with the built-in image tool and compressed for mobile loading. Prompt: friendly, chunky cartoon toy tanks in a sunny quarry, orange/green facing blue/purple, warm cream/sage colors, wide composition, no text or logos.
+
+The lobby artwork uses a clean quarry background and separate transparent tank sprites, so recoil reveals scenery instead of a second tank. Brief muzzle flames, sparks and smoke appear only when firing. Shaded shells travel at the same constant speed, and the distant purple tank's shots pass behind the foreground blue tank. Pause and reduced-motion controls cover every effect.
+
+Layered artwork assets: `hero-quarry.webp` and `hero-tanks.webp`, created with the built-in image editing tool from the original idle banner and compressed to WebP. Background prompt: remove all four tanks, dust and tank shadows; preserve the quarry camera, layout and lighting. Sprite prompt: extract the same four tanks at their original positions on a transparent 2048×768 canvas, with clean silhouettes and no scenery, glow or shadows.
+
+The lobby shells keep a constant speed and gradually fade during the last part of their flight. The muzzle blast briefly adds a broad flame, expanding ring and scattered sparks while the tank fires.

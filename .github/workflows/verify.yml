@@ -29,11 +29,12 @@ jobs:
       - run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.62.1
       - run: npx playwright install --with-deps chromium
       - run: node tools/admin-ui-check.cjs
+      - run: node tools/hero-ui-check.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: admin-dashboard-screenshots
-          path: artifacts/admin/
+          path: artifacts/
           retention-days: 7
   container:
     needs: test

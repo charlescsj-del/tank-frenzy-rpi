@@ -59,7 +59,16 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   ],shells:[],events:[]};
   const view=await touch.evaluate(state=>{joined=true;myId='me';spectating=false;roomCode='QUARRY';$('overlay').classList.add('hidden');$('arena').classList.remove('lobby-open');document.body.classList.remove('in-lobby');applySnapshot(state);resize();draw();return {touch:touchMedia.matches,roles:tanks.map(teamRelation),markers:enemyMarkers()};},combat);
   assert.equal(view.touch,true);assert.deepEqual(view.roles,[null,'ally','enemy','enemy']);assert.deepEqual(view.markers.map(m=>m.id),['foe','foe2']);
+  assert.equal(await touch.locator('#battleProgress strong').textContent(),'TEAM 4 / 10');
+  assert.equal(await touch.locator('#battleProgress small').textContent(),'6 KILLS TO WIN');
+  assert.deepEqual(await touch.locator('.battle-opponent-hp').allTextContents(),['10/10','10/10','10/10']);
+  assert.equal(await touch.locator('.battle-opponent.ally').count(),1);
+  assert(await touch.locator('#battleHud').isVisible());
+  assert(await touch.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'battle HUD fits on a phone');
   await touch.screenshot({path:out+'/team-close-view-phone.png',fullPage:true});
+  await touch.setViewportSize({width:844,height:390});
+  assert(await touch.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'landscape battle HUD fits the viewport');
+  await touch.screenshot({path:out+'/team-close-view-landscape.png',fullPage:true});
   await touch.evaluate(state=>{state.phase='results';state.winner={id:'me',team:0,name:'Orange team'};state.teamScores=[10,6];state.rematchIn=15;state.rematchNeeded=3;applySnapshot(state);draw();},{...combat});
   assert.deepEqual(await touch.locator('#resultsRows tr.team-heading th').allTextContents(),['ORANGE TEAM · 10 KILLS · WINNER ★','BLUE TEAM · 6 KILLS']);
   assert.equal(await touch.evaluate(()=>enemyMarkers().length),0);
