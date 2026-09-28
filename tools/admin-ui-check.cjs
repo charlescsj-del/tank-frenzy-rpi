@@ -124,7 +124,12 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   assert(resultsFrame.arena.height>=resultsFrame.viewport-2&&resultsFrame.stage.top<resultsFrame.header.bottom-10&&resultsFrame.scroll<=resultsFrame.viewport+2,'results retain the full-screen map');
   assert.deepEqual(await touch.locator('#resultsRows tr.team-heading th').allTextContents(),['ORANGE TEAM · 10 KILLS · WINNER ★','BLUE TEAM · 6 KILLS']);
   assert.equal(await touch.evaluate(()=>enemyMarkers().length),0);
-  await touch.screenshot({path:out+'/team-results-phone.png',fullPage:true});
+  for(const [width,height] of [[390,780],[844,390]]){
+    await touch.setViewportSize({width,height});
+    const result=await touch.evaluate(()=>({arena:$('arena').getBoundingClientRect(),stage:document.querySelector('.stage').getBoundingClientRect(),header:$('arenaHeader').getBoundingClientRect(),viewport:innerHeight,scroll:document.documentElement.scrollHeight,leave:$('resultsLeave').getBoundingClientRect()}));
+    assert(result.arena.height>=result.viewport-2&&result.stage.top<result.header.bottom-10&&result.scroll<=result.viewport+2&&result.leave.bottom<=result.viewport,'results fill '+width+'×'+height+' screen with Leave visible');
+    await touch.screenshot({path:out+'/team-results-'+width+'.png'});
+  }
   await touch.evaluate(()=>{joined=false;showLobby();updateTouchControls();});
   assert.equal(await touch.locator('#battleHud').isVisible(),false,'live health is hidden in the lobby');
   assert.equal(await touch.locator('#battleOpponents').locator('.battle-opponent').count(),0,'old opponent chips are cleared in the lobby');
