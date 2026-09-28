@@ -1,6 +1,11 @@
 # Changelog
 
-Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. For entries through v1.18.0, the original release date was not retained, so the date shown is the archive import date.
+Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. For entries through v1.18.0, the original release date was not retained, so the date shown is the archive import date. The earlier 19.x headings record versions actually published before the numbering correction.
+
+## v1.19.0 [2026-09-29]
+
+- Correct the version sequence after v1.18.0: the 19.x major number was a numbering mistake. Historical 19.x entries remain below under their originally published numbers.
+- Keep the tested battlefield and Pi resource improvements, and preserve the existing Home Assistant app identity, host port and persistent leaderboard data across the update.
 
 ## v19.5.1 [2026-09-29]
 

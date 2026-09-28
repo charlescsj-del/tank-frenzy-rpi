@@ -2,7 +2,7 @@
 
 Install Tank Frenzy as a Home Assistant app (formerly called an add-on). The Pi hosts the multiplayer game; players use Safari, Edge, Chrome, or another modern browser on their phones, tablets, or computers. Rendering and sound run on each player's device.
 
-**Tank Frenzy v19.5.1**, developed directly in this repository. Touch play uses translucent controls across the left and right halves of the screen; creators can choose a 5–50 kill win target. Mobile close view points toward off-screen opponents; 2 vs 2 marks allies and enemies and groups match results by team. The persistent leaderboard shows damage dealt and deaths. The Pi app provides separate Home Assistant sidebar and LAN listeners.
+**Tank Frenzy v1.19.0**, developed directly in this repository. Touch play uses translucent controls across the left and right halves of the screen; creators can choose a 5–50 kill win target. Mobile close view points toward off-screen opponents; 2 vs 2 marks allies and enemies and groups match results by team. The persistent leaderboard shows damage dealt and deaths. The Pi app provides separate Home Assistant sidebar and LAN listeners.
 
 During battle, the top strip shows your score, kills needed to win and the other tanks' kills and health. In team play, the score counts both teammates' kills. The lobby artwork fires steadily moving shells that fade near the end, with a brief layered muzzle blast; animation stops outside the lobby, when the tab is hidden, or when reduced motion is preferred.
 
@@ -56,6 +56,6 @@ docker run --rm -p 8765:8765 tank-frenzy-rpi
 
 Run the build on the intended architecture (or use Docker Buildx with `--platform linux/arm64`). The repository includes CI for tests and ARM64/AMD64 container builds. A physical Pi/Home Assistant installation and mobile play must still be checked on the target device; automated tests do not establish Pi performance under load.
 
-App package version: **19.5.1**. Game version: **19.5.1**. Production retains the `tank_frenzy` slug, data and host port across upgrades; releases bump the numeric version in several files at once. See the release checklist in [AGENTS.md](AGENTS.md).
+App package version: **1.19.0**. Game version: **1.19.0**. Production retains the `tank_frenzy` slug, data and host port across upgrades; releases bump the numeric version in several files at once. See the release checklist in [AGENTS.md](AGENTS.md).
 
 The How to Play screenshots in `tutorial/` are rendered by the game itself. After a visual change, run `npm start` and then `npx -y -p playwright node tools/tutorial-screenshots.cjs` to regenerate them (set `ONLY=win.webp` for one image).
