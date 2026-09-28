@@ -77,7 +77,7 @@ Harness quirks:
 - Globals the sandbox needs must be passed in explicitly (`setTimeout`, `clearTimeout`, `history`, `HTMLInputElement`, `process`, `Buffer`, …).
 - Objects created inside a sandbox fail `assert.deepEqual` against outer-realm objects; compare `JSON.stringify` output instead.
 - Don't compare full `map` objects between snapshots (the map is intermittent); compare `mapId`.
-- `tests/version.test.cjs` requires `FIELD.version`, `package.json` and both `package-lock.json` versions to match, and a line exactly `## <version>` in CHANGELOG.md.
+- `tests/version.test.cjs` requires a three-part numeric version with no branch suffix, matching `FIELD.version`, `package.json` and both `package-lock.json` versions, plus a dated `## v<version> [YYYY-MM-DD]` heading in CHANGELOG.md.
 
 ## Release checklist
 
@@ -86,13 +86,13 @@ Use `MAJOR.MINOR.PATCH` for the game/app version:
 - Increment **MINOR** for a new feature; reset PATCH to 0.
 - Increment **PATCH** for a bug fix or small correction that adds no feature.
 - Choose the bump from the largest change in a release. For example, after `19.0.0`, a feature is `19.1.0`, a fix is `19.0.1`, and a major change is `20.0.0`.
-- For the separate dev Home Assistant app, append exactly `-dev` to the three-part version, without another numeric suffix. Each installable dev update advances the appropriate numeric part: for example, `19.0.0-dev` followed by `19.0.1-dev` for a fix. When promoting to production, remove the suffix and sync every versioned file in the checklist below. Documentation-only edits do not require a version bump.
+- Use the same plain `MAJOR.MINOR.PATCH` format on both `dev` and `main`; never append `-dev` (or another branch suffix) to the package, game, health or Home Assistant app version. The separate dev installation is distinguished by its Home Assistant slug `tank_frenzy_dev`, name and configurable host port; production keeps slug `tank_frenzy`. Advance the numeric version for each installable dev update. When promoting the tested dev commit to production, merge through a PR and retain the production app identity. Documentation-only edits do not require a version bump.
 
 Every user-visible release bumps the version in all of these:
 1. `shared.js` (`version`), `package.json`, `package-lock.json` (top-level `version` and `packages[""].version`).
 2. `config.yaml` `version` (Supervisor only offers an update when this changes) and `Dockerfile` `ARG BUILD_VERSION`.
 3. `README.md` ("App package version" line and the v1.9.0–x.y summary), `DOCS.md` (`/health` version), `GAMEPLAY.md` ("Current release").
-4. `CHANGELOG.md`: an `## App x.y.z — Tank Frenzy vx.y.z` section at the top and a `## x.y.z` technical section below.
+4. `CHANGELOG.md`: one `## vx.y.z [YYYY-MM-DD]` heading per numeric game version, with user-visible and technical notes below it. Never put `-dev`, `App`, or descriptive text in the heading. Keep the full release history comparable on `dev` and `main` by synchronizing production notes back to `dev` after a release PR merges. Use the actual change date for new entries; older dates through v1.18.0 are archive import dates.
 
 Then document the feature in GAMEPLAY.md (and DOCS.md for options/operation), and regenerate tutorial screenshots if visuals changed:
 
@@ -106,4 +106,4 @@ npx -y -p playwright node tools/tutorial-screenshots.cjs [baseUrl] [outDir]   # 
 - Code style: dense, compact JavaScript with few comments (match the surrounding code); CommonJS on the server (`.cjs`), no build step, one runtime dependency (`ws`).
 - Server is authoritative; the client only sends input and renders. Keep new per-tick work bounded and keep snapshots small (they are the main cost).
 - Verify UI changes in Chromium via Playwright (pre-installed; don't run `playwright install`) at desktop and phone sizes before pushing. When killing a local test server, use `pkill -f "^node server.cjs"` in its own command; a looser pattern also matches the shell running it.
-- Git workflow the owner uses: work on a feature branch, open a PR to `main`, the owner reviews and merges on GitHub. After a PR merges, restart the branch from `origin/main`.
+- Git workflow the owner uses: test changes on `dev` (or a short feature branch), open a production PR to `main` when ready, and let the owner review and merge on GitHub. Keep the dev app's separate Home Assistant identity, and sync shared release notes back to `dev` after the merge.
