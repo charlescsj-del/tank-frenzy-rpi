@@ -78,7 +78,7 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
     {id:'foe2',name:'Orchid',slot:3,team:1,x:800,y:10,a:0,aim:0,hp:10,kills:1,deaths:2,shots:10,hits:5,life:1,connected:true}
   ],shells:[],events:[]};
   const view=await touch.evaluate(state=>{joined=true;myId='me';spectating=false;roomCode='QUARRY';$('overlay').classList.add('hidden');$('arena').classList.remove('lobby-open');document.body.classList.remove('in-lobby');applySnapshot(state);resize();draw();return {touch:touchMedia.matches,roles:tanks.map(teamRelation),markers:enemyMarkers()};},combat);
-  assert.equal(view.touch,true);assert.deepEqual(view.roles,[null,'ally','enemy','enemy']);assert.deepEqual(view.markers.map(m=>m.id),['foe','foe2']);
+  assert.equal(view.touch,true);assert.deepEqual(view.roles,[null,'ally','enemy','enemy']);assert.deepEqual(view.markers.map(m=>m.id),['foe'],'the expanded map keeps foe2 in view, so only the off-screen foe needs an arrow');
   assert.equal(await touch.locator('#battleProgress strong').textContent(),'TEAM 4 / 10');
   assert.equal(await touch.locator('#battleProgress small').textContent(),'6 KILLS TO WIN');
   assert.deepEqual(await touch.locator('.battle-opponent-hp').allTextContents(),['10/10','10/10','10/10']);
