@@ -1,105 +1,114 @@
 # Changelog
 
-App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
+Game versions are shown without the Home Assistant dev suffix. Dev and production branches share this history; check `config.yaml` for the installed app version. For entries through v1.18.0, the original release date was not retained, so the date shown is the archive import date.
 
-## App 19.3.0-dev — Tank Frenzy v19.3.0-dev
+## v19.3.0 [2026-09-28]
 
+- Remove the artwork pause/play button so the lobby illustration stays unobstructed; hidden-tab and reduced-motion pauses still work.
+- Protect the game from malformed requests and messages that could previously stop the server for everyone.
+- Limit excessive connections and idle arenas while retaining space for players sharing one network.
+- Prevent one visitor's password guesses from locking out the owner; add leaderboard name removal and reset to the admin page.
+- Count leaderboard results only when at least two people play, and keep frequent players from being displaced by new names.
+- Add browser security headers to restrict scripts, framing and referrer information.
+- Promote the 19.3.0-dev hardening and admin changes alongside the 19.2.2 lobby animation and live battle strip.
+- Preserve the production Home Assistant slug `tank_frenzy`, default host port `8765`, app name and `/data/leaderboard.json` across the upgrade.
 - Security: a single crafted message or web request could stop the game server for everyone. Malformed input now closes only its own connection.
 - Fair-use limits so one visitor cannot fill the server: 6 open arenas and 32 connections per address (16 not yet in an arena), 256 in total; arenas idle in the waiting room or after a match close after 15 minutes.
 - Admin sign-in slows only the address that guesses wrong (10 tries a minute), so strangers can no longer lock you out.
 - Leaderboard: only matches with at least two people count, a flood of made-up names can no longer push out regular players, and the admin page can remove a name or reset the leaderboard.
 - Browser security headers: a Content-Security-Policy that allows only the game's own files, no framing by other sites, and no referrer.
-
-## 19.3.0-dev
-
 - `text()` for untrusted message fields and a `typeof` check for bot skills; `try/catch` around the HTTP and WebSocket handlers; a missing static file now ends its response.
 - `visitorOf()` (`CF-Connecting-IP`, else socket address) with per-visitor connection, pending and arena limits; `closeRoom()` shared by admin End arena and the 15-minute idle close.
 - `securityHeaders()` on every response; the admin inline script is allowed by a startup SHA-256 hash.
 - `Leaderboard.remove()` / `reset()` and admin routes `GET /leaderboard`, `POST /leaderboard/remove`, `POST /leaderboard/reset`; prune by fewest matches first.
 
-## App 19.2.2-dev — Tank Frenzy v19.2.2-dev
+## v19.2.2 [2026-09-28]
 
+- Bring the tested lobby artwork to production: independent tank sprites over a clean quarry, recoil, muzzle flame, expanding burst ring, sparks and smoke, and shaded shells that fly at a constant speed before fading out.
+- Add a compact live battle strip for your kills, kills remaining to win, and every other tank’s kills and health. Team matches use the combined team score and mark teammates.
+- Keep the artwork pause control, hidden-tab pause and reduced-motion behavior. Purple shots pass behind the foreground blue tank.
+- Ship the new WebP background and transparent tank atlas with the game, serve them through the static allowlist, and exercise the responsive animation in browser CI.
+- Preserve the production Home Assistant slug `tank_frenzy`, host port `8765`, app name and leaderboard data across the upgrade.
 - Fade each flying shell gradually over the final part of its flight while retaining its uniform travel speed.
 - Strengthen the muzzle burst with a brighter layered flame, an expanding shock ring and extra sparks, visible only during firing.
-
-## 19.2.2-dev
-
 - Animate opacity separately from a linear projectile transform; keep pause and reduced-motion behavior for the new blast ring.
 
-## App 19.2.1-dev — Tank Frenzy v19.2.1-dev
+## v19.2.1 [2026-09-28]
 
 - Separate the quarry background and transparent tank silhouettes so recoil has no duplicate tank underneath.
 - Add short flickering muzzle flames, sparks and fading smoke; draw shaded pointed shells at a constant speed.
 - Layer the distant tanks and their shots behind the foreground tanks so purple shells pass behind the blue tank.
-
-## 19.2.1-dev
-
 - Reuse one transparent sprite atlas and one clean background; animate only browser transforms and opacity, with pause and reduced-motion support.
 
-## App 19.2.0-dev — Tank Frenzy v19.2.0-dev
+## v19.2.0 [2026-09-28]
 
 - Remove the baked-in flashes from the lobby picture so tanks only appear to fire during animated shots.
 - Give each tank stronger recoil; show larger shells traveling more slowly between volleys.
 - Keep a live battle strip on screen with your kills, kills left to win, and every other tank's kills and health; team games track the team score and mark allies.
 - Keep the pause control and reduced-motion behavior, with all effects rendered in the browser.
-
-## 19.2.0-dev
-
 - Serve a clean idle WebP image as the animated hero's background while preserving the original illustration for reference.
 
-## App 19.1.0-dev — Tank Frenzy v19.1.0-dev
+## v19.1.0 [2026-09-27]
 
 - Animate the existing lobby artwork with gentle tank recoil, staggered muzzle flashes and shell streaks.
 - Add an artwork pause control; stop motion outside the lobby, in hidden tabs and when reduced motion is requested.
 - Align the game badge, health endpoint and Home Assistant app version using the MAJOR.MINOR.PATCH-dev convention.
-
-## 19.1.0-dev
-
 - Use SVG masks and CSS transforms with the existing banner asset; add no server simulation or animation downloads.
 
-## App 1.18.0 — Tank Frenzy v1.18.0
+## v1.18.0 [2026-09-27]
 
 - Use transparent left/right touch zones with floating thumb indicators, and keep the live aim line steady during laser shots.
 - Put in-game actions behind a compact icon menu; hide the arena code during play and use "arena" in player-facing text.
 - Let arena creators set a 5–50 kill win target, default 10, for free-for-all or team matches.
 - Center and shrink the mobile tutorial card and add safe-area space above the iPhone lobby logo.
+- Validate the per-arena kill target on the server; include it in discovery and snapshots, and use it for winning and rematches.
+- Keep existing `?room=` links and WebSocket fields compatible while changing interface terminology.
 
-## App 1.17.0 — Tank Frenzy v1.17.0
+## v1.17.0 [2026-09-27]
 
 - Point mobile close-view players toward off-screen opponents with labeled arrows at the view edge; hide arrows in Full Map, for allies and destroyed tanks, and after a match.
 - Mark allies and enemies with distinct rings and names in 2 vs 2, and split the end-of-match scoreboard by Orange and Blue teams with their scores.
+- Add client-side camera-edge marker geometry and 2 vs 2 relationship cues without extra network data or server work. Group result rows by team, preserving the free-for-all board.
+- Cover off-screen visibility, team identification and grouped results with regression tests.
 
-## App 1.16.0 — Tank Frenzy v1.16.0
+## v1.16.0 [2026-09-27]
 
 - Add Damage and Deaths columns to the persistent leaderboard, keeping K/D and the existing period and region filters. Damage counts actual enemy health lost, not excess laser damage or hits blocked by shields.
 - Preserve previous leaderboard totals; historical damage that was not recorded starts at zero.
+- Track per-match damage dealt on the server, reset it on rematch, and save it in both all-time totals and recent match logs. Expose damage and deaths in `/leaderboard` without enlarging 30 Hz game snapshots.
+- Migrate old saved leaderboards and match logs without a damage field, defaulting their missing values to zero; add combat, persistence and period regression tests.
 
-## App 1.15.0 — Tank Frenzy v1.15.0
+## v1.15.0 [2026-09-27]
 
 - Replace the admin's plain resource numbers with system CPU and memory gauges, showing game usage separately.
 - Show Pi load over 1, 5 and 15 minutes with per-core values, reference markers, and a recent 60-second trend.
 - Exclude reclaimable cache from Linux memory usage; label unavailable and stale readings clearly. Share one resource sample per second across admin viewers.
+- Add `system-metrics.cjs`: lazy host CPU deltas, Linux available-memory accounting, process usage, load averages and one-second caching. Preserve legacy admin fields and include the module in the container.
+- Add responsive SVG gauges and a bounded load-history chart to `admin.html`; prevent overlapping refreshes and time out stalled requests.
 
-## App 1.14.0 — Tank Frenzy v1.14.0
+## v1.14.0 [2026-09-27]
 
 - About 70% less network traffic: snapshots are encoded once per room, numbers are rounded, shells carry only what the browser draws, and the map is resent once a second instead of 30 times.
 - Private admin page (`/admin` or your own `admin_path`, never linked from the game) with live mini-maps, scores and server load for every room, hidden-spectator **Watch live** and End room. Free through the Home Assistant sidebar; on the public address only with the new `admin_password` option.
 - Leaderboard views for today, this week, this month and all time, filtered by the country Cloudflare reports. Recent match history is kept for 62 days in `/data/leaderboard.json`.
 - App-list icon and logo for Home Assistant. One or two rooms no longer stretch to fill the room list.
+- Leaner snapshots (`encodeState`, optional map with `mapId`), `/admin` with `admin.html`, and leaderboard periods and regions.
 
-## App 1.13.0 — Tank Frenzy v1.13.0
+## v1.13.0 [2026-09-27]
 
 - All-time leaderboard saved as `/data/leaderboard.json`: wins, matches, kills and deaths by player name, shown from the 🏆 button. Written atomically; bots are not ranked.
 - New `notify_service` option: a Home Assistant notification (via the Supervisor API, `homeassistant_api: true`) when someone opens a room, with a tap-to-join link when `public_url` is set. At most one a minute.
 - Option names and descriptions in the Configuration tab (`translations/en.yaml`).
+- 🏆 leaderboard (`/leaderboard`, new `leaderboard.cjs`) and a room-created hook used by the Home Assistant app for notifications.
 
-## App 1.12.0 — Tank Frenzy v1.12.0
+## v1.12.0 [2026-09-27]
 
 - Computer-controlled bots: the room starter adds or removes up to three bots in the waiting room and sets Easy, Normal or Hard skill.
 - Bots use normal player input and rules, aim with skill-based error and target leading, steer around walls, unstick themselves and fetch nearby power-ups.
 - People joining a full room replace a bot; bots never own rooms, vote on rematches or keep empty rooms alive.
+- Bots with three skill levels, controlled from the waiting room. New `bots.cjs`; the room directory lists open seats by people and marks bots.
 
-## App 1.11.0 — Tank Frenzy v1.11.0
+## v1.11.0 [2026-09-27]
 
 - Room browser: saved player name, Quick Play, and one-tap Join on every room row with its players and rules. Round icon buttons for effects and music.
 - Kill feed with streak banners, an end-of-match scoreboard (kills, deaths, hit rate) and a low-health heartbeat.
@@ -107,15 +116,19 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 - Desktop waiting rooms and battles fit the window. Removed the map label, bottom help cards, footer and masthead slogans.
 - Add to Home Screen: web app manifest and icons; landscape lock on Android when fullscreen starts.
 - Fix the Room Code pattern, which browsers rejected as invalid. Add `tools/tutorial-screenshots.cjs` and regenerate the tutorial images.
+- Quick Play, one-tap Join, remembered name, kill feed and streaks, scoreboard, heartbeat, majority rematch, home-screen app support and a one-screen desktop battle view.
+- Destroyed events carry the attacker and streak; snapshots carry shots, hits, streak and the rematch vote target.
 
-## App 1.10.0 — Tank Frenzy v1.10.0
+## v1.10.0 [2026-09-27]
 
 - Redesign the room browser to fit one screen without scrolling: artwork beside the room panel on wide screens, above it on phones. Only the room list scrolls.
 - Turn How to Play into eight pages with Back/Next buttons, page dots, arrow keys and swipes; add a Getting Hit page and split power-ups into tokens and effects.
 - Add hit effects: flames around the screen edges, a stronger shake, rising damage numbers, smoke and a shockwave on destruction, vibration on Android and a low-health smoulder.
 - Improve touch use: no double-tap zoom on buttons, 40px+ touch targets in the room browser and tutorial.
+- One-screen room browser; paged How to Play guide with swipe and arrow keys.
+- Fiery screen-edge hit flash, damage numbers, destruction shockwave, Android vibration and low-health smoulder. Hit events now carry their damage.
 
-## App 1.9.0 — Tank Frenzy v1.9.0
+## v1.9.0 [2026-09-27]
 
 - Show the quarry artwork as a large header in the room browser. Forms, waiting rooms and battles now share one compact tagline instead of switching between large and small headers.
 - Add a How to Play guide with game screenshots: how to win, PC and phone controls, finding your tank, bouncing bullets and each power-up.
@@ -123,115 +136,49 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 - Place Leave Room beside Rematch on the result card.
 - Enter fullscreen automatically on Create & Join, Join Arena and Start Game where the browser allows it; leaving the room exits fullscreen.
 - Serve the six tutorial WebP images through the sidebar and LAN listeners.
-
-## App 1.8.0 — Tank Frenzy v1.8.0
-
-- Show the animated winner card in the arena and require every connected player to vote within 20 seconds for a rematch.
-- Keep results open after the deadline, reject new joins to ended rooms, and freeze gameplay while voting.
-- Preserve authenticated Home Assistant ingress and LAN multiplayer paths; align app and game versions.
-
-## App 1.7.1 — Tank Frenzy v1.7.1
-
-- Keep the Create and Join forms visible without scrolling on narrow screens. Preserve the tagline in a compact line and hide inactive arena chrome while the form is open.
-- Keep the room browser and active game layouts unchanged; retain Home Assistant ingress and LAN multiplayer paths.
-
-## App 1.7.0 — Tank Frenzy v1.7.0
-
-- Match the Home Assistant app and game version numbers.
-- Raise music gain to 0.30, loop within the active phrases and preload battle music during the countdown.
-- Add separate original MP3s for the 3–2–1 countdown and battle start, served through sidebar and LAN access.
-
-## App 1.1.0 — Tank Frenzy v1.6.0
-
-- Sync the current main-game release, including the approved B pre-game music, random A/C battle music and four selected combat effects.
-- Serve seven additional versioned MP3s through both the authenticated sidebar and LAN game, retaining the ingress prefix and WebSocket behavior.
-- Remove unrelated project references from the published documentation.
-
-## App 1.0.0 — Home Assistant / Raspberry Pi
-
-- Package Tank Frenzy v1.4.0 for 64-bit Raspberry Pi and AMD64 Home Assistant OS.
-- Add repository installation, a multi-architecture Dockerfile, health checks and startup/shutdown handling.
-- Support authenticated sidebar access on an internal ingress listener and LAN play on host port 8765.
-- Keep assets, sound, room discovery and WebSockets under the ingress prefix; support a configured invitation URL.
-- Include installation/update instructions and CI container builds for both architectures.
-- Verify 88 automated checks, including mixed ingress/LAN multiplayer. Physical Pi play still requires target-device verification.
-
-## 1.18.0
-
-- Validate the per-arena kill target on the server; include it in discovery and snapshots, and use it for winning and rematches.
-- Keep existing `?room=` links and WebSocket fields compatible while changing interface terminology.
-
-## 1.17.0
-
-- Add client-side camera-edge marker geometry and 2 vs 2 relationship cues without extra network data or server work. Group result rows by team, preserving the free-for-all board.
-- Cover off-screen visibility, team identification and grouped results with regression tests.
-
-## 1.16.0
-
-- Track per-match damage dealt on the server, reset it on rematch, and save it in both all-time totals and recent match logs. Expose damage and deaths in `/leaderboard` without enlarging 30 Hz game snapshots.
-- Migrate old saved leaderboards and match logs without a damage field, defaulting their missing values to zero; add combat, persistence and period regression tests.
-
-## 1.15.0
-
-- Add `system-metrics.cjs`: lazy host CPU deltas, Linux available-memory accounting, process usage, load averages and one-second caching. Preserve legacy admin fields and include the module in the container.
-- Add responsive SVG gauges and a bounded load-history chart to `admin.html`; prevent overlapping refreshes and time out stalled requests.
-
-## 1.14.0
-
-- Leaner snapshots (`encodeState`, optional map with `mapId`), `/admin` with `admin.html`, and leaderboard periods and regions.
-
-## 1.13.0
-
-- 🏆 leaderboard (`/leaderboard`, new `leaderboard.cjs`) and a room-created hook used by the Home Assistant app for notifications.
-
-## 1.12.0
-
-- Bots with three skill levels, controlled from the waiting room. New `bots.cjs`; the room directory lists open seats by people and marks bots.
-
-## 1.11.0
-
-- Quick Play, one-tap Join, remembered name, kill feed and streaks, scoreboard, heartbeat, majority rematch, home-screen app support and a one-screen desktop battle view.
-- Destroyed events carry the attacker and streak; snapshots carry shots, hits, streak and the rematch vote target.
-
-## 1.10.0
-
-- One-screen room browser; paged How to Play guide with swipe and arrow keys.
-- Fiery screen-edge hit flash, damage numbers, destruction shockwave, Android vibration and low-health smoulder. Hit events now carry their damage.
-
-## 1.9.0
-
 - Large illustrated room-browser header; one compact tagline on every other screen.
 - How to Play guide with screenshots of controls, bouncing bullets, power-ups and the win screen.
 - Own-tank halo, Leave Room on the result card and automatic fullscreen when joining or starting.
 
-## 1.8.0
+## v1.8.0 [2026-09-27]
 
+- Show the animated winner card in the arena and require every connected player to vote within 20 seconds for a rematch.
+- Keep results open after the deadline, reject new joins to ended rooms, and freeze gameplay while voting.
+- Preserve authenticated Home Assistant ingress and LAN multiplayer paths; align app and game versions.
 - Replace the small bottom victory line with a large centered result card, player outcome, rematch tally and countdown.
 - Remove automatic restarts. Only unanimous votes from connected players during the 20-second window launch a new map and round.
 - Keep expired results visible until players leave; prevent late joins and freeze movement/aim controls while voting.
 
-## 1.7.1
+## v1.7.1 [2026-09-27]
 
+- Keep the Create and Join forms visible without scrolling on narrow screens. Preserve the tagline in a compact line and hide inactive arena chrome while the form is open.
+- Keep the room browser and active game layouts unchanged; retain Home Assistant ingress and LAN multiplayer paths.
 - Use a dedicated compact phone layout for Create and Join, with the tagline on one line, tighter form spacing and a return to the top of the page.
 - Leave the room browser and active game views unchanged.
 
-## 1.7.0
+## v1.7.0 [2026-09-27]
 
+- Match the Home Assistant app and game version numbers.
+- Raise music gain to 0.30, loop within the active phrases and preload battle music during the countdown.
+- Add separate original MP3s for the 3–2–1 countdown and battle start, served through sidebar and LAN access.
 - Raise background music gain from 0.10 to 0.30 and loop its active phrase without replaying the intro or faded ending.
 - Select and preload A or C during countdown; play three rising numbered countdown ticks and a separate battle-start recording.
 
-## 1.6.0
+## v1.6.0 [2026-09-27]
 
+- Home Assistant app package 1.1.0: Sync the current main-game release, including the approved B pre-game music, random A/C battle music and four selected combat effects.
+- Serve seven additional versioned MP3s through both the authenticated sidebar and LAN game, retaining the ingress prefix and WebSocket behavior.
+- Remove unrelated project references from the published documentation.
 - Install the approved Cannon A for normal and machine-gun fire, Ricochet C for bounces, Power-up A for pickups and Destruction C for tank explosions. Keep the previous samples as per-asset fallbacks.
 - Preserve double cannon and other unaffected cues, voice limits, spatial playback and mute.
 
-## 1.5.0
+## v1.5.0 [2026-09-27]
 
 - Play B — Overdrive before battles, including waiting and countdown.
 - Select A — Iron Advance or C — Steel Pressure locally for each battle; cache decoded tracks and use one looping music source.
 - Preserve independent music/effects controls and browser autoplay behavior.
 
-## 1.4.0
+## v1.4.0 [2026-09-27]
 
 ### Pickups and aiming
 
@@ -246,12 +193,12 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 - Battle music plays at 128 BPM; the splash/waiting arrangement is a calmer 112 BPM. Both remain below sound-effect volume, with independent saved music/effects switches.
 - Music still renders once per track locally, then uses one looping source. Two cached mono buffers total about 5.4 MiB; no music downloads or server audio processing are required.
 
-## 1.3.2
+## v1.3.2 [2026-09-27]
 
 - Reduced laser damage from 5 to 4 per hit. A full-health, unprotected tank now survives two laser hits with 2 health and is destroyed by the third.
 - Updated the power-up guide, current rules and damage regression tests. Screen shake and other laser behavior are unchanged.
 
-## 1.3.1
+## v1.3.1 [2026-09-27]
 
 ### Combat
 
@@ -259,7 +206,7 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 - Double cannon now fires two parallel shells from separate barrel origins instead of a spreading volley. Both barrels share the same heading and independently stop spawning forward when obstructed by cover.
 - Shared barrel spacing between simulation and tank rendering; updated the power-up guide and current rules.
 
-## 1.3.0
+## v1.3.0 [2026-09-27]
 
 ### Rooms and rounds
 
@@ -276,7 +223,7 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 - Added independent Music and Effects switches to the top menu and splash screen, with browser-saved preferences. Hidden pages stop both channels; music resumes if enabled when returning.
 - Music uses one looping source and two cached mono buffers. Existing sound-effect voice limits remain in place.
 
-## 1.2.0
+## v1.2.0 [2026-09-27]
 
 ### Audio
 
@@ -292,7 +239,7 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 
 - Samples download and decode once per page session after audio is activated. All mixing runs in the browser. No gameplay snapshot fields, simulation timers or per-room server work were added.
 
-## 1.1.1
+## v1.1.1 [2026-09-27]
 
 ### Fixed
 
@@ -303,7 +250,7 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 
 - Added `SOUND_DESIGN.md` to explore a cartoon arcade sound direction. Audio behavior is unchanged in this patch.
 
-## 1.1.0
+## v1.1.0 [2026-09-27]
 
 ### Added
 
@@ -330,8 +277,14 @@ App package versions follow `config.yaml`. Game versions below follow `shared.js
 
 - Existing four-player, two-pickup and 96-shell room limits remain in place. Laser bullet clearing is a bounded scan per laser shot; Immortal and Restore add no background jobs.
 
-## 1.0.0 — Previous baseline
+## v1.0.0 [2026-09-27]
 
+- Package Tank Frenzy v1.4.0 for 64-bit Raspberry Pi and AMD64 Home Assistant OS.
+- Add repository installation, a multi-architecture Dockerfile, health checks and startup/shutdown handling.
+- Support authenticated sidebar access on an internal ingress listener and LAN play on host port 8765.
+- Keep assets, sound, room discovery and WebSockets under the ingress prefix; support a configured invitation URL.
+- Include installation/update instructions and CI container builds for both architectures.
+- Verify 88 automated checks, including mixed ingress/LAN multiplayer. Physical Pi play still requires target-device verification.
 - Tank Frenzy branding, cartoon battlefield and illustrated lobby, animated power icons and countdowns.
 - Menu, round-start, pickup, victory and defeat audio cues; louder destruction effects.
 - Free-for-All and 2 vs 2 rooms, room discovery, player previews, and optional bouncing bullets and powers.

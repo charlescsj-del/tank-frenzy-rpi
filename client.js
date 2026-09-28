@@ -24,13 +24,6 @@ const cueVoices=new Set();
 $('roomInput').value=roomCode;$('roomCode').textContent=roomCode||'—';
 $('versionBadge').textContent='v'+FIELD.version;
 $('versionBadge').setAttribute('aria-label','Tank Frenzy version '+FIELD.version);
-let heroPaused=false;
-$('heroMotion').addEventListener('click',()=>{
-  heroPaused=!heroPaused;document.body.classList.toggle('hero-paused',heroPaused);
-  $('heroMotion').setAttribute('aria-pressed',String(heroPaused));
-  $('heroMotion').setAttribute('aria-label',heroPaused?'Play artwork animation':'Pause artwork animation');
-  $('heroMotion').title=heroPaused?'Play artwork animation':'Pause artwork animation';
-});
 function syncHeroVisibility(){document.body.classList.toggle('hero-suspended',Boolean(document.hidden));}
 syncHeroVisibility();
 function status(text){$('status').textContent=spectating?'👁 WATCHING (HIDDEN) · '+text:text;}
