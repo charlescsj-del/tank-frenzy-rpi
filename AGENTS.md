@@ -37,9 +37,12 @@ Multiplayer browser tank game packaged as a **Home Assistant app** (formerly add
 - `/rooms` → open rooms with players, settings, phase, `available` (human seats; 0 in `postgame`).
 - `/leaderboard?period=day|week|month|all&country=XX` → `{players,countries,period,country,persistent}`.
 - `/network-info` → LAN URLs, `publicUrl`, whether the request came through ingress.
-- Admin root (`/admin`, or `/<admin_path>`): `GET /` admin.html, `GET /state`, `POST /watch` → `{pass,room}`, `POST /close` → 204. POSTs require the header `X-Tank-Admin: 1` (CSRF guard). Ingress requests skip auth; otherwise HTTP Basic with `admin_password` (constant-time SHA-256 compare, 429 after 20 failures a minute). With no password, the admin root returns 404 on the game port. When `admin_path` is set, `/admin` is an ordinary 404.
+- Admin root (`/admin`, or `/<admin_path>`): `GET /` admin.html, `GET /state`, `POST /watch` → `{pass,room}`, `POST /close` → 204, `GET /leaderboard` (all names), `POST /leaderboard/remove?name=` → 204/404, `POST /leaderboard/reset` → 204. POSTs require the header `X-Tank-Admin: 1` (CSRF guard). Ingress requests skip auth; otherwise HTTP Basic with `admin_password` (constant-time SHA-256 compare, 429 for one visitor after 10 failures a minute, or for everyone after 300). With no password, the admin root returns 404 on the game port. When `admin_path` is set, `/admin` is an ordinary 404.
 - Ingress requests to `/` get `<base href="<ingress path>">` injected so relative asset URLs work under the sidebar. Every browser URL in the client must stay **relative** (`./audio/...`, `rooms`, `ws`).
 - WebSocket upgrades only on `/ws`; on the game port the `Origin` host must equal `Host`.
+- Every response carries a Content-Security-Policy (`securityHeaders`): own-origin scripts only, `frame-ancestors 'none'` (`'self'` for ingress so the HA sidebar can frame it), `Referrer-Policy: no-referrer`. `admin.html`'s single inline `<script>` is allowed by a SHA-256 hash computed at startup, so keep exactly one inline script there. New pages must not use inline scripts, inline event handlers or third-party URLs.
+- Untrusted input: read message fields with `text()` or `typeof` checks, never `String(value)` (a JSON object like `{"toString":1}` throws). HTTP and WebSocket handlers are wrapped in `try/catch` so a mistake drops one connection, not the server.
+- Fair use (`limits` in `server.cjs`): per visitor (`visitorOf`: `CF-Connecting-IP`, else the socket address; ingress is exempt) 32 connections, 16 not yet joined, 6 created arenas still open; 256 connections server-wide. Rooms idle in `waiting`/`postgame` for 15 minutes close.
 
 ## WebSocket protocol
 
@@ -58,7 +61,7 @@ Phases: `waiting` → `countdown` (3 s) → `playing` → `results` (20 s rematc
 ## Game rules that code depends on
 
 - The owner is the first connected human; ownership passes on leave/disconnect before the first start, then is cleared. Bots never own, vote or keep a room alive: the last human leaving removes them. A human joining a full room replaces the newest bot.
-- Leaderboard: recorded once per match when `room.winner` first appears (`room.recorded`). Bots are skipped; names match case-insensitively; in teams the whole winning team wins. Periods use the server's local time zone; weeks start Monday. Country comes from `CF-IPCountry` (`/^[A-Z]{2}$/`, excluding `XX` and `T1`).
+- Leaderboard: recorded once per match when `room.winner` first appears (`room.recorded`), only with at least two humans. Over 200 names, the fewest-match names are pruned first. Bots are skipped; names match case-insensitively; in teams the whole winning team wins. Periods use the server's local time zone; weeks start Monday. Country comes from `CF-IPCountry` (`/^[A-Z]{2}$/`, excluding `XX` and `T1`).
 - Hidden spectators live in the server's `spectators` Map, never in `room.players`, so they never appear in counts, `/rooms` or snapshots. Watch passes are random hex, single room, 10-minute expiry; the client strips `?spectate=…&pass=…` from the address bar with `history.replaceState`.
 
 ## Home Assistant options
@@ -67,7 +70,7 @@ Phases: `waiting` → `countdown` (3 s) → `playing` → `results` (20 s rematc
 
 ## Tests
 
-`npm test` runs `node --test tests/*.test.cjs` (about 135 tests, around 10 seconds). CI (`.github/workflows/verify.yml`) runs the tests, builds the Docker image on amd64 and aarch64, checks `/health` and `/rooms`, and runs `tools/admin-ui-check.cjs` in Chromium at desktop/tablet/phone widths. The UI job temporarily installs Playwright and uploads screenshots; it adds no game runtime dependency.
+`npm test` runs `node --test tests/*.test.cjs` (about 155 tests, around 10 seconds). CI (`.github/workflows/verify.yml`) runs the tests, builds the Docker image on amd64 and aarch64, checks `/health` and `/rooms`, and runs `tools/admin-ui-check.cjs` in Chromium at desktop/tablet/phone widths. The UI job temporarily installs Playwright and uploads screenshots; it adds no game runtime dependency.
 
 Harness quirks:
 - `client.js` and `server.cjs` are loaded into `vm` sandboxes with hand-made fake DOM elements (children, `append`, `prepend`, `replaceChildren`, `classList`, events, `setAttribute`). They have no `querySelector`, `closest` or `dataset`; if new client code uses a browser API, add it to the fake (or guard the call), or the sandbox throws.

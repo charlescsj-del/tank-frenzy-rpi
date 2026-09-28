@@ -2,6 +2,21 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 19.3.0-dev — Tank Frenzy v19.3.0-dev
+
+- Security: a single crafted message or web request could stop the game server for everyone. Malformed input now closes only its own connection.
+- Fair-use limits so one visitor cannot fill the server: 6 open arenas and 32 connections per address (16 not yet in an arena), 256 in total; arenas idle in the waiting room or after a match close after 15 minutes.
+- Admin sign-in slows only the address that guesses wrong (10 tries a minute), so strangers can no longer lock you out.
+- Leaderboard: only matches with at least two people count, a flood of made-up names can no longer push out regular players, and the admin page can remove a name or reset the leaderboard.
+- Browser security headers: a Content-Security-Policy that allows only the game's own files, no framing by other sites, and no referrer.
+
+## 19.3.0-dev
+
+- `text()` for untrusted message fields and a `typeof` check for bot skills; `try/catch` around the HTTP and WebSocket handlers; a missing static file now ends its response.
+- `visitorOf()` (`CF-Connecting-IP`, else socket address) with per-visitor connection, pending and arena limits; `closeRoom()` shared by admin End arena and the 15-minute idle close.
+- `securityHeaders()` on every response; the admin inline script is allowed by a startup SHA-256 hash.
+- `Leaderboard.remove()` / `reset()` and admin routes `GET /leaderboard`, `POST /leaderboard/remove`, `POST /leaderboard/reset`; prune by fewest matches first.
+
 ## App 19.2.2-dev — Tank Frenzy v19.2.2-dev
 
 - Fade each flying shell gradually over the final part of its flight while retaining its uniform travel speed.
