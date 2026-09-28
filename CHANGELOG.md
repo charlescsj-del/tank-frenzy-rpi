@@ -1,6 +1,17 @@
 # Changelog
 
-Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. For entries through v1.18.0, the original release date was not retained, so the date shown is the archive import date.
+Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. For entries through v1.18.0, the original release date was not retained, so the date shown is the archive import date. The earlier 19.x headings record versions actually published before the numbering correction.
+
+## v1.20.0 [2026-09-29]
+
+- Show teal ALLY arrows for off-screen teammates in 2 vs 2 and keep enemy arrows red.
+- Put readable health bars and numbers below visible tanks, including on narrow phones.
+- Extend the close-view map to mobile safe-area edges and inset the score and menu chips.
+
+## v1.19.0 [2026-09-29]
+
+- Correct the version sequence after v1.18.0: the 19.x major number was a numbering mistake. Historical 19.x entries remain below under their originally published numbers.
+- Keep the tested battlefield and Pi resource improvements, and preserve the existing Home Assistant app identity, host port and persistent leaderboard data across the update.
 
 ## v19.6.1 [2026-09-29]
 
