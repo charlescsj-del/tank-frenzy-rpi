@@ -1,6 +1,6 @@
 # Changelog
 
-Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. For entries through v1.18.0, the original release date was not retained, so the date shown is the archive import date. The earlier 19.x headings record versions actually published before the numbering correction.
+Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. For entries through v1.18.0, the original release date was not retained, so the date shown is the archive import date. The 19.x builds were originally distributed under those numbers; their entries below are relabeled as consecutive 1.19.x versions for a consistent history. Git history retains the original package numbers.
 
 ## v1.20.0 [2026-09-29]
 
@@ -8,38 +8,38 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - Put readable health bars and numbers below visible tanks, including on narrow phones.
 - Extend the close-view map to mobile safe-area edges and inset the score and menu chips.
 
-## v1.19.0 [2026-09-29]
-
-- Correct the version sequence after v1.18.0: the 19.x major number was a numbering mistake. Historical 19.x entries remain below under their originally published numbers.
-- Keep the tested battlefield and Pi resource improvements, and preserve the existing Home Assistant app identity, host port and persistent leaderboard data across the update.
-
-## v19.6.1 [2026-09-29]
+## v1.19.11 [2026-09-29]
 
 - Keep the health bar and health number below other tanks large enough to read in a narrow phone view.
 
-## v19.6.0 [2026-09-29]
+## v1.19.10 [2026-09-29]
 
 - Show teal ALLY arrows toward off-screen teammates in 2 vs 2, distinct from red ENEMY arrows.
 - Draw each visible rival or teammate’s live health directly below their tank.
 - In close view, use the left, right and bottom map area with slimmer camera margins; let the map reach mobile safe-area edges while inset score and menu chips stay readable.
 - Keep the mobile score chip on one line by showing progress toward the target without repeating the remaining count below it.
 
-## v19.5.1 [2026-09-29]
+## v1.19.9 [2026-09-29]
+
+- Correct the app version after the accidental 19.x jump and relabel earlier changelog entries in chronological 1.19.x order. The original published package numbers remain in Git history.
+- Keep the tested battlefield and Pi resource improvements, and preserve the existing Home Assistant app identity, host port and persistent leaderboard data across the update.
+
+## v1.19.8 [2026-09-29]
 
 - Compact the admin CPU and memory gauges: keep system and game values visible while removing repeated labels and unused vertical space.
 
-## v19.5.0 [2026-09-28]
+## v1.19.7 [2026-09-28]
 
 - Let the battlefield fill the active arena while the score, your health, opponent chips and menu float over just the map area they need, including mobile landscape.
 - Clear live opponent health on victory, results, disconnection and return to the arena browser, so old match information cannot linger over the lobby.
 
-## v19.4.0 [2026-09-28]
+## v1.19.6 [2026-09-28]
 
-- Use the plain numeric version `19.4.0` on dev too; the Home Assistant dev slug still keeps that installation separate from production.
+- Use the plain numeric version `1.19.6` on dev too; the Home Assistant dev slug still keeps that installation separate from production.
 - Overlay game CPU and memory use on the corresponding Pi resource half-circle gauges. The orange segment starts at zero and shows the game's share of total host CPU or RAM; the exact one-core CPU and resident-memory readings remain below.
 - Convert process CPU from one-core percentage to all-core capacity for the overlay, and resident bytes to a share of total RAM. Hide the segment when the denominator or game reading is unavailable.
 
-## v19.3.0 [2026-09-28]
+## v1.19.5 [2026-09-28]
 
 - Remove the artwork pause/play button so the lobby illustration stays unobstructed; hidden-tab and reduced-motion pauses still work.
 - Protect the game from malformed requests and messages that could previously stop the server for everyone.
@@ -47,7 +47,7 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - Prevent one visitor's password guesses from locking out the owner; add leaderboard name removal and reset to the admin page.
 - Count leaderboard results only when at least two people play, and keep frequent players from being displaced by new names.
 - Add browser security headers to restrict scripts, framing and referrer information.
-- Promote the 19.3.0-dev hardening and admin changes alongside the 19.2.2 lobby animation and live battle strip.
+- Promote the 1.19.5-dev hardening and admin changes alongside the 1.19.4 lobby animation and live battle strip.
 - Preserve the production Home Assistant slug `tank_frenzy`, default host port `8765`, app name and `/data/leaderboard.json` across the upgrade.
 - Security: a single crafted message or web request could stop the game server for everyone. Malformed input now closes only its own connection.
 - Fair-use limits so one visitor cannot fill the server: 6 open arenas and 32 connections per address (16 not yet in an arena), 256 in total; arenas idle in the waiting room or after a match close after 15 minutes.
@@ -59,7 +59,7 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - `securityHeaders()` on every response; the admin inline script is allowed by a startup SHA-256 hash.
 - `Leaderboard.remove()` / `reset()` and admin routes `GET /leaderboard`, `POST /leaderboard/remove`, `POST /leaderboard/reset`; prune by fewest matches first.
 
-## v19.2.2 [2026-09-28]
+## v1.19.4 [2026-09-28]
 
 - Bring the tested lobby artwork to production: independent tank sprites over a clean quarry, recoil, muzzle flame, expanding burst ring, sparks and smoke, and shaded shells that fly at a constant speed before fading out.
 - Add a compact live battle strip for your kills, kills remaining to win, and every other tank’s kills and health. Team matches use the combined team score and mark teammates.
@@ -70,14 +70,14 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - Strengthen the muzzle burst with a brighter layered flame, an expanding shock ring and extra sparks, visible only during firing.
 - Animate opacity separately from a linear projectile transform; keep pause and reduced-motion behavior for the new blast ring.
 
-## v19.2.1 [2026-09-28]
+## v1.19.3 [2026-09-28]
 
 - Separate the quarry background and transparent tank silhouettes so recoil has no duplicate tank underneath.
 - Add short flickering muzzle flames, sparks and fading smoke; draw shaded pointed shells at a constant speed.
 - Layer the distant tanks and their shots behind the foreground tanks so purple shells pass behind the blue tank.
 - Reuse one transparent sprite atlas and one clean background; animate only browser transforms and opacity, with pause and reduced-motion support.
 
-## v19.2.0 [2026-09-28]
+## v1.19.2 [2026-09-28]
 
 - Remove the baked-in flashes from the lobby picture so tanks only appear to fire during animated shots.
 - Give each tank stronger recoil; show larger shells traveling more slowly between volleys.
@@ -85,7 +85,7 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - Keep the pause control and reduced-motion behavior, with all effects rendered in the browser.
 - Serve a clean idle WebP image as the animated hero's background while preserving the original illustration for reference.
 
-## v19.1.0 [2026-09-27]
+## v1.19.1 [2026-09-27]
 
 - Animate the existing lobby artwork with gentle tank recoil, staggered muzzle flashes and shell streaks.
 - Add an artwork pause control; stop motion outside the lobby, in hidden tabs and when reduced motion is requested.
