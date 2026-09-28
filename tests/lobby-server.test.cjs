@@ -14,8 +14,9 @@ function server(options={}){
     terminate(){this.close();}
   }
   class WSS extends EventEmitter{clients=new Set();close(cb){cb();}}
+  const intervals=[];
   const sandbox={module:{exports:{}},__dirname:require('node:path').resolve(__dirname,'..'),URL,performance,process,Buffer,
-    setInterval(){},clearInterval(){},setTimeout(){},clearTimeout(){},
+    setInterval(fn){intervals.push(fn);},clearInterval(){},setTimeout(){},clearTimeout(){},
     require(name){
       if(name==='node:http')return {createServer(handler){const http=new EventEmitter();http.on('request',handler);http.close=cb=>cb();return http;}};
       if(name==='ws')return {WebSocketServer:WSS,WebSocket:{OPEN:1}};
@@ -33,8 +34,11 @@ function server(options={}){
     response.on('finish',()=>resolve({status,headers,body:Buffer.concat(chunks)}));response.on('error',reject);
     game.server.emit('request',{url,method,headers:requestHeaders},response);
   });}
-  function watch(room,pass){const socket=new Socket();game.wss.emit('connection',socket);socket.emit('message',JSON.stringify({type:'spectate',room,pass}));return socket;}
-  return {game,join,list,read,watch};
+  function connect(){const socket=new Socket();game.wss.emit('connection',socket);return socket;}
+  function watch(room,pass){const socket=connect();socket.emit('message',JSON.stringify({type:'spectate',room,pass}));return socket;}
+  // Runs the 60 Hz loop once; snapshots and housekeeping happen every second call.
+  const tick=()=>intervals[0]();
+  return {game,join,list,read,watch,connect,tick};
 }
 
 test('approved audio is served with the right type/cache policy and unrelated files stay private',async()=>{
@@ -203,10 +207,58 @@ test('players get the country Cloudflare reports, and the leaderboard filters by
   assert.deepEqual((await read('')).countries,[{code:'MY',players:1},{code:'SG',players:1}]);
 });
 
-test('/admin stops accepting passwords after 20 wrong guesses in a minute',async()=>{
-  const s=server({adminPassword:'tank-secret'}),auth=password=>({authorization:'Basic '+Buffer.from('x:'+password).toString('base64')});
-  for(let i=0;i<20;i++)assert.equal((await s.read('/admin/state',{headers:auth('guess'+i)})).status,401);
-  assert.equal((await s.read('/admin/state',{headers:auth('tank-secret')})).status,429,'even the right password waits out the minute');
+test('/admin slows each guesser after 10 wrong passwords a minute without locking out anyone else',async()=>{
+  const s=server({adminPassword:'tank-secret'}),auth=(password,ip)=>({authorization:'Basic '+Buffer.from('x:'+password).toString('base64'),'cf-connecting-ip':ip});
+  for(let i=0;i<10;i++)assert.equal((await s.read('/admin/state',{headers:auth('guess'+i,'203.0.113.9')})).status,401);
+  assert.equal((await s.read('/admin/state',{headers:auth('tank-secret','203.0.113.9')})).status,429,'the guesser waits out the minute');
+  assert.equal((await s.read('/admin/state',{headers:auth('tank-secret','198.51.100.4')})).status,200,'the owner elsewhere still gets in');
+});
+
+test('malformed messages and requests close one connection without stopping the server',async()=>{
+  const s=server({adminPassword:'tank-secret'}),evil={toString:1};
+  for(const message of [{type:'join',room:evil,name:'x'},{type:'spectate',room:'A',pass:evil},{type:'spectate',room:evil,pass:'x'}]){
+    const socket=s.connect();assert.doesNotThrow(()=>socket.emit('message',JSON.stringify(message)));
+  }
+  const owner=s.join('BOTS','create','Ann');
+  assert.doesNotThrow(()=>owner.emit('message',JSON.stringify({type:'bot',action:'skill',skill:evil})));
+  assert.equal(owner.readyState,1,'an unknown skill is simply ignored');assert.equal(s.game.rooms.get('BOTS').botSkill,'normal');
+  assert.equal((await s.read('http://[/')).status,400,'an unparsable address gets 400');
+  assert.equal((await s.read('/health')).status,200);
+});
+
+test('one network can hold at most six arenas; idle arenas close after 15 minutes',()=>{
+  const s=server();
+  for(let i=0;i<6;i++)assert.equal(s.join('MINE'+i,'create').messages[0].type,'welcome');
+  const seventh=s.join('MINE6','create');assert.equal(seventh.messages[0].title,'Too many arenas');assert.equal(seventh.readyState,3);
+  assert.equal(s.join('MINE0','join','Friend').messages[0].type,'welcome','joining existing arenas still works');
+  const room=s.game.rooms.get('MINE1'),ann=[...s.game.rooms.get('MINE1').players.values()][0];assert(ann);
+  room.idleSince=room.time-901;s.tick();s.tick();
+  assert(!s.game.rooms.has('MINE1'),'the idle arena closed');assert(s.game.rooms.has('MINE2'));
+  assert.equal(s.join('MINE6','create').messages[0].type,'welcome','closing one frees a slot');
+});
+
+test('pages send security headers; only the Home Assistant sidebar may frame the game',async()=>{
+  const s=server({adminPassword:'tank-secret'}),page=await s.read('/');
+  const csp=page.headers['Content-Security-Policy'];
+  assert.match(csp,/default-src 'self'/);assert.match(csp,/script-src 'self';/);assert.match(csp,/frame-ancestors 'none'/);assert.match(csp,/object-src 'none'/);
+  assert.equal(page.headers['X-Frame-Options'],'DENY');assert.equal(page.headers['Referrer-Policy'],'no-referrer');
+  const admin=await s.read('/admin',{headers:{authorization:'Basic '+Buffer.from('x:tank-secret').toString('base64')}});
+  const script=/<script>([\s\S]*?)<\/script>/.exec(admin.body.toString())[1],hash=require('node:crypto').createHash('sha256').update(script).digest('base64');
+  assert(admin.headers['Content-Security-Policy'].includes(`script-src 'self' 'sha256-${hash}'`),'the admin script is allowed by its exact hash');
+  assert.doesNotMatch(admin.headers['Content-Security-Policy'],/unsafe-eval|script-src[^;]*unsafe-inline/);
+});
+
+test('the admin can list, remove and reset leaderboard names',async()=>{
+  const s=server({adminPassword:'tank-secret'}),auth={authorization:'Basic '+Buffer.from('x:tank-secret').toString('base64')},post={...auth,'x-tank-admin':'1'};
+  const {Room}=require('../game-server.cjs'),r=new Room('LB'),a=r.add('Ann');r.add('Bo');r.add('Cy');r.winner={id:a.id,name:'Ann'};s.game.leaderboard.record(r);
+  assert.equal((await s.read('/admin/leaderboard')).status,401);
+  assert.deepEqual(JSON.parse((await s.read('/admin/leaderboard',{headers:auth})).body.toString()).players.map(p=>p.name),['Ann','Bo','Cy']);
+  assert.equal((await s.read('/admin/leaderboard/remove?name=bo',{method:'POST',headers:auth})).status,404,'needs the admin header');
+  assert.equal((await s.read('/admin/leaderboard/remove?name=bo',{method:'POST',headers:post})).status,204);
+  assert.equal((await s.read('/admin/leaderboard/remove?name=bo',{method:'POST',headers:post})).status,404);
+  assert.deepEqual(JSON.parse((await s.read('/leaderboard')).body.toString()).players.map(p=>p.name),['Ann','Cy']);
+  assert.equal((await s.read('/admin/leaderboard/reset',{method:'POST',headers:post})).status,204);
+  assert.deepEqual(JSON.parse((await s.read('/leaderboard')).body.toString()).players,[]);
 });
 
 test('the admin page can live at a private address, and /admin then does not exist',async()=>{

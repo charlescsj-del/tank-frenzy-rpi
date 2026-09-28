@@ -28,8 +28,9 @@ test('names match regardless of case, the file survives a restart, and old names
     const board=new Leaderboard(file);board.record(finished('ffa','Ann'));
     const r=finished('ffa','Ann');r.players.get([...r.players.keys()][0]).name='ANN';board.record(r);board.save();
     const reloaded=new Leaderboard(file);assert.equal(reloaded.top()[0].matches,2);assert.equal(reloaded.top()[0].name,'ANN');assert.equal(reloaded.top()[0].damageDealt,146);
-    for(let i=0;i<210;i++){const room=new Room('P'+i),p=room.add('Player'+i);room.winner={id:p.id,name:p.name};reloaded.record(room);}
-    assert.equal(reloaded.entries.size,200);assert(!reloaded.entries.has('ann'),'the least recently seen names go first');
+    for(let i=0;i<105;i++){const room=new Room('P'+i),p=room.add('Player'+i);room.add('Rival'+i);room.winner={id:p.id,name:p.name};reloaded.record(room);}
+    assert.equal(reloaded.entries.size,200);assert(reloaded.entries.has('ann'),'a flood of one-match names cannot push out a regular');
+    assert(!reloaded.entries.has('player0')&&reloaded.entries.has('player104'),'among one-match names the oldest go first');
     fs.writeFileSync(file,'{not json');assert.equal(new Leaderboard(file).top().length,0,'a damaged file starts fresh');
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
@@ -72,4 +73,17 @@ test('old recent match logs without damage still aggregate alongside new matches
     assert.equal(board.top({period:'day'})[0].damageDealt,73);
     assert.equal(board.top({period:'day'})[0].deaths,3);
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('matches need two people: wins against bots alone are not ranked',()=>{
+  const board=new Leaderboard(),r=new Room('SOLO'),a=r.add('Ann');r.botCommand(a,{action:'add'});r.botCommand(a,{action:'add'});
+  a.kills=10;r.winner={id:a.id,name:'Ann'};board.record(r);
+  assert.equal(board.top().length,0);assert.equal(board.matches.length,0);
+});
+
+test('the admin can remove one name everywhere or reset the whole leaderboard',()=>{
+  const board=new Leaderboard();board.record(finished('ffa','Ann'));board.record(finished('ffa','bo'));
+  assert.equal(board.remove('BO'),true,'names match regardless of case');assert.equal(board.remove('bo'),false);assert.equal(board.remove(''),false);
+  for(const period of ['day','week','month','all'])assert.deepEqual(board.top({period}).map(p=>p.name),['Ann','Cy']);
+  board.reset();assert.equal(board.top().length,0);assert.equal(board.matches.length,0);
 });

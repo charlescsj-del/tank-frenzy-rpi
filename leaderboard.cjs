@@ -25,9 +25,11 @@ class Leaderboard {
       this.matches=Array.isArray(data.matches)?data.matches.filter(m=>Number.isFinite(m?.t)&&Array.isArray(m.players)):[];
     }catch(error){console.error('Tank Frenzy: ignoring unreadable leaderboard:',error.message);}
   }
-  // Called once when a match has a winner. Bots are not ranked.
+  // Called once when a match has a winner. Bots are not ranked, and a match counts only
+  // with at least two people in it, so wins cannot be farmed against bots alone.
   record(room){
     const now=this.now(),winner=room.winner,players=[];
+    if([...room.players.values()].filter(p=>!p.bot&&String(p.name||'').trim()).length<2)return;
     for(const p of room.players.values()){
       const name=String(p.name||'').trim();if(p.bot||!name)continue;
       const key=name.toLowerCase(),won=room.settings.mode==='teams'?p.team!=null&&p.team===winner?.team:p.id===winner?.id;
@@ -41,8 +43,19 @@ class Leaderboard {
   }
   prune(now){
     this.matches=this.matches.filter(m=>m.t>=now-historyDays*day).slice(-matchLimit);
-    if(this.entries.size>nameLimit)for(const [key] of [...this.entries].sort((a,b)=>a[1].lastPlayed-b[1].lastPlayed).slice(0,this.entries.size-nameLimit))this.entries.delete(key);
+    // Over 200 names, drop those with the fewest matches first (oldest first among equals), so a
+    // burst of throwaway names pushes out other throwaway names, not established players.
+    if(this.entries.size>nameLimit)for(const [key] of [...this.entries].sort((a,b)=>a[1].matches-b[1].matches||a[1].lastPlayed-b[1].lastPlayed).slice(0,this.entries.size-nameLimit))this.entries.delete(key);
   }
+  // Admin: forget one name everywhere (all-time and recent matches), or everything.
+  remove(name){
+    const key=String(name).trim().toLowerCase(),seen=m=>m.players.some(p=>p.name.toLowerCase()===key);
+    if(!key||!this.entries.has(key)&&!this.matches.some(seen))return false;
+    this.entries.delete(key);
+    this.matches=this.matches.map(m=>seen(m)?{...m,players:m.players.filter(p=>p.name.toLowerCase()!==key)}:m).filter(m=>m.players.length);
+    this.scheduleSave();return true;
+  }
+  reset(){this.entries.clear();this.matches=[];this.scheduleSave();}
   rows(period){
     if(period==='all')return [...this.entries.values()];
     const since=periodStart(period,this.now()),totals=new Map();

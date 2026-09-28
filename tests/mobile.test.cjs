@@ -143,6 +143,13 @@ test('battle HUD shows goal, remaining kills, opponent score and live health',()
   c.run('battle.players[1].hp=2;battle.players[1].kills=7;updateHud(battle)');
   assert.equal(chips.children[0].children[1].textContent,'7 K');
   assert.equal(chips.children[0].children[3].textContent,'2/10');
+  assert(c.elements.get('arena').classList.contains('battle-live'));
+  c.run('battle.winner={id:"me"};updateHud(battle)');
+  assert.equal(hud.hidden,true,'a winner hides opponent health even before a phase update');
+  assert.equal(chips.children.length,0);assert(!c.elements.get('arena').classList.contains('battle-live'));
+  c.run('battle.winner=null;updateHud(battle);networkMessage("Find your battle.","Pick an arena.")');
+  assert.equal(hud.hidden,true,'returning to the lobby clears the stale live HUD');
+  assert.equal(chips.children.length,0);assert(!c.elements.get('arenaHeader').classList.contains('has-battle-hud'));
   c.run('battle.phase="results";updateHud(battle)');assert.equal(hud.hidden,true);
 });
 
