@@ -2,6 +2,34 @@
 
 App package versions follow `config.yaml`. Game versions below follow `shared.js`, `package.json` and `package-lock.json`.
 
+## App 19.3.0 — Tank Frenzy v19.3.0
+
+- Protect the game from malformed requests and messages that could previously stop the server for everyone.
+- Limit excessive connections and idle arenas while retaining space for players sharing one network.
+- Prevent one visitor's password guesses from locking out the owner; add leaderboard name removal and reset to the admin page.
+- Count leaderboard results only when at least two people play, and keep frequent players from being displaced by new names.
+- Add browser security headers to restrict scripts, framing and referrer information.
+
+## 19.3.0
+
+- Promote the 19.3.0-dev hardening and admin changes alongside the 19.2.2 lobby animation and live battle strip.
+- Preserve the production Home Assistant slug `tank_frenzy`, default host port `8765`, app name and `/data/leaderboard.json` across the upgrade.
+
+## App 19.3.0-dev — Tank Frenzy v19.3.0-dev
+
+- Security: a single crafted message or web request could stop the game server for everyone. Malformed input now closes only its own connection.
+- Fair-use limits so one visitor cannot fill the server: 6 open arenas and 32 connections per address (16 not yet in an arena), 256 in total; arenas idle in the waiting room or after a match close after 15 minutes.
+- Admin sign-in slows only the address that guesses wrong (10 tries a minute), so strangers can no longer lock you out.
+- Leaderboard: only matches with at least two people count, a flood of made-up names can no longer push out regular players, and the admin page can remove a name or reset the leaderboard.
+- Browser security headers: a Content-Security-Policy that allows only the game's own files, no framing by other sites, and no referrer.
+
+## 19.3.0-dev
+
+- `text()` for untrusted message fields and a `typeof` check for bot skills; `try/catch` around the HTTP and WebSocket handlers; a missing static file now ends its response.
+- `visitorOf()` (`CF-Connecting-IP`, else socket address) with per-visitor connection, pending and arena limits; `closeRoom()` shared by admin End arena and the 15-minute idle close.
+- `securityHeaders()` on every response; the admin inline script is allowed by a startup SHA-256 hash.
+- `Leaderboard.remove()` / `reset()` and admin routes `GET /leaderboard`, `POST /leaderboard/remove`, `POST /leaderboard/reset`; prune by fewest matches first.
+
 ## App 19.2.2 — Tank Frenzy v19.2.2
 
 - Bring the tested lobby artwork to production: independent tank sprites over a clean quarry, recoil, muzzle flame, expanding burst ring, sparks and smoke, and shaded shells that fly at a constant speed before fading out.

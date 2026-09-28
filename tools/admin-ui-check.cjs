@@ -11,7 +11,9 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
  try{
   browser=await chromium.launch({headless:true});
   const page=await browser.newPage({viewport:{width:1440,height:1000},httpCredentials:{username:'admin',password:'review-only-password'},reducedMotion:'reduce'});
-  page.on('pageerror',e=>errors.push(e.message));await page.goto(base+'/private-test');
+  // The Content-Security-Policy must not block anything the pages use.
+  const blocked=message=>{if(/Content Security Policy|Refused to/i.test(message.text()))errors.push(message.text());};
+  page.on('pageerror',e=>errors.push(e.message));page.on('console',blocked);await page.goto(base+'/private-test');
   await page.waitForFunction(()=>document.getElementById('freshness').textContent.startsWith('Live'));
   await page.waitForTimeout(1200);
   const state=await page.evaluate(async()=>{const value=await fetch(adminRoot+'/state').then(r=>r.json());clearTimeout(timer);refreshing=true;return value;});
@@ -41,16 +43,25 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   await page.unroute('**/private-test/state');await page.evaluate(async()=>{refreshing=false;await refresh();clearTimeout(timer);refreshing=true});
   assert.equal(await page.locator('#freshness').getAttribute('data-stale'),'false');assert(await page.locator('.room').count()>0);
   game.rooms.delete(room.code);
+  room.add('Rookie');// Matches count only with two people.
   const player=room.players.values().next().value;player.kills=3;player.deaths=2;player.damageDealt=27;room.winner={id:player.id,name:player.name};game.leaderboard.record(room);
   await page.goto(base+'/');await page.locator('#leaderboardButton').click();
   assert.deepEqual(await page.locator('#leaderboard thead th').allTextContents(),['#','Player','Wins','Matches','Kills','Damage','Deaths','K/D']);
+  await page.waitForFunction(()=>document.querySelectorAll('#leaderboardRows tr').length>0);
   assert.deepEqual(await page.locator('#leaderboardRows tr:first-child td').allTextContents(),['🥇','Commander','1','1','3','27','2','1.5']);
   await page.setViewportSize({width:390,height:844});
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'phone page must not overflow');
   assert(await page.locator('.leaderboard-body').evaluate(el=>el.scrollWidth>el.clientWidth),'wide leaderboard scrolls within the dialog on a phone');
   await page.screenshot({path:out+'/leaderboard-phone.png',fullPage:true});
+  await page.setViewportSize({width:1440,height:1000});await page.goto(base+'/private-test');
+  await page.waitForFunction(()=>document.querySelectorAll('#boardRows tr').length===3);
+  page.once('dialog',dialog=>dialog.accept());await page.locator('#boardRows tr',{hasText:'Rookie'}).getByRole('button',{name:'Remove'}).click();
+  await page.waitForFunction(()=>document.querySelectorAll('#boardRows tr').length===2);assert.match(await page.locator('#boardRows').textContent(),/Commander/);
+  assert.equal(game.leaderboard.top().length,2,'Remove deletes the name on the server');
+  await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'admin leaderboard fits a phone');
+  await page.locator('.board').screenshot({path:out+'/admin-leaderboard-phone.png'});await page.setViewportSize({width:1440,height:1000});await page.locator('.board').screenshot({path:out+'/admin-leaderboard.png'});console.log('Admin leaderboard lists and removes names.');
   const touch=await browser.newPage({viewport:{width:390,height:780},hasTouch:true,isMobile:true,deviceScaleFactor:1,reducedMotion:'reduce'});
-  touch.on('pageerror',e=>errors.push(e.message));await touch.goto(base+'/');
+  touch.on('pageerror',e=>errors.push(e.message));touch.on('console',blocked);await touch.goto(base+'/');
   const combat={type:'state',room:'QUARRY',settings:{mode:'teams',bouncing:true,powers:true},phase:'playing',countdownIn:0,ownerId:null,teamScores:[4,3],pickups:[],map:{id:777,walls:[],spawns:[[90,90],[1510,950],[1510,90],[90,950]]},time:42,winner:null,rematchIn:0,rematchVotes:[],players:[
     {id:'me',name:'Commander',slot:0,team:0,x:800,y:520,a:0,aim:0,hp:10,kills:2,deaths:1,shots:10,hits:5,life:1,connected:true},
     {id:'ally',name:'Moss',slot:2,team:0,x:850,y:550,a:0,aim:0,hp:10,kills:2,deaths:1,shots:10,hits:5,life:1,connected:true},

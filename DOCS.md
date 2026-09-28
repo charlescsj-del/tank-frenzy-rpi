@@ -20,13 +20,13 @@ The complete repository must be inside `/addons/tank_frenzy`, with `config.yaml`
 ## Configuration
 
 - `admin_path`: Optional private address of the admin page, for example `hq-7f3k` for `https://your-domain/hq-7f3k`. Nothing in the game links to it, and the default `/admin` stops existing once you change it. Letters, digits, `-` and `_`, 3–64 characters.
-- `admin_password`: Optional. Required to open the admin page on the game port and your public address; the browser asks for it (any user name works). At least 8 characters; after 20 wrong passwords in a minute, sign-in pauses for the rest of that minute. Leave it empty to keep the admin page off the public address. Inside the Home Assistant sidebar, type the admin address after the sidebar URL instead; it opens without a password because Home Assistant has already signed you in. For stronger protection on a Cloudflare address, you can also add a Cloudflare Access rule for the admin path.
+- `admin_password`: Optional. Required to open the admin page on the game port and your public address; the browser asks for it (any user name works). At least 8 characters. After 10 wrong passwords in a minute from one address, sign-in pauses for that address for the rest of the minute, so someone guessing cannot lock you out from elsewhere. Leave it empty to keep the admin page off the public address. Inside the Home Assistant sidebar, type the admin address after the sidebar URL instead; it opens without a password because Home Assistant has already signed you in. For stronger protection on a Cloudflare address, you can also add a Cloudflare Access rule for the admin path.
 - `notify_service`: Optional Home Assistant notify service that announces each newly opened room, for example `notify.mobile_app_your_phone` or `notify.notify`. The message names the player, room and mode; with `public_url` set, tapping it opens the room. At most one notification is sent per minute. Leave empty to turn notifications off. Find your service names under **Developer tools → Actions** by searching for `notify.`.
 - `public_url`: Optional absolute game URL used for invitations. Example: `http://192.168.1.50:8765`. For a reverse proxy, use its HTTPS address. Do not include a room query, username, password, or fragment. Restart after changing it.
 - **Network → 8765/tcp**: Host port for LAN players. Default: `8765`. Set a different free host port if occupied, or disable to use only Home Assistant ingress.
 - **Show in sidebar**: Opens the game through Home Assistant authentication. The dedicated ingress listener accepts only the Supervisor proxy at `172.30.32.2`.
 
-The app has no HA configuration/media mappings. It uses the Home Assistant API only to send the optional notifications. `/data` holds Supervisor options and `leaderboard.json`: all-time totals (wins, matches, kills, damage dealt, deaths and country by player name, at most 200 names) plus the last 62 days of match results, which power the Today, This week and This month views. It is saved about a second after every finished match and again when the app stops, written to a temporary file first so a power cut cannot corrupt it. It survives app restarts, updates and Pi reboots, and is included in Home Assistant backups of the app; uninstalling the app deletes it. Existing leaderboard files keep their scores, but damage from matches before v1.16.0 was not recorded and starts at zero. Delete the file with the app stopped to reset the leaderboard. Days and weeks (Monday to Sunday) follow Home Assistant's time zone. Rooms and matches in progress are not persisted: app restarts/updates end active matches.
+The app has no HA configuration/media mappings. It uses the Home Assistant API only to send the optional notifications. `/data` holds Supervisor options and `leaderboard.json`: all-time totals (wins, matches, kills, damage dealt, deaths and country by player name, at most 200 names) plus the last 62 days of match results, which power the Today, This week and This month views. It is saved about a second after every finished match and again when the app stops, written to a temporary file first so a power cut cannot corrupt it. It survives app restarts, updates and Pi reboots, and is included in Home Assistant backups of the app; uninstalling the app deletes it. Existing leaderboard files keep their scores, but damage from matches before v1.16.0 was not recorded and starts at zero. Only matches with at least two people are saved. To remove one name or reset everything, use the Leaderboard section at the bottom of the admin page (or delete the file with the app stopped). When more than 200 names exist, those with the fewest matches are dropped first, so a flood of made-up names cannot push out regular players. Days and weeks (Monday to Sunday) follow Home Assistant's time zone. Rooms and matches in progress are not persisted: app restarts/updates end active matches.
 
 ## Reading the admin resource charts
 
@@ -41,7 +41,7 @@ The app has no HA configuration/media mappings. It uses the Home Assistant API o
 1. The app log should show listeners on game port `8765` and internal ingress port `8099`.
 2. Open **Web UI**: the lobby, banner and room list should load.
 3. Open `http://YOUR_PI_IP:8765` on two devices. Create and join one arena, set a win count between 5 and 50 (default 10), start a round, move, shoot, and confirm sound after interacting.
-4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `19.2.2`.
+4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `19.3.0`.
 5. Test an invitation generated from the sidebar after setting `public_url`.
 
 ## Updates
@@ -65,6 +65,14 @@ If you already run Cloudflare Tunnel, add a public hostname whose service is `ht
 
 Each room holds four tanks, and the server allows 32 rooms at once. Snapshots go out 30 times a second at about 0.7 Mbit/s per player in a busy match, so a group of 19 people (five rooms) needs roughly 13 Mbit/s of upload and a modest share of one Pi 4 core. Bots add a little CPU and no extra connections. Wi-Fi quality on the players' side usually matters more than the Pi.
 
+Fair-use limits protect the server from one visitor filling it: each address can keep 32 connections open, 16 of them not yet in an arena, and have 6 arenas open; the whole server takes 256 connections. Arenas left waiting or finished for 15 minutes close. Players behind Cloudflare are told apart by the `CF-Connecting-IP` header; LAN players by their own address; the Home Assistant sidebar is not limited.
+
+## Security
+
+- The game and admin pages send a Content-Security-Policy that allows only the app's own scripts, sounds, images and connections, and forbids other sites from framing them (the Home Assistant sidebar may still frame its own copy). `Referrer-Policy: no-referrer` keeps watch links out of other sites' logs.
+- A malformed message or web request closes only its own connection; it can no longer stop the game for everyone.
+- Protect the admin page further with a Cloudflare Access rule on your `admin_path`. Anyone who can reach port 8765 directly (your LAN, or the Internet if you forward it) can set the country and address headers themselves, so keep that port off the Internet and use the tunnel.
+
 ## Troubleshooting
 
 | Symptom | Check |
@@ -82,5 +90,7 @@ Each room holds four tanks, and the server allows 32 rooms at once. Snapshots go
 | Admin page shows "Not found" | On the game port or public address it needs `admin_password`; with `admin_path` set, `/admin` no longer exists. Open `/<admin_path>` and restart after changing options. |
 | No room notifications | Check `notify_service` under **Developer tools → Actions**; at most one notification is sent per minute. |
 | Leaderboard has no regions | Only players arriving through Cloudflare have a country. |
+| "Too many arenas" | One address already has 6 open arenas. Join one of them, or end idle ones from the admin page. |
+| A finished solo match is missing from the leaderboard | Only matches with at least two people are ranked. |
 
 The container uses the maintained `node:22-alpine` tag; patch updates may change the underlying image on future rebuilds. ARM64 build success and real-device performance are separate checks.

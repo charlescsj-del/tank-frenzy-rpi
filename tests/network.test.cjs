@@ -142,3 +142,15 @@ test('snapshots are compact: minimal shells, rounded numbers and an optional map
   assert(decoded.shells.every(s=>Number.isInteger(s.x*10)));
   assert(encodeState(lean).length<JSON.stringify(full).length);
 });
+
+test('real network: each visitor may hold only a few connections that have not joined an arena',async t=>{
+  const game=createGameServer();game.server.listen(0,'127.0.0.1');await once(game.server,'listening');
+  t.after(()=>game.close());const url='ws://127.0.0.1:'+game.server.address().port+'/ws',sockets=[];
+  t.after(()=>{for(const ws of sockets)ws.terminate();});
+  const open=(headers={})=>new Promise(resolve=>{const ws=new WebSocket(url,{headers});sockets.push(ws);ws.on('open',()=>resolve(true));ws.on('error',()=>resolve(false));});
+  for(let i=0;i<16;i++)assert.equal(await open({'cf-connecting-ip':'203.0.113.7'}),true);
+  assert.equal(await open({'cf-connecting-ip':'203.0.113.7'}),false,'a 17th idle connection from one visitor is refused');
+  assert.equal(await open({'cf-connecting-ip':'198.51.100.2'}),true,'other visitors still connect');
+  const joined=sockets[0];joined.send(JSON.stringify({type:'join',room:'LIMIT',name:'Ann'}));await once(joined,'message');
+  assert.equal(await open({'cf-connecting-ip':'203.0.113.7'}),true,'joining an arena frees a waiting slot');
+});

@@ -40,6 +40,8 @@ button.danger{border-color:#c46a4a;background:#ffe5da;color:#9b3b1d}
 .resource p{font-size:12px;line-height:1.5;margin:5px 0}.resource .detail{font-weight:900}.resource .subtle{color:var(--muted)}.resource .game-usage{border-top:1px dashed var(--line);padding-top:10px;margin-top:10px;font-size:12px;font-weight:800}.monitor.stale .resources{opacity:.6}
 .load-head{display:flex;gap:10px;align-items:baseline;justify-content:space-between;margin:12px 0 8px}.load-head strong{font-size:29px;line-height:1;font-variant-numeric:tabular-nums}.load-head span{color:var(--muted);font-size:12px}.load-averages{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}.load-period{border-radius:10px;background:#f1f3e3;padding:9px}.load-period b{display:block;font-size:18px;font-variant-numeric:tabular-nums}.load-period span{font-size:10px;color:var(--muted)}.load-bar{height:5px;margin:7px 0;background:#dce3c8;border-radius:3px;position:relative;overflow:hidden}.load-bar::after{content:'';position:absolute;width:2px;background:#627b5a;left:50%;top:0;bottom:0}.load-bar i{display:block;height:100%;width:0;background:var(--meter);transition:width .5s}
 .trend{position:relative;margin-top:14px;border-top:1px dashed var(--line);padding-top:8px}.trend-labels{display:flex;justify-content:space-between;gap:6px;font-size:10px;color:var(--muted);font-weight:800}.trend svg{display:block;width:100%;height:62px;margin:3px 0}.trend polyline{fill:none;stroke:var(--meter);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}.trend line{stroke:#91a27b;stroke-dasharray:4 4}.trend circle{fill:var(--meter)}.load-note{font-size:11px!important;color:var(--muted);margin-top:9px!important}
+.board{padding:0 20px 28px}.board-heading{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:10px}.board h2{font-size:18px;margin:0 auto 0 0}.board-heading button{flex:0 0 auto}
+.board-card{border:2px solid var(--line);border-radius:18px;background:var(--card);padding:6px 12px;overflow-x:auto}.board table td{padding:7px 4px}.board td b{display:block}.board td small{display:block;margin-top:2px;font-size:12px;color:var(--muted)}.board td button{min-height:30px;padding:3px 10px;flex:none;display:inline-grid}.board .note{font-size:12px;font-weight:700;color:var(--muted);margin:8px 0 0}
 @media(max-width:1000px){.resources{grid-template-columns:1fr 1fr}.load-resource{grid-column:1/-1}.load-averages{margin:8px 0}.trend svg{height:70px}}
 @media(max-width:540px){header{padding:12px}h1{font-size:20px}.stats{padding:12px;grid-template-columns:repeat(2,minmax(0,1fr))}.monitor{padding:4px 12px 16px}.resources{gap:10px}.resource{padding:12px 10px}.resource-top{flex-wrap:wrap;gap:4px}.resource h3{font-size:13px}.resource .game-usage{font-size:11px}.gauge .reading{font-size:32px}.freshness{font-size:10px}.monitor h2{font-size:16px}main{padding:0 12px 20px}}
 @media(prefers-reduced-motion:reduce){.gauge .fill,.load-bar i{transition:none}}
@@ -70,6 +72,10 @@ button.danger{border-color:#c46a4a;background:#ffe5da;color:#9b3b1d}
 <p class="load-note" id="loadNote">Load includes tasks waiting for disk. It is not a CPU usage percentage. Bar markers and the dashed line show one task per CPU core.</p></article>
 </div></section>
 <main id="rooms" aria-live="polite"></main>
+<section class="board" aria-labelledby="boardTitle">
+<div class="board-heading"><h2 id="boardTitle">Leaderboard</h2><button type="button" id="boardRefresh">↻ Refresh</button><button type="button" class="danger" id="boardReset">Reset leaderboard</button></div>
+<div class="board-card"><table><tbody id="boardRows"></tbody></table><p class="note" id="boardNote">Loading…</p></div>
+</section>
 <script>
 'use strict';
 // The admin page can live at any private address; the game itself is one level up.
@@ -210,8 +216,30 @@ async function refresh(){
   finally{clearTimeout(timeout);refreshing=false;}
   timer=setTimeout(refresh,document.hidden?5000:500);
 }
+// Leaderboard moderation: remove a name (offensive or impersonating) or start over.
+async function loadBoard(){
+  try{
+    const response=await fetch(adminRoot+'/leaderboard',{cache:'no-store'});if(!response.ok)throw Error(response.status);
+    const {players}=await response.json();
+    $('boardRows').replaceChildren(...players.map(p=>{
+      const remove=el('button',{type:'button',className:'danger',textContent:'Remove'});
+      remove.addEventListener('click',async()=>{
+        if(!confirm('Remove '+p.name+' from the leaderboard, including recent matches?'))return;
+        await fetch(adminRoot+'/leaderboard/remove?name='+encodeURIComponent(p.name),{method:'POST',headers:{'X-Tank-Admin':'1'}});loadBoard();
+      });
+      const stats=p.wins+(p.wins===1?' win':' wins')+' · '+p.matches+(p.matches===1?' match':' matches')+' · '+p.kills+(p.kills===1?' kill':' kills');
+      return el('tr',{},el('td',{},el('b',{textContent:p.name+(p.country?' '+flag(p.country):'')}),el('small',{textContent:stats})),el('td',{className:'num'},remove));
+    }));
+    $('boardNote').textContent=players.length?players.length+' names, all time. Only matches with at least two people count.':'No finished matches yet. Only matches with at least two people count.';
+  }catch{$('boardNote').textContent='Cannot load the leaderboard. Try Refresh.';}
+}
+$('boardRefresh').addEventListener('click',loadBoard);
+$('boardReset').addEventListener('click',async()=>{
+  if(!confirm('Reset the whole leaderboard? All names, all-time totals and recent matches are deleted. This cannot be undone.'))return;
+  await fetch(adminRoot+'/leaderboard/reset',{method:'POST',headers:{'X-Tank-Admin':'1'}});loadBoard();
+});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
-refresh();
+refresh();loadBoard();
 </script>
 </body>
 </html>

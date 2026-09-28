@@ -53,7 +53,7 @@ class Room {
     if(this.phase!=='waiting'||!p?.connected||p.id!==this.ownerId)return false;
     if(msg.action==='add')return !!this.add('',{bot:true});
     if(msg.action==='remove'){const bot=[...this.players.values()].reverse().find(t=>t.bot);if(!bot)return false;this.players.delete(bot.id);return true;}
-    if(msg.action==='skill'&&Object.hasOwn(Bots.skills,msg.skill)){this.botSkill=msg.skill;return true;}
+    if(msg.action==='skill'&&typeof msg.skill==='string'&&Object.hasOwn(Bots.skills,msg.skill)){this.botSkill=msg.skill;return true;}
     return false;
   }
   start(p){
