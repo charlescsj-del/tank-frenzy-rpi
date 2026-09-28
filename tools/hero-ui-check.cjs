@@ -19,10 +19,11 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
   assert.equal(alpha[0],0);assert.equal(alpha[1],0);assert(alpha[2]>250,'tank is opaque but the surrounding quarry is transparent');
   const before=await motion.evaluate(el=>el.getAnimations()[0].currentTime);await page.waitForTimeout(200);
   assert(await motion.evaluate(el=>el.getAnimations()[0].currentTime)>before,'tank animation advances');
-  await page.locator('#heroMotion').click();assert.equal(await page.locator('#heroMotion').getAttribute('aria-pressed'),'true');
+  assert.equal(await page.locator('#heroMotion').count(),0,'the artwork has no visible playback control');
+  await page.evaluate(()=>document.body.classList.add('hero-suspended'));
   await page.waitForFunction(()=>{const a=document.querySelector('.hero-tank').getAnimations()[0];return a.playState==='paused'&&!a.pending;});
   const paused=await motion.evaluate(el=>el.getAnimations()[0].currentTime);await page.waitForTimeout(150);
-  assert(Math.abs(await motion.evaluate(el=>el.getAnimations()[0].currentTime)-paused)<1,'pause stops animation');
+  assert(Math.abs(await motion.evaluate(el=>el.getAnimations()[0].currentTime)-paused)<1,'hidden artwork stops animation');
   const shell=page.locator('#heroLayer-orange .hero-shell');
   await page.evaluate(()=>document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=0)));
   assert.equal(await flash.evaluate(el=>getComputedStyle(el).opacity),'0','no flash between shots');
@@ -44,30 +45,29 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
    assert(await flash.evaluate(el=>Number(getComputedStyle(el).opacity)>.3),'muzzle flash appears during the shot');
    assert(await ring.evaluate(el=>Number(getComputedStyle(el).opacity)>.1),'expanding muzzle ring appears during the shot');
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal page overflow');
-   const button=await page.locator('#heroMotion').boundingBox();assert(button.width>=44&&button.height>=44,'touch sized pause control');
    await page.screenshot({path:out+'/lobby-'+width+'.png',fullPage:true});
    if(width===390){await page.evaluate(()=>document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=0)));await page.screenshot({path:out+'/lobby-idle-390.png',fullPage:true});}
   }
   await page.setViewportSize({width:1440,height:900});
   await page.evaluate(()=>{document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=0));document.querySelectorAll('#heroLayer-purple .hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=6100));});
   await page.screenshot({path:out+'/lobby-purple-behind-blue.png',fullPage:true});
-  await page.locator('#heroMotion').click();assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'running');
+  await page.evaluate(()=>document.body.classList.remove('hero-suspended'));assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'running');
   await page.locator('#createRoom').click();assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'paused','animation pauses outside lobby');
   await page.locator('#browseRooms').click();
   await page.evaluate(()=>{document.body.classList.add('hero-suspended');});assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'paused');
   await page.evaluate(()=>document.body.classList.remove('hero-suspended'));
   await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationName),'none');
-  assert.equal(await flash.evaluate(el=>getComputedStyle(el).opacity),'0');assert.equal(await ring.evaluate(el=>getComputedStyle(el).opacity),'0');assert.equal(await page.locator('#heroMotion').isVisible(),false);
+  assert.equal(await flash.evaluate(el=>getComputedStyle(el).opacity),'0');assert.equal(await ring.evaluate(el=>getComputedStyle(el).opacity),'0');
   // Review the entire composition as well as the cropped responsive lobby.
   const review=await browser.newPage({viewport:{width:2048,height:768},reducedMotion:'no-preference'});
   const css=await page.locator('style').textContent(),svg=await page.locator('.hero-art').evaluate(el=>el.outerHTML);
-  await review.setContent('<base href="'+page.url()+'"><style>'+css+' body{margin:0;padding:0;overflow:hidden}.hero-art{display:block!important;width:2048px!important;height:768px!important}</style><body class="in-lobby hero-paused">'+svg+'</body>');
+  await review.setContent('<base href="'+page.url()+'"><style>'+css+' body{margin:0;padding:0;overflow:hidden}.hero-art{display:block!important;width:2048px!important;height:768px!important}</style><body class="in-lobby hero-suspended">'+svg+'</body>');
   await review.evaluate(async()=>{for(const path of ['hero-quarry.webp','hero-tanks.webp']){const img=new Image();img.src=path;await img.decode();}});
   for(const [name,time] of [['idle',0],['recoil',810],['fade',2880],['depth',6100]]){
     await review.evaluate(({name,time})=>document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=(name==='depth'&&!el.closest('#heroLayer-purple'))||(name==='fade'&&!el.closest('#heroLayer-orange'))?0:time)),{name,time});
     await review.screenshot({path:out+'/artwork-'+name+'.png'});
   }
   await review.close();
-  assert.deepEqual(errors,[]);console.log('Hero movement, flashes, pause, lobby visibility, reduced motion, version badge and responsive layouts passed.');
+  assert.deepEqual(errors,[]);console.log('Hero movement, flashes, hidden-tab pause, lobby visibility, reduced motion, version badge and responsive layouts passed.');
  }finally{await browser?.close();await game.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

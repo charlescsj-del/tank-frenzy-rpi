@@ -4,7 +4,7 @@ Install Tank Frenzy as a Home Assistant app (formerly called an add-on). The Pi 
 
 **Tank Frenzy v19.3.0**, developed directly in this repository. Touch play uses translucent controls across the left and right halves of the screen; creators can choose a 5–50 kill win target. Mobile close view points toward off-screen opponents; 2 vs 2 marks allies and enemies and groups match results by team. The persistent leaderboard shows damage dealt and deaths. The Pi app provides separate Home Assistant sidebar and LAN listeners.
 
-During battle, the top strip shows your score, kills needed to win and the other tanks' kills and health. In team play, the score counts both teammates' kills. The lobby artwork fires steadily moving shells that fade near the end, with a brief layered muzzle blast; its motion can be paused.
+During battle, the top strip shows your score, kills needed to win and the other tanks' kills and health. In team play, the score counts both teammates' kills. The lobby artwork fires steadily moving shells that fade near the end, with a brief layered muzzle blast; animation stops outside the lobby, when the tab is hidden, or when reduced motion is preferred.
 
 ## Install
 
