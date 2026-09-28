@@ -22,6 +22,13 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   await page.evaluate(state=>{for(let i=0;i<=65;i++){state.system.sampledAt=100000+i*1000;state.system.load[0]=i===65?1.48:.7+i*.01+Math.sin(i/7)*.3;render(state)}},fixture);
   assert.equal(await page.locator('#cpuValue').textContent(),'36%');assert.match(await page.locator('#gameCpu').textContent(),/16.2% of one core/);
   assert.equal(await page.locator('#memoryValue').textContent(),'61%');assert.equal(await page.locator('#loadRatio1').textContent(),'0.37 per core');
+  const gameCpuArc=Number((await page.locator('#cpuGameArc').getAttribute('stroke-dasharray')).split(' ')[0]);
+  const gameMemoryArc=Number((await page.locator('#memoryGameArc').getAttribute('stroke-dasharray')).split(' ')[0]);
+  assert(Math.abs(gameCpuArc-16.2/4)<.001,'game CPU uses the whole Pi as the gauge denominator');
+  assert(Math.abs(gameMemoryArc-72/4096*100)<.001,'game RSS uses total RAM as the gauge denominator');
+  assert.equal(await page.locator('#cpuGameValue').textContent(),'Game 4.0%');
+  assert.equal(await page.locator('#memoryGameValue').textContent(),'Game 1.8%');
+  assert.equal(await page.locator('#cpuGameArc').evaluate(el=>getComputedStyle(el).visibility),'visible');
   assert.equal(await page.evaluate(()=>loadHistory.length),61);assert.equal(await page.locator('#cpuGauge').getAttribute('aria-valuenow'),'36.4');
   for(const width of [1440,768,390,320]){
     await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow at '+width);
@@ -35,6 +42,8 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:out+'/admin-high.png',fullPage:true});
   const missing=JSON.parse(JSON.stringify(fixture));Object.assign(missing.system,{sampledAt:180000,cpuPercent:null,cores:null,load:[null,null,null],memory:{},game:{}});
   await page.evaluate(state=>render(state),missing);assert.equal(await page.locator('#cpuValue').textContent(),'—');assert.equal(await page.locator('#cpuGauge').getAttribute('aria-valuenow'),null);assert.equal(await page.locator('#loadLevel').textContent(),'Unavailable');assert.equal(await page.evaluate(()=>loadHistory.length),0);
+  assert.equal(await page.locator('#cpuGameArc').evaluate(el=>getComputedStyle(el).visibility),'hidden');
+  assert.equal(await page.locator('#memoryGameArc').evaluate(el=>getComputedStyle(el).visibility),'hidden');
   assert(!/NaN|Infinity/.test(await page.locator('#monitor').textContent()));
   await page.evaluate(state=>render(state),fixture);
   await page.route('**/private-test/state',route=>route.abort());await page.evaluate(async()=>{refreshing=false;await refresh();clearTimeout(timer);refreshing=true});

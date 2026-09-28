@@ -2,6 +2,11 @@
 
 Game versions are shown without the Home Assistant dev suffix. Dev and production branches share this history; check `config.yaml` for the installed app version. For entries through v1.18.0, the original release date was not retained, so the date shown is the archive import date.
 
+## v19.4.0 [2026-09-28]
+
+- Overlay game CPU and memory use on the corresponding Pi resource half-circle gauges. The orange segment starts at zero and shows the game's share of total host CPU or RAM; the exact one-core CPU and resident-memory readings remain below.
+- Convert process CPU from one-core percentage to all-core capacity for the overlay, and resident bytes to a share of total RAM. Hide the segment when the denominator or game reading is unavailable.
+
 ## v19.3.0 [2026-09-28]
 
 - Remove the artwork pause/play button so the lobby illustration stays unobstructed; hidden-tab and reduced-motion pauses still work.
