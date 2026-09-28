@@ -32,6 +32,10 @@ function resetResultDamage(){
   $('resultStatsToggle').setAttribute('aria-expanded','false');
   $('resultStatsToggle').textContent='SHOW DAMAGE ▾';
 }
+function hideBattleHud(){
+  $('battleHud').hidden=true;$('arenaHeader').classList.remove('has-battle-hud');$('arena').classList.remove('battle-live');
+  $('battleProgress').replaceChildren();$('battleOpponents').replaceChildren();battleSignature='';
+}
 $('resultStatsToggle').addEventListener('click',()=>{
   const open=$('resultDamage').hidden;
   $('resultDamage').hidden=!open;
@@ -41,6 +45,7 @@ $('resultStatsToggle').addEventListener('click',()=>{
 function networkMessage(title,text,form=false){
   if(form)leaveFullscreen();
   resetResultDamage();
+  hideBattleHud();
   $('waitingRoom').hidden=true;$('countdown').hidden=true;$('results').hidden=true;$('arena').classList.toggle('waiting-room',false);
   document.body.classList.toggle('in-lobby',false);document.body.classList.toggle('in-room-form',form);
   $('arena').classList.toggle('lobby-open',false);$('arena').classList.toggle('room-form-open',form);
@@ -316,9 +321,12 @@ $('resultsLeave').addEventListener('click',leave);
 function updateHud(data){
   const count=data.players.filter(p=>p.connected).length;
   $('roomCount').textContent=count+' / 4 PLAYERS';
-  const battling=data.phase==='playing';
-  $('battleHud').hidden=!battling;
-  $('arenaHeader').classList.toggle('has-battle-hud',battling);
+  const battling=(joined||spectating)&&data.phase==='playing'&&!data.winner;
+  if(!battling){
+    if(!$('battleHud').hidden)hideBattleHud();
+  }else{
+    $('battleHud').hidden=false;$('arenaHeader').classList.add('has-battle-hud');$('arena').classList.add('battle-live');
+  }
   if(battling){
     const goal=data.settings?.targetScore||FIELD.targetScore;
     const mine=data.players.find(p=>p.id===myId);

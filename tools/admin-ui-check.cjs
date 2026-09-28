@@ -84,15 +84,24 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   assert.deepEqual(await touch.locator('.battle-opponent-hp').allTextContents(),['10/10','10/10','10/10']);
   assert.equal(await touch.locator('.battle-opponent.ally').count(),1);
   assert(await touch.locator('#battleHud').isVisible());
+  const layout=await touch.evaluate(()=>({stage:document.querySelector('.stage').getBoundingClientRect(),header:document.querySelector('#arenaHeader').getBoundingClientRect(),background:getComputedStyle(document.querySelector('#arenaHeader')).backgroundColor}));
+  assert(layout.stage.top<layout.header.bottom-20,'the map extends behind the floating HUD');
+  assert.equal(layout.background,'rgba(0, 0, 0, 0)','the floating header does not cover the map with an opaque band');
   assert(await touch.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'battle HUD fits on a phone');
   await touch.screenshot({path:out+'/team-close-view-phone.png',fullPage:true});
   await touch.setViewportSize({width:844,height:390});
   assert(await touch.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'landscape battle HUD fits the viewport');
+  assert(await touch.evaluate(()=>document.querySelector('.stage').getBoundingClientRect().top<document.querySelector('#arenaHeader').getBoundingClientRect().bottom-20),'landscape map extends behind the HUD');
   await touch.screenshot({path:out+'/team-close-view-landscape.png',fullPage:true});
   await touch.evaluate(state=>{state.phase='results';state.winner={id:'me',team:0,name:'Orange team'};state.teamScores=[10,6];state.rematchIn=15;state.rematchNeeded=3;applySnapshot(state);draw();},{...combat});
+  assert.equal(await touch.locator('#battleHud').isVisible(),false,'opponent health disappears after the match');
   assert.deepEqual(await touch.locator('#resultsRows tr.team-heading th').allTextContents(),['ORANGE TEAM · 10 KILLS · WINNER ★','BLUE TEAM · 6 KILLS']);
   assert.equal(await touch.evaluate(()=>enemyMarkers().length),0);
   await touch.screenshot({path:out+'/team-results-phone.png',fullPage:true});
+  await touch.evaluate(()=>{joined=false;showLobby();updateTouchControls();});
+  assert.equal(await touch.locator('#battleHud').isVisible(),false,'live health is hidden in the lobby');
+  assert.equal(await touch.locator('#battleOpponents').locator('.battle-opponent').count(),0,'old opponent chips are cleared in the lobby');
+  await touch.screenshot({path:out+'/lobby-after-battle-phone.png',fullPage:true});
   assert.deepEqual(errors,[]);console.log('PASS: live endpoint, gauges, core-normalized high load, unknown values, bounded history, stale/recovery states and four responsive widths.');
  }finally{await browser?.close();await game.close();}
 })().catch(e=>{console.error(e);process.exit(1)});

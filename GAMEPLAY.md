@@ -2,13 +2,13 @@
 
 A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarry, rounded menus and bold lettering. Choose Free-for-All or 2 vs 2 and invite your friends.
 
-Current release: **v19.4.0**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
+Current release: **v19.5.0**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
 
 The private admin page uses **system CPU and memory gauges**, with the game's share overlaid in orange from the zero end of each arc. CPU converts the game's one-core reading to a fraction of all cores; memory compares resident game memory with total RAM. The exact game readings remain below each gauge. Pi load shows 1-, 5- and 15-minute averages, values per CPU core and a 60-second history collected while the page is open. Core-count reference markers make load easier to interpret. Resource readings refresh once a second and are marked stale when disconnected; room views still refresh twice a second. See [DOCS.md](DOCS.md) for measurement details.
 
 See [SOUND_DESIGN.md](SOUND_DESIGN.md) for the approved cartoon arcade audio direction and implementation notes.
 
-The main-screen illustration animates with tank recoil, brief muzzle flashes and slow flying shells between shots. Use its pause button to stop or resume it. Reduced-motion preferences keep the illustration still. Animation pauses when the lobby or browser tab is hidden.
+The main-screen illustration animates with tank recoil, brief muzzle flashes and slow flying shells between shots. Reduced-motion preferences keep the illustration still. Animation pauses when the lobby or browser tab is hidden.
 
 ## Rooms
 
@@ -97,7 +97,7 @@ Run `npm test` for simulation and real WebSocket integration checks.
 
 Server work is bounded: at most 32 rooms, and per room 144 active shells / 36 per player, two pickups, and four players. Machine gun cooldown is 0.12 seconds; laser traces cover and tanks, then checks at most 144 shells per shot (0.8-second cooldown). Immortal adds a damage guard; Restore assigns maximum health once when collected. Neither adds timers or background jobs. Beam animation and particles are drawn only in the browser. The menu artwork is cached separately and is never sent in game snapshots. These limits keep the additions modest for small rooms; actual hosting capacity depends on concurrent rooms and the server plan.
 
-Rendering, icon/fade animation, countdown display and audio playback run in each browser. Waiting/countdown phases and start authorization use the existing server tick and snapshot; no extra simulation timers are added. Waiting rooms skip combat simulation. The Start Game command is checked against the connected starter on the server. The tank collision shapes, aiming and compact 44px touch header are unchanged.
+Rendering, icon/fade animation, countdown display and audio playback run in each browser. Waiting/countdown phases and start authorization use the existing server tick and snapshot; no extra simulation timers are added. Waiting rooms skip combat simulation. The Start Game command is checked against the connected starter on the server. Tank collision shapes and aiming are unchanged; during play the score, health and menu are small overlays so the map retains the full arena height.
 
 Menu artwork: `mode-banner.webp`, generated with the built-in image tool and compressed for mobile loading. Prompt: friendly, chunky cartoon toy tanks in a sunny quarry, orange/green facing blue/purple, warm cream/sage colors, wide composition, no text or logos.
 
