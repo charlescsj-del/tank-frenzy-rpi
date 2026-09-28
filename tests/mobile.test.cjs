@@ -384,16 +384,15 @@ test('mobile camera enlarges tanks, follows them, and keeps every corner visible
     c.run(`cssW=${width};cssH=${height};tanks[0].x=800;tanks[0].y=520;updateCamera()`);
     assert(c.run('48*boardScale*scale')>=33.59,'tank width stays readable in CSS pixels');
     assert.equal(c.run('project(tanks[0].x,tanks[0].y).x*scale+offsetX'),width/2);
-    assert.equal(c.run('project(tanks[0].x,tanks[0].y).y*scale+offsetY'),height/2-40);
+    assert.equal(c.run('project(tanks[0].x,tanks[0].y).y*scale+offsetY'),height/2);
     const before=c.run('offsetX');
     c.run('tanks[0].x+=50;updateCamera()');assert(c.run('offsetX')<before);
     for(const [x,y] of [[0,0],[1600,0],[0,1040],[1600,1040]]){
       c.run(`tanks[0].x=${x};tanks[0].y=${y};updateCamera()`);
       const screenX=c.run('project(tanks[0].x,tanks[0].y).x*scale+offsetX');
       const screenY=c.run('project(tanks[0].x,tanks[0].y).y*scale+offsetY');
-      assert(screenX>=23.99&&screenX<=width-23.99);
-      assert(screenY>=23.99&&screenY<=height-23.99);
-      assert(screenY>=63.99&&screenY<=height-143.99,'tank stays clear of tools and thumb pads');
+      assert(screenX>=17.99&&screenX<=width-17.99);
+      assert(screenY>=17.99&&screenY<=height-17.99,'the camera uses map area at every edge while keeping the tank visible');
     }
   }
 });
@@ -404,16 +403,16 @@ test('overview fits the whole board and toggles back without changing touch aim'
   c.elements.get('viewMode').events.click();
   assert.equal(c.elements.get('viewMode').attributes['aria-label'],'Close view');
   assert(c.run('scale')<closeScale);
-  assert(c.run('project(0,0).x*scale+offsetX')>=23.99);
-  assert(c.run('project(0,0).y*scale+offsetY')>=23.99);
-  assert(c.run('project(W,H).x*scale+offsetX')<=850.01);
-  assert(c.run('project(W,H).y*scale+offsetY')<=266.01);
+  assert(c.run('project(0,0).x*scale+offsetX')>=5.99);
+  assert(c.run('project(0,0).y*scale+offsetY')>=5.99);
+  assert(c.run('project(W,H).x*scale+offsetX')<=868.01);
+  assert(c.run('project(W,H).y*scale+offsetY')<=284.01);
   c.run('sendInput()');assert.equal(c.sent.at(-1).aimY,-50);
   c.elements.get('viewMode').events.click();assert.equal(c.run('scale'),closeScale);
   assert.equal(c.elements.get('viewMode').attributes['aria-label'],'Full map');
 });
 
-test('close-view arrows track off-screen enemies, avoid allies and disappear in overview or after a win',()=>{
+test('close-view arrows identify off-screen allies and enemies and disappear outside play',()=>{
   const c=client();
   c.run(`cssW=390;cssH=620;tanks=[
     {id:'me',name:'Me',x:800,y:520,hp:10,team:0},
@@ -424,12 +423,13 @@ test('close-view arrows track off-screen enemies, avoid allies and disappear in 
     {id:'dead',name:'Dead',x:10,y:520,hp:0,team:1}];
     latest={phase:'playing',settings:{mode:'teams'}};updateCamera()`);
   let markers=JSON.parse(c.run('JSON.stringify(enemyMarkers())'));
-  assert.deepEqual(markers.map(m=>m.id),['right','top']);
+  assert.deepEqual(markers.map(m=>m.id),['ally','right','top']);
+  assert.equal(markers[0].relation,'ally');assert.equal(markers[1].relation,'enemy');
   assert(markers.find(m=>m.id==='right').x>300,'right-side enemy points to the right edge');
   assert(markers.find(m=>m.id==='top').y<100,'upper enemy points to the upper edge');
   c.run("tanks.push({id:'right2',name:'Second',x:1510,y:525,hp:10,team:1})");
   markers=JSON.parse(c.run('JSON.stringify(enemyMarkers())'));
-  assert(Math.hypot(markers[0].x-markers[2].x,markers[0].y-markers[2].y)>=34,'nearby arrows spread so both are visible');
+  assert(Math.hypot(markers[1].x-markers[3].x,markers[1].y-markers[3].y)>=34,'nearby enemy arrows spread so both are visible');
   c.run('mapOverview=true;updateCamera()');assert.equal(c.run('enemyMarkers().length'),0);
   c.run('mapOverview=false;latest.phase="results"');assert.equal(c.run('enemyMarkers().length'),0);
   c.run('latest.phase="playing";tanks[0].hp=0');assert.equal(c.run('enemyMarkers().length'),0);

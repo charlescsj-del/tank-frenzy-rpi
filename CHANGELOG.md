@@ -2,6 +2,13 @@
 
 Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. For entries through v1.18.0, the original release date was not retained, so the date shown is the archive import date.
 
+## v19.6.0 [2026-09-29]
+
+- Show teal ALLY arrows toward off-screen teammates in 2 vs 2, distinct from red ENEMY arrows.
+- Draw each visible rival or teammate’s live health directly below their tank.
+- In close view, use the left, right and bottom map area with slimmer camera margins; let the map reach mobile safe-area edges while inset score and menu chips stay readable.
+- Keep the mobile score chip on one line by showing progress toward the target without repeating the remaining count below it.
+
 ## v19.5.1 [2026-09-29]
 
 - Compact the admin CPU and memory gauges: keep system and game values visible while removing repeated labels and unused vertical space.

@@ -86,6 +86,7 @@ Use `MAJOR.MINOR.PATCH` for the game/app version:
 - Increment **MINOR** for a new feature; reset PATCH to 0.
 - Increment **PATCH** for a bug fix or small correction that adds no feature.
 - Choose the bump from the largest change in a release. For example, after `19.0.0`, a feature is `19.1.0`, a fix is `19.0.1`, and a major change is `20.0.0`.
+- Historical correction: after `1.18.0`, the next feature should have been `1.19.0`; the jump to `19.x` was a numbering mistake, not a breaking-major redesign. Already installed Home Assistant apps report `19.x`, so do not silently publish a lower `1.x` app version as an upgrade. Keep installable versions increasing until a migration that preserves app data and update visibility is agreed.
 - Use the same plain `MAJOR.MINOR.PATCH` format on both `dev` and `main`; never append `-dev` (or another branch suffix) to the package, game, health or Home Assistant app version. The separate dev installation is distinguished by its Home Assistant slug `tank_frenzy_dev`, name and configurable host port; production keeps slug `tank_frenzy`. Advance the numeric version for each installable dev update. When promoting the tested dev commit to production, merge through a PR and retain the production app identity. Documentation-only edits do not require a version bump.
 
 Every user-visible release bumps the version in all of these:

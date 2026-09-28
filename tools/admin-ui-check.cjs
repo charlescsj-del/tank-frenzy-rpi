@@ -73,19 +73,20 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   touch.on('pageerror',e=>errors.push(e.message));touch.on('console',blocked);await touch.goto(base+'/');
   const combat={type:'state',room:'QUARRY',settings:{mode:'teams',bouncing:true,powers:true},phase:'playing',countdownIn:0,ownerId:null,teamScores:[4,3],pickups:[],map:{id:777,walls:[],spawns:[[90,90],[1510,950],[1510,90],[90,950]]},time:42,winner:null,rematchIn:0,rematchVotes:[],players:[
     {id:'me',name:'Commander',slot:0,team:0,x:800,y:520,a:0,aim:0,hp:10,kills:2,deaths:1,shots:10,hits:5,life:1,connected:true},
-    {id:'ally',name:'Moss',slot:2,team:0,x:850,y:550,a:0,aim:0,hp:10,kills:2,deaths:1,shots:10,hits:5,life:1,connected:true},
+    {id:'ally',name:'Moss',slot:2,team:0,x:1510,y:520,a:0,aim:0,hp:10,kills:2,deaths:1,shots:10,hits:5,life:1,connected:true},
     {id:'foe',name:'Glacier',slot:1,team:1,x:1500,y:520,a:0,aim:0,hp:10,kills:2,deaths:2,shots:10,hits:5,life:1,connected:true},
-    {id:'foe2',name:'Orchid',slot:3,team:1,x:800,y:10,a:0,aim:0,hp:10,kills:1,deaths:2,shots:10,hits:5,life:1,connected:true}
+    {id:'foe2',name:'Orchid',slot:3,team:1,x:875,y:550,a:0,aim:0,hp:7,kills:1,deaths:2,shots:10,hits:5,life:1,connected:true}
   ],shells:[],events:[]};
   const view=await touch.evaluate(state=>{joined=true;myId='me';spectating=false;roomCode='QUARRY';$('overlay').classList.add('hidden');$('arena').classList.remove('lobby-open');document.body.classList.remove('in-lobby');applySnapshot(state);resize();draw();return {touch:touchMedia.matches,roles:tanks.map(teamRelation),markers:enemyMarkers()};},combat);
-  assert.equal(view.touch,true);assert.deepEqual(view.roles,[null,'ally','enemy','enemy']);assert.deepEqual(view.markers.map(m=>m.id),['foe'],'the expanded map keeps foe2 in view, so only the off-screen foe needs an arrow');
+  assert.equal(view.touch,true);assert.deepEqual(view.roles,[null,'ally','enemy','enemy']);assert.deepEqual(view.markers.map(m=>[m.id,m.relation]),[['ally','ally'],['foe','enemy']]);
   assert.equal(await touch.locator('#battleProgress strong').textContent(),'TEAM 4 / 10');
   assert.equal(await touch.locator('#battleProgress small').textContent(),'6 KILLS TO WIN');
-  assert.deepEqual(await touch.locator('.battle-opponent-hp').allTextContents(),['10/10','10/10','10/10']);
+  assert.deepEqual(await touch.locator('.battle-opponent-hp').allTextContents(),['10/10','10/10','7/10']);
   assert.equal(await touch.locator('.battle-opponent.ally').count(),1);
   assert(await touch.locator('#battleHud').isVisible());
-  const layout=await touch.evaluate(()=>({stage:document.querySelector('.stage').getBoundingClientRect(),header:document.querySelector('#arenaHeader').getBoundingClientRect(),background:getComputedStyle(document.querySelector('#arenaHeader')).backgroundColor}));
+  const layout=await touch.evaluate(()=>({stage:document.querySelector('.stage').getBoundingClientRect(),header:document.querySelector('#arenaHeader').getBoundingClientRect(),progress:document.querySelector('#battleProgress').getBoundingClientRect(),background:getComputedStyle(document.querySelector('#arenaHeader')).backgroundColor}));
   assert(layout.stage.top<layout.header.bottom-20,'the map extends behind the floating HUD');
+  assert(layout.progress.left>=layout.stage.left+17,'the kill counter stays clear of the screen edge');
   assert.equal(layout.background,'rgba(0, 0, 0, 0)','the floating header does not cover the map with an opaque band');
   assert(await touch.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'battle HUD fits on a phone');
   await touch.screenshot({path:out+'/team-close-view-phone.png',fullPage:true});
