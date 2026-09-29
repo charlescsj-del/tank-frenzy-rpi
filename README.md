@@ -1,6 +1,4 @@
-# Tank Frenzy Dev for Home Assistant / Raspberry Pi
-
-This `dev` branch is the test installation. Add `https://github.com/charlescsj-del/tank-frenzy-rpi#dev` to the Home Assistant app store. Install **Tank Frenzy Dev** alongside production; it has its own app identity, data and leaderboard. Its default host port is **8766**, and it starts manually. Set its `public_url` to your dev subdomain after routing that hostname to the Pi on port 8766. Advance its plain numeric version for each test update. Promote tested source changes to `main` separately; keep the dev-only app manifest out of production.
+# Tank Frenzy for Home Assistant / Raspberry Pi
 
 Install Tank Frenzy as a Home Assistant app (formerly called an add-on). The Pi hosts the multiplayer game; players use Safari, Edge, Chrome, or another modern browser on their phones, tablets, or computers. Rendering and sound run on each player's device.
 
@@ -60,6 +58,6 @@ docker run --rm -p 8765:8765 tank-frenzy-rpi
 
 Run the build on the intended architecture (or use Docker Buildx with `--platform linux/arm64`). The repository includes CI for tests and ARM64/AMD64 container builds. A physical Pi/Home Assistant installation and mobile play must still be checked on the target device; automated tests do not establish Pi performance under load.
 
-App package version: **1.22.2**. Game version: **1.22.2**. The dev Home Assistant app keeps its own slug; releases bump the numeric version in several files at once. See the release checklist in [AGENTS.md](AGENTS.md).
+App package version: **1.22.2**. Game version: **1.22.2**. Production retains the `tank_frenzy` slug, data and host port across upgrades; releases bump the numeric version in several files at once. See the release checklist in [AGENTS.md](AGENTS.md).
 
 The How to Play screenshots in `tutorial/` are rendered by the game itself. After a visual change, run `npm start` and then `npx -y -p playwright node tools/tutorial-screenshots.cjs` to regenerate them (set `ONLY=win.webp` for one image).
