@@ -172,8 +172,9 @@ test('team battle HUD uses team score and identifies an ally',()=>{
     {id:'enemy',name:'Rival',slot:2,team:1,hp:8,kills:4,deaths:2,connected:true}]})`);
   const progress=c.elements.get('battleProgress'),chips=c.elements.get('battleOpponents').children;
   assert.equal(progress.children[0].textContent,'TEAM 6 / 10');assert.equal(progress.children[1].textContent,'4 KILLS TO WIN');
-  assert.equal(chips[0].className,'battle-opponent ally');assert.match(chips[0].children[0].textContent,/Friend/);
-  assert.equal(chips[1].className,'battle-opponent');assert.equal(chips[1].children.length,2);
+  assert.equal(chips[0].className,'battle-opponent ally');assert.equal(chips[0].children[0].textContent,'★');
+  assert.equal(chips[0].attributes['aria-label'],'Teammate Friend: 3 kills');
+  assert.equal(chips[1].className,'battle-opponent');assert.equal(chips[1].children[0].textContent,'●');assert.equal(chips[1].children.length,2);
 });
 
 test('laser starts at the rendered muzzle despite movement and newer touch aim',()=>{

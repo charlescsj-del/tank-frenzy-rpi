@@ -109,6 +109,8 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   assert.equal(await touch.locator('#battleProgress strong').textContent(),'TEAM 4 / 10');
   assert.equal(await touch.locator('#battleProgress small').textContent(),'6 KILLS TO WIN');
   assert.equal(await touch.locator('.battle-opponent').count(),3);
+  assert.equal(await touch.locator('.battle-opponent-name').count(),0,'no player names cover the map in the top header');
+  assert.equal(await touch.locator('.battle-opponent.ally').getAttribute('aria-label'),'Teammate Moss: 2 kills');
   assert.equal(await touch.locator('.battle-health,.battle-opponent-hp').count(),0,'health is shown by each tank, not repeated in the header');
   assert.equal(await touch.locator('.battle-opponent.ally').count(),1);
   assert.equal(await touch.locator('.roster-card.me .roster-name').isVisible(),false,'own name does not crowd the health bar');
@@ -119,6 +121,9 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   assert(layout.stage.top<layout.header.bottom-20,'the map extends behind the floating HUD');
   assert(layout.progress.left>=layout.stage.left+17,'the kill counter stays clear of the screen edge');
   assert.equal(layout.background,'rgba(0, 0, 0, 0)','the floating header does not cover the map with an opaque band');
+  await touch.evaluate(()=>announceKill({by:'me',player:'foe',streak:1},latest.players));
+  const notification=await touch.evaluate(()=>({menu:$('arenaMenu').getBoundingClientRect(),feed:$('killFeed').getBoundingClientRect()}));
+  assert(notification.feed.top>=notification.menu.bottom+4,'kill notifications sit below the menu button');
   assert(await touch.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'battle HUD fits on a phone');
   await touch.screenshot({path:out+'/team-close-view-phone.png',fullPage:true});
   await touch.setViewportSize({width:844,height:390});

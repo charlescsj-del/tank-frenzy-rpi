@@ -349,9 +349,10 @@ function updateHud(data){
         const ally=teams&&player.team===mine?.team;
         const chip=document.createElement('div');chip.className='battle-opponent'+(ally?' ally':'')+(!player.connected?' offline':'');chip.style.setProperty('--tank',colors[player.slot]);
         chip.title=(ally?'Teammate ':'Opponent ')+player.name+': '+player.kills+' kills';
-        const name=document.createElement('span');name.className='battle-opponent-name';name.textContent=(ally?'★ ':'')+player.name;
+        const marker=document.createElement('span');marker.className='battle-opponent-marker';marker.textContent=ally?'★':'●';marker.setAttribute('aria-hidden','true');
         const kills=document.createElement('span');kills.className='battle-opponent-score';kills.textContent=player.kills+' K';
-        chip.append(name,kills);opponents.append(chip);
+        chip.setAttribute('aria-label',(ally?'Teammate ':'Opponent ')+player.name+': '+player.kills+' kills');
+        chip.append(marker,kills);opponents.append(chip);
       }
     }
   }

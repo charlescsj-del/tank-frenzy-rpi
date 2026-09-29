@@ -73,7 +73,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
     return {version:require('./package.json').version,board:{width:F.width,height:F.height},palette:F.palette.map(p=>p.body),uptime:Math.round((Date.now()-started)/1000),system,cpu:system.game.cpuPercent,
       memory:system.game.rssBytes===null?null:Math.round(system.game.rssBytes/1048576),load:system.load,sessions:sessions.size,
       rooms:[...rooms.values()].filter(room=>room.players.size).map(room=>({code:room.code,phase:room.phase,settings:room.settings,botSkill:room.botSkill,time:Math.round(room.time),
-        winner:room.winner,teamScores:room.teamScores,walls:room.map.walls,shells:room.shells.map(({x,y,slot})=>({x:Math.round(x),y:Math.round(y),slot})),
+        winner:room.winner,teamScores:room.teamScores,walls:room.map.walls,
         players:[...room.players.values()].map(({id,name,slot,team,bot,connected,hp,kills,deaths,x,y,aim,country,power})=>({id,name,slot,team,bot:!!bot,connected,hp,kills,deaths,x:Math.round(x),y:Math.round(y),aim:Math.round(aim*100)/100,country:country||'',power:power||null}))}))};
   }
   // Slow down password guessing: 10 wrong passwords a minute per visitor (300 across everyone),

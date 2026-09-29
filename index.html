@@ -464,7 +464,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .battle-opponents{display:flex;align-items:center;gap:7px;min-width:0;overflow-x:auto;scrollbar-width:thin}
 .battle-opponent{display:flex;align-items:center;gap:5px;flex:none;padding:3px 7px;border-radius:8px;background:#fffdf0;border:1px solid #d3deb8;box-shadow:inset 3px 0 var(--tank)}
 .battle-opponent.ally{background:#edf7e8}.battle-opponent.offline{opacity:.55}
-.battle-opponent-name{max-width:95px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.battle-opponent-marker{color:var(--tank);font-size:12px;line-height:1}
 .battle-opponent-score{color:var(--tank);white-space:nowrap}
 @media(pointer:coarse) and (hover:none){
   .game.mobile-active .arena-header.has-battle-hud{height:80px;grid-template-rows:44px 36px;row-gap:0}
@@ -474,7 +474,6 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   .game.mobile-active .battle-progress small{font-size:8px}
   .game.mobile-active .battle-opponents{grid-column:1 / -1;grid-row:2;max-width:100%;padding:2px 0 4px}
   .game.mobile-active .battle-opponent{font-size:10px;padding:2px 5px}
-  .game.mobile-active .battle-opponent-name{max-width:75px}
 }
 
 /* A touch can begin anywhere in its half. Only the small translucent marker is drawn. */
@@ -541,6 +540,9 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .game.mobile-active.battle-field .arena-header{left:max(18px,env(safe-area-inset-left));right:max(18px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));padding:0}
 .game.mobile-active.battle-field .battle-progress small{display:none}
 .game.mobile-active.battle-field .room-actions{right:0}
+/* Keep recent kills under the menu so notifications never cover its button. */
+.game.battle-field .kill-feed{top:max(68px,calc(env(safe-area-inset-top) + 56px));right:max(16px,env(safe-area-inset-right))}
+.game.mobile-active.battle-field .kill-feed{right:max(18px,env(safe-area-inset-right))}
 /* Keep the mobile battlefield edge to edge through countdown and results. */
 @media(pointer:coarse) and (hover:none){
   .game.mobile-active.battle-field .results-screen{padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}

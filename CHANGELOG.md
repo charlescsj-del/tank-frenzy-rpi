@@ -2,6 +2,11 @@
 
 Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. For entries through v1.18.0, the original release date was not retained, so the date shown is the archive import date. The 19.x builds were originally distributed under those numbers; their entries below are relabeled as consecutive 1.19.x versions for a consistent history. Git history retains the original package numbers.
 
+## v1.22.2 [2026-09-29]
+
+- Remove player names from the top battle score chips while retaining color, kills and accessible labels. Place the kill feed below the menu button.
+- Stop drawing bullets on admin mini-maps and omit bullet coordinates from their twice-per-second admin payload; live gameplay snapshots are unchanged.
+
 ## v1.22.1 [2026-09-29]
 
 - Make the embedded game gauge labels easier to read on narrow phones by enlarging and repositioning them, while retaining the exact one-core CPU value for screen readers.

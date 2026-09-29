@@ -180,8 +180,10 @@ test('/admin is hidden without a password, asks for one, and shows and ends room
   assert.equal((await s.read('/admin/state',{headers:auth('wrong-pass')})).status,401);
   const page=await s.read('/admin',{headers:auth('tank-secret')});assert.equal(page.status,200);assert.match(page.body.toString(),/Tank Frenzy Admin/);
   const ann=s.join('ALPHA','create','Ann');s.join('BETA','create','Bo');
+  s.game.rooms.get('ALPHA').shells.push({x:100,y:100,slot:0});
   const state=JSON.parse((await s.read('/admin/state',{headers:auth('tank-secret')})).body.toString());
   assert.deepEqual(state.rooms.map(r=>r.code).sort(),['ALPHA','BETA']);assert.equal(state.rooms.find(r=>r.code==='ALPHA').players[0].name,'Ann');
+  assert.equal(Object.hasOwn(state.rooms.find(r=>r.code==='ALPHA'),'shells'),false,'admin snapshots omit live bullet coordinates');
   assert((state.cpu===null||Number.isFinite(state.cpu))&&(state.memory===null||state.memory>0)&&state.palette.length>=4);
   assert(Number.isFinite(state.system.sampledAt));assert(state.system.game.rssBytes===null||state.system.game.rssBytes>0);
   assert.equal(state.system.load.length,3);assert(state.system.memory.totalBytes===null||state.system.memory.totalBytes>0);

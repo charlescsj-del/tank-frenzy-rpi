@@ -181,7 +181,6 @@ function draw(canvas,room,state){
   ctx.fillStyle='#b9da86';ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.fillStyle='#f4dda1';ctx.strokeStyle='#83734d';ctx.lineWidth=1.5;
   for(const w of room.walls){ctx.fillRect(w.x*sx,w.y*sy,w.w*sx,w.h*sy);ctx.strokeRect(w.x*sx,w.y*sy,w.w*sx,w.h*sy);}
-  for(const s of room.shells){ctx.fillStyle=state.palette[s.slot];ctx.beginPath();ctx.arc(s.x*sx,s.y*sy,2.5,0,Math.PI*2);ctx.fill();}
   ctx.font='900 11px ui-rounded,"Trebuchet MS",sans-serif';ctx.textAlign='center';
   for(const p of room.players){
     if(!p.connected)continue;const x=p.x*sx,y=p.y*sy;
