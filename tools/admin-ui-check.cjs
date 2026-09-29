@@ -20,14 +20,16 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   assert(state.system.memory.totalBytes===null||state.system.memory.totalBytes>0);assert(state.system.game.rssBytes===null||state.system.game.rssBytes>0);console.log('Live authenticated endpoint passed.');
   const fixture={...state,version:'1.17.0',uptime:26780,system:{sampledAt:100000,cores:4,cpuPercent:36.4,memory:{usedPercent:61.2,totalBytes:4*1073741824,usedBytes:2.448*1073741824,availableBytes:1.552*1073741824,basis:'available'},load:[1.48,1.02,.86],game:{cpuPercent:16.2,rssBytes:72*1048576}}};
   await page.evaluate(state=>{for(let i=0;i<=65;i++){state.system.sampledAt=100000+i*1000;state.system.load[0]=i===65?1.48:.7+i*.01+Math.sin(i/7)*.3;render(state)}},fixture);
-  assert.equal(await page.locator('#cpuValue').textContent(),'36%');assert.match(await page.locator('#gameCpu').textContent(),/16.2% of one core/);
+  assert.equal(await page.locator('#cpuValue').textContent(),'36%');assert.match(await page.locator('#cpuGauge').getAttribute('aria-valuetext'),/16.2 percent of one core/);
   assert.equal(await page.locator('#memoryValue').textContent(),'61%');assert.equal(await page.locator('#loadRatio1').textContent(),'0.37 per core');
   const gameCpuArc=Number((await page.locator('#cpuGameArc').getAttribute('stroke-dasharray')).split(' ')[0]);
   const gameMemoryArc=Number((await page.locator('#memoryGameArc').getAttribute('stroke-dasharray')).split(' ')[0]);
   assert(Math.abs(gameCpuArc-16.2/4)<.001,'game CPU uses the whole Pi as the gauge denominator');
   assert(Math.abs(gameMemoryArc-72/4096*100)<.001,'game RSS uses total RAM as the gauge denominator');
-  assert.equal(await page.locator('#cpuGameValue').textContent(),'Game 4.0%');
-  assert.equal(await page.locator('#memoryGameValue').textContent(),'Game 1.8%');
+  assert.equal(await page.locator('#cpuGameValue').textContent(),'Game 4.0% (16.2% core)');
+  assert.equal(await page.locator('#memoryGameValue').textContent(),'Game 1.8% (72 MiB)');
+  assert.equal(await page.locator('#memoryAvailable').textContent(),'1.55 GiB available');
+  assert.equal(await page.locator('#gameMemory').count(),0,'no duplicate game memory line below the gauge');
   assert.equal(await page.locator('#cpuGameArc').evaluate(el=>getComputedStyle(el).visibility),'visible');
   assert.equal(await page.evaluate(()=>loadHistory.length),61);assert.equal(await page.locator('#cpuGauge').getAttribute('aria-valuenow'),'36.4');
   for(const width of [1440,768,390,320]){
@@ -37,7 +39,7 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   console.log('Desktop, tablet and phone gauges rendered; history bounded.');
   const high=JSON.parse(JSON.stringify(fixture));Object.assign(high.system,{sampledAt:166000,cpuPercent:95.6,load:[8.4,5.1,3.7]});Object.assign(high.system.memory,{usedPercent:94,usedBytes:3.76*1073741824,availableBytes:.24*1073741824});high.system.game.cpuPercent=146;
   await page.evaluate(state=>render(state),high);assert.equal(await page.locator('#cpuResource').getAttribute('data-tone'),'high');assert.equal(await page.locator('#memoryResource').getAttribute('data-tone'),'high');
-  assert.equal(await page.locator('#load1').textContent(),'8.40');assert.match(await page.locator('#gameCpu').textContent(),/146.0%/);
+  assert.equal(await page.locator('#load1').textContent(),'8.40');assert.match(await page.locator('#cpuGauge').getAttribute('aria-valuetext'),/146.0 percent of one core/);
   assert.equal(await page.locator('#loadBar1').evaluate(e=>e.style.width),'100%');assert.equal(await page.locator('#loadRatio1').textContent(),'2.10 per core');
   await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:out+'/admin-high.png',fullPage:true});
   const missing=JSON.parse(JSON.stringify(fixture));Object.assign(missing.system,{sampledAt:180000,cpuPercent:null,cores:null,load:[null,null,null],memory:{},game:{}});
@@ -105,8 +107,12 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   assert.equal(view.touch,true);assert.deepEqual(view.roles,[null,'ally','enemy','enemy']);assert.deepEqual(view.markers.map(m=>[m.id,m.relation]),[['ally','ally'],['foe','enemy']]);
   assert.equal(await touch.locator('#battleProgress strong').textContent(),'TEAM 4 / 10');
   assert.equal(await touch.locator('#battleProgress small').textContent(),'6 KILLS TO WIN');
-  assert.deepEqual(await touch.locator('.battle-opponent-hp').allTextContents(),['10/10','10/10','7/10']);
+  assert.equal(await touch.locator('.battle-opponent').count(),3);
+  assert.equal(await touch.locator('.battle-health,.battle-opponent-hp').count(),0,'health is shown by each tank, not repeated in the header');
   assert.equal(await touch.locator('.battle-opponent.ally').count(),1);
+  assert.equal(await touch.locator('.roster-card.me .roster-name').isVisible(),false,'own name does not crowd the health bar');
+  const ownHealth=await touch.locator('.roster-card.me .health').evaluate(el=>({width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,label:el.getAttribute('aria-label')}));
+  assert(ownHealth.width>=100&&ownHealth.height>=14&&ownHealth.label==='10 / 10 health','own health is a large accessible bar');
   assert(await touch.locator('#battleHud').isVisible());
   const layout=await touch.evaluate(()=>({stage:document.querySelector('.stage').getBoundingClientRect(),header:document.querySelector('#arenaHeader').getBoundingClientRect(),progress:document.querySelector('#battleProgress').getBoundingClientRect(),background:getComputedStyle(document.querySelector('#arenaHeader')).backgroundColor}));
   assert(layout.stage.top<layout.header.bottom-20,'the map extends behind the floating HUD');
@@ -134,6 +140,13 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   assert.equal(await touch.locator('#battleHud').isVisible(),false,'live health is hidden in the lobby');
   assert.equal(await touch.locator('#battleOpponents').locator('.battle-opponent').count(),0,'old opponent chips are cleared in the lobby');
   await touch.screenshot({path:out+'/lobby-after-battle-phone.png',fullPage:true});
+  const resume=await browser.newPage({viewport:{width:390,height:780},hasTouch:true,isMobile:true});
+  resume.on('pageerror',e=>errors.push(e.message));resume.on('dialog',dialog=>dialog.accept());
+  await resume.goto(base+'/?room=RECOVER');await resume.locator('#callsign').fill('Returning');await resume.locator('#action').click();
+  await resume.waitForFunction(()=>joined&&myId&&token);const originalId=await resume.evaluate(()=>myId);
+  await resume.reload();await resume.waitForFunction(id=>joined&&myId===id,originalId);
+  assert.equal(await resume.locator('#waitingRoom').isVisible(),true,'same-tab reload recovers the reserved tank');
+  await resume.close();
   assert.deepEqual(errors,[]);console.log('PASS: live endpoint, gauges, core-normalized high load, unknown values, bounded history, stale/recovery states and four responsive widths.');
  }finally{await browser?.close();await game.close();}
 })().catch(e=>{console.error(e);process.exit(1)});

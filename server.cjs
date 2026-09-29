@@ -181,7 +181,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
     if(mine){mine.connections++;mine.pending++;}
     let session=null,count=0,windowStart=Date.now(),pending=true;
     const settle=()=>{if(mine&&pending){pending=false;mine.pending--;}};
-    ws.alive=true;ws.on('pong',()=>{ws.alive=true;});
+    ws.missedPongs=0;ws.on('pong',()=>{ws.missedPongs=0;});
     const joinTimeout=setTimeout(()=>{if(!session)ws.close(1008,'Join required');},10000);
     ws.on('error',()=>{});
     ws.on('message',raw=>{
@@ -204,7 +204,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
         if(existing&&existing.room.code===code&&existing.room.players.has(existing.player.id)){
           session=existing;const previous=session.ws;session.ws=ws;
           if(previous!==ws)previous.terminate();
-          session.player.connected=true;session.player.pendingShot=false;session.player.input={x:0,y:0,aimX:session.player.x+100,aimY:session.player.y,fire:false};session.player.lastInput=session.room.time;
+          session.player.connected=true;session.player.disconnectedAt=0;session.player.pendingShot=false;session.player.input={x:0,y:0,aimX:session.player.x+100,aimY:session.player.y,fire:false};session.player.lastInput=session.room.time;
         }
         else{
           if(msg.mode==='create'&&rooms.has(code)&&rooms.get(code).players.size>0){send(ws,{type:'error',message:'That arena already exists. Choose another code or browse arenas to join it.'});ws.close();return;}
@@ -258,7 +258,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
       for(const [token,s]of sessions)if(!s.room.players.has(s.player.id))sessions.delete(token);
     }
   },1000/60);
-  const heartbeat=setInterval(()=>{for(const ws of wss.clients){if(!ws.alive){ws.terminate();continue;}ws.alive=false;ws.ping();}},5000);
+  const heartbeat=setInterval(()=>{for(const ws of wss.clients){if(ws.missedPongs>=6){ws.terminate();continue;}ws.missedPongs++;ws.ping();}},5000);
   async function close(){leaderboard.save();clearInterval(timer);clearInterval(heartbeat);for(const ws of wss.clients)ws.terminate();await new Promise(resolve=>wss.close(resolve));await new Promise(resolve=>server.close(resolve));if(ingressServer)await new Promise(resolve=>ingressServer.close(resolve));}
   return {server,ingressServer,wss,rooms,leaderboard,close};
 }

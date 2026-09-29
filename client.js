@@ -13,6 +13,8 @@ let touchAim=null,expanded=false,mapOverview=false;
 let cssW=1120,cssH=610,scale=1,offsetX=0,offsetY=0;
 let tanks=[],shells=[],particles=[],tracks=[],pickups=[],beams=[],pickupFlashes=[],floaters=[],rings=[],hurt=0,shake=0,last=0,sound=true,audioReady=false,audioContext,soundBank;
 let socket=null,myId=null,token=null,joined=false,spectating=false,connecting=false,intentional=false,retry=0,retryTimer;
+const sessionKey='tank-frenzy-session';
+let visibleSince=performance.now();
 let latest=null,lastEvent=0,seq=0,rosterSignature='',battleSignature='',pointer={x:500,y:330,active:false},firing=false,lastSnapshot=0;
 let roomCode=(new URL(location.href).searchParams.get('room')||'').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,16),networkBase=appBase.href.replace(/\/$/,'');
 let lobbyVisible=false,lobbyRooms=[],joinMode=null,roomRequest=0;
@@ -154,18 +156,19 @@ function connect(){
   status('CONNECTING');$('latency').textContent='CONNECTING';
   const wsUrl=new URL(appUrl('ws'));wsUrl.protocol=wsUrl.protocol==='https:'?'wss:':'ws:';
   const ws=new WebSocket(wsUrl.href);socket=ws;
-  const timeout=setTimeout(()=>{if(ws.readyState!==WebSocket.OPEN)ws.close();},7000);
+  const timeout=setTimeout(()=>{if(ws.readyState!==WebSocket.OPEN)ws.close();},15000);
   ws.addEventListener('open',()=>{clearTimeout(timeout);ws.send(JSON.stringify({type:'join',room:roomCode,name:$('callsign').value,token,mode:joinMode,settings:{mode:$('gameMode').value,bouncing:$('bounceOption').checked,powers:$('powersOption').checked,targetScore:Number($('targetScore').value)}}));});
   ws.addEventListener('message',event=>{
     if(socket!==ws)return;
     let data;try{data=JSON.parse(event.data);}catch{return;}
     if(data.type==='welcome'){
       myId=data.id;token=data.token;joinMode=null;seq=Math.max(seq,data.seq+1);joined=true;connecting=false;retry=0;lastEvent=0;rosterSignature='';pointer.active=false;
+      try{sessionStorage.setItem(sessionKey,JSON.stringify({room:roomCode,token,name:$('callsign').value}));}catch{}
       touchAim=null;$('overlay').classList.add('hidden');$('leave').hidden=false;updateTouchControls();canvas.focus({preventScroll:true});
       history.replaceState(null,'','?room='+encodeURIComponent(roomCode));sendInput();
     }else if(data.type==='state'){applySnapshot(data);}
     else if(data.type==='pong'){$('latency').textContent=Math.round(performance.now()-data.sent)+' MS';}
-    else if(data.type==='error'){intentional=true;joined=false;connecting=false;networkMessage(data.title||'Cannot join this arena.',data.message,true);status('CHOOSE AN ARENA');}
+    else if(data.type==='error'){intentional=true;joined=false;connecting=false;try{sessionStorage.removeItem(sessionKey);}catch{}networkMessage(data.title||'Cannot join this arena.',data.message,true);status('CHOOSE AN ARENA');}
   });
   ws.addEventListener('error',()=>{});
   ws.addEventListener('close',()=>{
@@ -173,7 +176,7 @@ function connect(){
     joined=false;connecting=false;closeLeaveDialog();release();updateTouchControls();$('latency').textContent='OFFLINE';
     if(intentional)return;
     status('CONNECTION LOST');
-    if(++retry<=8){networkMessage('Reconnecting...','The connection dropped. Retrying automatically.');retryTimer=setTimeout(connect,Math.min(800*retry,4000));}
+    if(++retry<=30){networkMessage('Reconnecting...','The connection dropped. Retrying automatically.');retryTimer=setTimeout(connect,Math.min(800*retry,4000));}
     else{retry=0;networkMessage('Server unavailable.','Start the game server on the host, then join again.',true);}
   });
 }
@@ -202,6 +205,7 @@ function leave(){
   closeLeaveDialog();
   if(spectating){spectating=false;document.body.classList.remove('spectating');$('leave').setAttribute('aria-label','Leave arena');$('leave').title='Leave arena';}
   intentional=true;clearTimeout(retryTimer);release();send({type:'leave'});socket?.close();socket=null;joined=false;connecting=false;myId=null;token=null;retry=0;
+  try{sessionStorage.removeItem(sessionKey);}catch{}
   latest=null;tanks=[];shells=[];tracks=[];pickups=[];beams=[];pickupFlashes=[];floaters=[];rings=[];hurt=0;$('killFeed').replaceChildren();$('streakBanner').hidden=true;resultsSignature='';$('leave').hidden=true;$('respawn').textContent='';$('latency').textContent='OFFLINE';$('roster').replaceChildren();
   touchAim=null;updateTouchControls();
   roundAudioMap=null;resultAudioKey=null;countdownAudioKey=null;activePower=null;roomPhase=null;waitingSignature='';stopCueSounds();syncMusic();
@@ -333,7 +337,7 @@ function updateHud(data){
     const mine=data.players.find(p=>p.id===myId);
     const teams=data.settings?.mode==='teams';
     const score=teams?(data.teamScores?.[mine?.team]??0):(mine?.kills??0);
-    const battleState=JSON.stringify([myId,goal,teams,score,data.teamScores,data.players.map(p=>[p.id,p.name,p.slot,p.team,p.hp,p.kills,p.connected])]);
+    const battleState=JSON.stringify([myId,goal,teams,score,data.teamScores,data.players.map(p=>[p.id,p.name,p.slot,p.team,p.kills,p.connected])]);
     if(battleState!==battleSignature){
       battleSignature=battleState;
       const progress=$('battleProgress');progress.replaceChildren();
@@ -344,13 +348,10 @@ function updateHud(data){
       for(const player of data.players.filter(p=>p.id!==myId)){
         const ally=teams&&player.team===mine?.team;
         const chip=document.createElement('div');chip.className='battle-opponent'+(ally?' ally':'')+(!player.connected?' offline':'');chip.style.setProperty('--tank',colors[player.slot]);
-        chip.title=(ally?'Teammate ':'Opponent ')+player.name+': '+player.kills+' kills, '+player.hp+' / '+FIELD.maxHealth+' health';
+        chip.title=(ally?'Teammate ':'Opponent ')+player.name+': '+player.kills+' kills';
         const name=document.createElement('span');name.className='battle-opponent-name';name.textContent=(ally?'★ ':'')+player.name;
         const kills=document.createElement('span');kills.className='battle-opponent-score';kills.textContent=player.kills+' K';
-        const health=document.createElement('span');health.className='battle-health';health.setAttribute('aria-label',player.hp+' / '+FIELD.maxHealth+' health');
-        const fill=document.createElement('span');fill.style.width=Math.max(0,Math.min(100,100*player.hp/FIELD.maxHealth))+'%';health.append(fill);
-        const hp=document.createElement('span');hp.className='battle-opponent-hp';hp.textContent=player.hp+'/'+FIELD.maxHealth;
-        chip.append(name,kills,health,hp);opponents.append(chip);
+        chip.append(name,kills);opponents.append(chip);
       }
     }
   }
@@ -523,8 +524,8 @@ canvas.addEventListener('contextmenu',e=>e.preventDefault());
 window.addEventListener('keydown',e=>{if(e.code==='Escape'){release();if(leaderboardOpen){closeLeaderboard();return;}if(tutorialOpen){closeTutorial();return;}if(leaveDialogOpen){closeLeaveDialog();return;}if(expanded)setExpanded(false);}if(tutorialOpen&&(e.code==='ArrowRight'||e.code==='ArrowLeft')){e.preventDefault();showTutorialPage(tutorialPage+(e.code==='ArrowRight'?1:-1));return;}if(leaderboardOpen||tutorialOpen||leaveDialogOpen||!joined||e.target instanceof HTMLInputElement)return;if(moveKeys.has(e.code)){e.preventDefault();keys.add(e.code);if(!e.repeat)sendInput();}});
 window.addEventListener('keyup',e=>{if(moveKeys.has(e.code)){keys.delete(e.code);sendInput();}});
 window.addEventListener('blur',release);
-document.addEventListener('visibilitychange',()=>{syncHeroVisibility();if(document.hidden){release();stopCueSounds();}syncMusic();});
-window.addEventListener('pagehide',()=>{release();stopCueSounds();musicPlayer?.stop();send({type:'leave'});});
+document.addEventListener('visibilitychange',()=>{syncHeroVisibility();if(document.hidden){release();stopCueSounds();}else{visibleSince=performance.now();if(!joined&&retry>0&&!connecting)connect();else if(joined)send({type:'ping',sent:performance.now()});}syncMusic();});
+window.addEventListener('pagehide',()=>{release();stopCueSounds();musicPlayer?.stop();});
 window.addEventListener('beforeunload',e=>{if(joined){e.preventDefault();e.returnValue='';}});
 
 function resetStick(name){
@@ -652,7 +653,7 @@ $('fullscreen').addEventListener('click',async()=>{
 for(const type of ['fullscreenchange','webkitfullscreenchange'])document.addEventListener(type,()=>{release();updateFullscreen();});
 window.addEventListener('resize',release);
 setInterval(sendInput,1000/30);
-setInterval(()=>{if(joined){send({type:'ping',sent:performance.now()});if(performance.now()-lastSnapshot>4000)socket?.close();}},2000);
+setInterval(()=>{if(joined){send({type:'ping',sent:performance.now()});if(!document.hidden&&performance.now()-lastSnapshot>18000&&performance.now()-visibleSince>5000)socket?.close();}},2000);
 
 
 let engine=null;
@@ -1116,4 +1117,8 @@ resize();requestAnimationFrame(frame);
 const watchParams=new URL(location.href).searchParams,watchRoom=(watchParams.get('spectate')||'').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,16);
 // Keep the watch pass out of the address bar once it has been read.
 if(watchRoom&&watchParams.get('pass')){history.replaceState(null,'',location.pathname);spectate(watchRoom,watchParams.get('pass'));}
-else if(roomCode)showRoomForm(roomCode);else showLobby();
+else if(roomCode){
+  let saved;try{saved=JSON.parse(sessionStorage.getItem(sessionKey));}catch{}
+  if(saved?.room===roomCode&&typeof saved.token==='string'&&saved.token){token=saved.token;$('callsign').value=saved.name||'';$('roomInput').value=roomCode;joinMode='join';retry=1;connect();}
+  else showRoomForm(roomCode);
+}else showLobby();

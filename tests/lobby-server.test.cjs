@@ -97,7 +97,7 @@ test('legacy room links still create rooms and reconnect tokens retain the playe
 test('leaving or expired reservations remove rooms from discovery',()=>{
   const s=server(),a=s.join('LEAVE','create');a.emit('message',JSON.stringify({type:'leave'}));
   assert.equal(s.list().body.rooms.length,0);
-  const b=s.join('EXPIRE','create');b.close();s.game.rooms.get('EXPIRE').step(16);
+  const b=s.join('EXPIRE','create');b.close();s.game.rooms.get('EXPIRE').step(91);
   assert.equal(s.list().body.rooms.length,0);
 });
 

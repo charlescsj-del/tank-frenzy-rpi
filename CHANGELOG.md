@@ -2,6 +2,12 @@
 
 Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. For entries through v1.18.0, the original release date was not retained, so the date shown is the archive import date. The 19.x builds were originally distributed under those numbers; their entries below are relabeled as consecutive 1.19.x versions for a consistent history. Git history retains the original package numbers.
 
+## v1.22.0 [2026-09-29]
+
+- Put game CPU and memory use inside their admin gauge readouts, including resident MiB for memory; remove repeated process lines and shorten the available-memory label.
+- Keep the battle header focused on kills and a larger, unlabeled health bar for your own tank. Other tanks' health remains below their tanks on the map.
+- Tolerate short mobile background/network interruptions: wait longer for snapshots and WebSocket pongs, reserve a disconnected tank for 90 seconds, retry longer, and reconnect promptly on return. Preserve the tank token across a same-tab reload; only Leave Arena explicitly releases the spot.
+
 ## v1.21.1 [2026-09-29]
 
 - Prevent the bot skill selector from clipping its value on narrow phones and keep the waiting title compact.

@@ -47,7 +47,7 @@ Multiplayer browser tank game packaged as a **Home Assistant app** (formerly add
 ## WebSocket protocol
 
 Client → server (JSON, max 2048 bytes, max 150 messages/s):
-- `{type:'join',room,name,mode:'create'|'join'|undefined,settings:{mode:'ffa'|'teams',bouncing,powers},token?}`. A `token` from an earlier `welcome` reconnects to the reserved tank (15 s reservation).
+- `{type:'join',room,name,mode:'create'|'join'|undefined,settings:{mode:'ffa'|'teams',bouncing,powers},token?}`. A `token` from an earlier `welcome` reconnects to the reserved tank (90 s reservation).
 - `{type:'input',seq,x,y,aimX,aimY,fire}`. `seq` must increase; input is ignored outside the `playing` phase.
 - `{type:'start'}` (owner only, while waiting), `{type:'rematch'}`, `{type:'bot',action:'add'|'remove'|'skill',skill}` (owner, waiting), `{type:'ping',sent}`, `{type:'leave'}`.
 - `{type:'spectate',room,pass}`: hidden admin spectator; must be the first message.

@@ -56,11 +56,11 @@ button.danger{border-color:#c46a4a;background:#ffe5da;color:#9b3b1d}
 <article class="resource" id="cpuResource" data-tone="unknown"><div class="resource-top"><h3 id="cpuTitle">System CPU</h3><span class="level" id="cpuLevel">Measuring</span></div>
 <div class="gauge" id="cpuGauge" role="meter" aria-labelledby="cpuTitle" aria-valuemin="0" aria-valuemax="100" aria-valuetext="Measuring">
 <svg viewBox="0 0 220 150" aria-hidden="true"><path class="track" d="M30 115 A80 80 0 0 1 190 115"/><path id="cpuArc" class="fill" d="M30 115 A80 80 0 0 1 190 115" pathLength="100" stroke-dasharray="0 100"/><path id="cpuGameArc" class="game-fill" d="M30 115 A80 80 0 0 1 190 115" pathLength="100" stroke-dasharray="0 100"/><text id="cpuValue" class="reading" x="110" y="104">—</text><text id="cpuGameValue" class="game-reading" x="110" y="125">Game —</text><text class="scale" x="30" y="142">0%</text><text class="scale" x="190" y="142">100%</text></svg></div>
-<p class="detail"><span id="cpuDetail">Waiting for a CPU sample</span> · <span class="game-usage" id="gameCpu">Game: measuring…</span></p></article>
+<p class="detail" id="cpuDetail">Waiting for a CPU sample</p></article>
 <article class="resource" id="memoryResource" data-tone="unknown"><div class="resource-top"><h3 id="memoryTitle">System memory</h3><span class="level" id="memoryLevel">Waiting</span></div>
 <div class="gauge" id="memoryGauge" role="meter" aria-labelledby="memoryTitle" aria-valuemin="0" aria-valuemax="100" aria-valuetext="Waiting for readings">
 <svg viewBox="0 0 220 150" aria-hidden="true"><path class="track" d="M30 115 A80 80 0 0 1 190 115"/><path id="memoryArc" class="fill" d="M30 115 A80 80 0 0 1 190 115" pathLength="100" stroke-dasharray="0 100"/><path id="memoryGameArc" class="game-fill" d="M30 115 A80 80 0 0 1 190 115" pathLength="100" stroke-dasharray="0 100"/><text id="memoryValue" class="reading" x="110" y="104">—</text><text id="memoryGameValue" class="game-reading" x="110" y="125">Game —</text><text class="scale" x="30" y="142">0%</text><text class="scale" x="190" y="142">100%</text></svg></div>
-<p class="detail" id="memoryDetail">Waiting for memory readings</p><p class="subtle"><span id="memoryAvailable">Available memory will appear here</span> · <span class="game-usage" id="gameMemory">Game: waiting…</span></p></article>
+<p class="detail" id="memoryDetail">Waiting for memory readings</p><p class="subtle" id="memoryAvailable">Available memory will appear here</p></article>
 <article class="resource load-resource" id="loadResource" data-tone="unknown"><div class="resource-top"><h3>Pi load · running + waiting tasks</h3><span class="level" id="loadLevel">Waiting</span></div>
 <div class="load-head"><strong id="loadValue">—</strong><span id="loadReference">CPU core reference</span></div>
 <div class="load-averages">
@@ -112,12 +112,15 @@ function renderResources(system){
   const gameCpuTotal=cores&&valid(game.cpuPercent)&&game.cpuPercent>=0?game.cpuPercent/cores:null;
   const gameMemoryTotal=valid(memory.totalBytes)&&memory.totalBytes>0&&valid(game.rssBytes)&&game.rssBytes>=0?game.rssBytes/memory.totalBytes*100:null;
   gameArc('cpu',gameCpuTotal);gameArc('memory',gameMemoryTotal);
+  $('cpuGameValue').textContent=gameCpuTotal===null?'Game —':'Game '+gameCpuTotal.toFixed(1)+'% ('+game.cpuPercent.toFixed(1)+'% core)';
   if(!cores&&!valid(s.cpuPercent))$('cpuLevel').textContent='Unavailable';
   $('cpuDetail').textContent=cores?'Across '+cores+' CPU '+(cores===1?'core':'cores'):'CPU core count unavailable';
-  $('gameCpu').textContent='Game: '+(valid(game.cpuPercent)?game.cpuPercent.toFixed(1)+'% of one core':'measuring…');
+  if(valid(game.cpuPercent))$('cpuGauge').setAttribute('aria-valuetext',$('cpuGauge').getAttribute('aria-valuetext')+' ('+game.cpuPercent.toFixed(1)+' percent of one core)');
   $('memoryDetail').textContent=valid(memory.usedBytes)&&valid(memory.totalBytes)?bytes(memory.usedBytes)+' / '+bytes(memory.totalBytes)+' used':'Memory unavailable';
-  $('memoryAvailable').textContent=valid(memory.availableBytes)?bytes(memory.availableBytes)+(memory.basis==='available'?' available · reclaimable cache excluded':' free · used includes cache'):'Available memory unknown';
-  $('gameMemory').textContent='Game: '+bytes(game.rssBytes)+' resident';
+  $('memoryAvailable').textContent=valid(memory.availableBytes)?bytes(memory.availableBytes)+(memory.basis==='available'?' available':' free'):'Available memory unknown';
+  $('memoryAvailable').title=memory.basis==='available'?'Reclaimable cache excluded':memory.basis==='free'?'Used includes cache':'';
+  $('memoryGameValue').textContent=gameMemoryTotal===null?'Game —':'Game '+gameMemoryTotal.toFixed(1)+'% ('+bytes(game.rssBytes)+')';
+  if(gameMemoryTotal!==null)$('memoryGauge').setAttribute('aria-valuetext',$('memoryGauge').getAttribute('aria-valuetext')+' ('+bytes(game.rssBytes)+' resident)');
   const current=valid(load[0])?load[0]:null,ratio=cores&&current!==null?current/cores:null;
   $('loadResource').dataset.tone=ratio===null?'unknown':ratio>=1?'high':ratio>=.7?'warm':'good';
   $('loadLevel').textContent=ratio===null?'Unavailable':ratio>=1?'At / above cores':ratio>=.7?'Near core count':'Below core count';

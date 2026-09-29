@@ -4,7 +4,7 @@ const vm=require('node:vm');
 const fs=require('node:fs');
 
 function client(mobile=true,url='http://localhost:8765'){
-  const elements=new Map(),windowEvents={},documentEvents={},sent=[];
+  const elements=new Map(),windowEvents={},documentEvents={},sent=[],intervals=new Map();let clock=100;
   function element(){
     const events={},classes=new Set(),captures=new Set();
     return {events,children:[],hidden:false,textContent:'',style:{setProperty(){}},replaceChildren(...items){this.children=items;},append(...items){this.children.push(...items);},prepend(...items){this.children.unshift(...items);},
@@ -14,15 +14,15 @@ function client(mobile=true,url='http://localhost:8765'){
       setPointerCapture:id=>captures.add(id),hasPointerCapture:id=>captures.has(id),releasePointerCapture:id=>captures.delete(id)};
   }
   const media={matches:mobile,addEventListener(n,f){this.change=f;}};
-  const sandbox={URL,FIELD:require('../shared.js'),performance:{now:()=>100},location:{href:url,origin:'http://localhost:8765'},
-    document:{body:element(),createElement:element,getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},addEventListener(n,f){documentEvents[n]=f;}},
+  const sandbox={URL,FIELD:require('../shared.js'),performance:{now:()=>clock},location:{href:url,origin:'http://localhost:8765'},
+    document:{hidden:false,body:element(),createElement:element,getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},addEventListener(n,f){documentEvents[n]=f;}},
     window:{addEventListener(n,f){windowEvents[n]=f;}},matchMedia:q=>q.includes('pointer')?media:{matches:false},
-    ResizeObserver:class{observe(){}},devicePixelRatio:1,setInterval(){},requestAnimationFrame(){},fetch:()=>new Promise(()=>{}),WebSocket:{OPEN:1},sent};
+    ResizeObserver:class{observe(){}},devicePixelRatio:1,setInterval(fn,ms){intervals.set(ms,fn);},requestAnimationFrame(){},fetch:()=>new Promise(()=>{}),WebSocket:{OPEN:1},sent};
   vm.createContext(sandbox);vm.runInContext(fs.readFileSync('client.js','utf8'),sandbox);
   const run=code=>vm.runInContext(code,sandbox);
   run("joined=true;myId='me';tanks=[{id:'me',x:100,y:100,aim:0}];socket={readyState:1,bufferedAmount:0,send:data=>sent.push(JSON.parse(data))};updateTouchControls();");
   const event=(id,x=50,y=50)=>({pointerId:id,pointerType:'touch',clientX:x,clientY:y,preventDefault(){}});
-  return {elements,windowEvents,documentEvents,media,sent,run,event,sandbox};
+  return {elements,windowEvents,documentEvents,media,sent,intervals,setTime:ms=>{clock=ms;},run,event,sandbox};
 }
 
 test('two thumbs move and aim independently, retain relative aim, and stop individually',()=>{
@@ -90,6 +90,18 @@ test('desktop hides thumb controls; touch controls wait for joining',()=>{
   mobile.run('joined=false;updateTouchControls()');assert.equal(mobile.elements.get('thumbControls').hidden,true);
 });
 
+test('backgrounding preserves the tank and stale-snapshot checks wait for a visible grace period',()=>{
+  const c=client();
+  c.run('lastSnapshot=100;visibleSince=100');
+  c.run('socket.close=()=>{closed++}');c.sandbox.closed=0;
+  c.setTime(30000);c.sandbox.document.hidden=true;
+  c.windowEvents.pagehide();assert.equal(c.sent.some(m=>m.type==='leave'),false,'page suspension does not give up the seat');
+  c.intervals.get(2000)();assert.equal(c.sandbox.closed,0,'backgrounded tab never closes a stale socket itself');
+  c.sandbox.document.hidden=false;c.documentEvents.visibilitychange();
+  c.setTime(34000);c.intervals.get(2000)();assert.equal(c.sandbox.closed,0,'returning to the app allows new snapshots to arrive');
+  c.setTime(36001);c.intervals.get(2000)();assert.equal(c.sandbox.closed,1,'a still-stale socket reconnects after the visible grace period');
+});
+
 test('leaving requires confirmation and cancellation keeps the player in the room',()=>{
   const c=client();c.sandbox.clearTimeout=()=>{};c.sandbox.history={replaceState(){}};
   c.elements.get('leave').events.click();assert.equal(c.elements.get('leaveDialog').hidden,false);
@@ -139,10 +151,10 @@ test('battle HUD shows goal, remaining kills, opponent score and live health',()
   assert.equal(hud.hidden,false);assert.equal(progress.children[0].textContent,'YOU 4 / 12');
   assert.equal(progress.children[1].textContent,'8 KILLS TO WIN');
   assert.equal(chips.children[0].children[1].textContent,'6 K');
-  assert.equal(chips.children[0].children[3].textContent,'7/10');
+  assert.equal(chips.children[0].children.length,2,'opponent health stays beside the tank, not in the header');
   c.run('battle.players[1].hp=2;battle.players[1].kills=7;updateHud(battle)');
   assert.equal(chips.children[0].children[1].textContent,'7 K');
-  assert.equal(chips.children[0].children[3].textContent,'2/10');
+  assert.equal(chips.children[0].children.length,2);
   assert(c.elements.get('arena').classList.contains('battle-live'));
   c.run('battle.winner={id:"me"};updateHud(battle)');
   assert.equal(hud.hidden,true,'a winner hides opponent health even before a phase update');
@@ -161,7 +173,7 @@ test('team battle HUD uses team score and identifies an ally',()=>{
   const progress=c.elements.get('battleProgress'),chips=c.elements.get('battleOpponents').children;
   assert.equal(progress.children[0].textContent,'TEAM 6 / 10');assert.equal(progress.children[1].textContent,'4 KILLS TO WIN');
   assert.equal(chips[0].className,'battle-opponent ally');assert.match(chips[0].children[0].textContent,/Friend/);
-  assert.equal(chips[1].className,'battle-opponent');assert.equal(chips[1].children[3].textContent,'8/10');
+  assert.equal(chips[1].className,'battle-opponent');assert.equal(chips[1].children.length,2);
 });
 
 test('laser starts at the rendered muzzle despite movement and newer touch aim',()=>{

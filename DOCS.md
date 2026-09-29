@@ -30,8 +30,8 @@ The app has no HA configuration/media mappings. It uses the Home Assistant API o
 
 ## Reading the admin resource charts
 
-- **System CPU** is busy CPU time across all host cores over the latest sample interval. The orange game segment starts at 0% on the same arc and divides the game's one-core CPU reading by the number of cores. For example, 20% of one core on a four-core Pi covers 5% of the total gauge. The exact one-core reading remains below: **100% means one full core**, so it can exceed 100% when the process uses multiple cores.
-- **System memory** shows used / total host RAM. The orange segment starts at 0% on the same arc and shows game resident memory (RSS) as a percentage of total RAM. RSS can include shared pages, so it is an approximate process share. On Linux the system gauge uses `MemTotal − MemAvailable`, so reclaimable cache does not look like exhausted RAM. Available RAM and exact game RSS are also shown. If Linux's available-memory figure cannot be read, the display explicitly says used memory includes cache. Values use MiB/GiB.
+- **System CPU** is busy CPU time across all host cores over the latest sample interval. The orange game segment starts at 0% on the same arc and divides the game's one-core CPU reading by the number of cores. For example, 20% of one core on a four-core Pi covers 5% of the total gauge. The one-core reading appears in parentheses inside the gauge: **100% core means one full core**, so it can exceed 100% when the process uses multiple cores.
+- **System memory** shows used / total host RAM. The orange segment starts at 0% on the same arc and shows game resident memory (RSS) as a percentage of total RAM. RSS can include shared pages, so it is an approximate process share. On Linux the system gauge uses `MemTotal − MemAvailable`, so reclaimable cache does not look like exhausted RAM. The gauge includes game RSS in MiB and the line below shows available RAM. Hover over that line for the cache basis when available. If Linux's available-memory figure cannot be read, it shows free RAM instead. Values use MiB/GiB.
 - **Pi load** counts running/runnable tasks and tasks waiting in uninterruptible I/O. It is **not CPU usage**. On a four-core Pi, load 4.00 is the one-task-per-core reference. Compare the 1-, 5- and 15-minute averages to see a short spike versus sustained demand. Bar midpoints and the dashed trend line mark that reference; high values are not capped in the numeric readouts.
 - Gauges summarize the host visible to the app, including other services; they do not represent a container memory limit. Colors are visual usage bands, not a hardware health diagnosis. The CPU gauge marks 70%/90%, memory 75%/90%; load bands use 0.7/1.0 tasks per core.
 - Resource samples are taken on demand, at most once a second for all admin viewers combined. The CPU gauge needs a second sample after opening or returning from a long gap. The browser keeps up to 60 seconds of load history, clears it after gaps, and labels the last readings when disconnected. Missing metrics show a dash, never a fake zero.
@@ -41,7 +41,7 @@ The app has no HA configuration/media mappings. It uses the Home Assistant API o
 1. The app log should show listeners on game port `8765` and internal ingress port `8099`.
 2. Open **Web UI**: the lobby, banner and room list should load.
 3. Open `http://YOUR_PI_IP:8765` on two devices. Create and join one arena, set a win count between 5 and 50 (default 10), start a round, move, shoot, and confirm sound after interacting.
-4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `1.21.1`.
+4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `1.22.0`.
 5. Test an invitation generated from the sidebar after setting `public_url`.
 
 ## Updates

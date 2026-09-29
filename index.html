@@ -457,7 +457,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 @keyframes hero-shot{0%,11.99%{opacity:0;transform:translateX(0)}12%{opacity:1;transform:translateX(0)}36%{opacity:1;transform:translateX(288px)}52%,100%{opacity:0;transform:translateX(480px)}}
 @media(prefers-reduced-motion:reduce){.hero-burst,.hero-blast-ring,.hero-shell,.hero-smoke,.hero-sparks{opacity:0!important}}
 
-/* Live score and opponent health remain visible in the narrow play header. */
+/* Live scores remain visible in the narrow play header; tank health stays on the map. */
 .battle-hud[hidden]{display:none!important}
 .battle-hud{display:flex;align-items:center;gap:12px;padding:6px 12px;background:#fff9e8;border-bottom:2px solid #d6dfb8;color:#304e45;font-size:12px;font-weight:900}
 .battle-progress{flex:none;white-space:nowrap}.battle-progress small{display:block;font-size:10px;color:#657661}
@@ -466,9 +466,6 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .battle-opponent.ally{background:#edf7e8}.battle-opponent.offline{opacity:.55}
 .battle-opponent-name{max-width:95px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .battle-opponent-score{color:var(--tank);white-space:nowrap}
-.battle-health{width:42px;height:7px;overflow:hidden;border-radius:8px;background:#dbe1cd}
-.battle-health span{display:block;height:100%;background:var(--tank)}
-.battle-opponent-hp{font-size:10px;white-space:nowrap}
 @media(pointer:coarse) and (hover:none){
   .game.mobile-active .arena-header.has-battle-hud{height:80px;grid-template-rows:44px 36px;row-gap:0}
   .game.mobile-active .arena-header.has-battle-hud .room-title{display:none}
@@ -521,9 +518,10 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .game.battle-field .room-title,.game.battle-field #viewNote,.game.battle-field .roster-card{display:none}
 .game.battle-field .scoreboard{display:flex;grid-column:2;grid-row:1;justify-self:center;min-width:0;max-width:100%;padding:0;gap:0;background:none;border:0;box-shadow:none;overflow:visible}
 .game.battle-field .roster-card.me{display:flex;align-items:center;gap:6px;min-width:0;max-width:100%;padding:6px 10px;border:1px solid #b7c99ca8;border-radius:12px;background:#fff9e8db;box-shadow:0 2px 8px #20362233;overflow:hidden}
-.game.battle-field .roster-name{min-width:0;max-width:150px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.game.battle-field .roster-card.me .roster-name{display:none}
 .game.battle-field .roster-stats{display:none}
-.game.battle-field .health{margin:0;flex-shrink:0}
+.game.battle-field .roster-card.me .health{display:flex;width:clamp(100px,22vw,170px);max-width:100%;height:16px;margin:0;gap:3px;flex-shrink:1}
+.game.battle-field .roster-card.me .pip{flex:1;min-width:0;width:auto;height:100%}
 .game.battle-field .battle-progress{grid-column:1;grid-row:1;justify-self:start;max-width:100%;padding:5px 9px;border:1px solid #b7c99ca8;border-radius:11px;background:#fff9e8dc;box-shadow:0 2px 8px #20362233;overflow:hidden;text-overflow:ellipsis;font-size:12px}
 .game.battle-field .battle-opponents{grid-column:1/-1;grid-row:2;justify-self:start;width:max-content;max-width:100%;padding:0;overflow-x:auto;pointer-events:none}
 .game.battle-field .battle-opponent{background:#fffdf0e8;box-shadow:inset 3px 0 var(--tank),0 2px 8px #20362233}
