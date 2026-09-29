@@ -1,6 +1,6 @@
 # Changelog
 
-Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. For entries through v1.18.0, the original release date was not retained, so the date shown is the archive import date. The 19.x builds were originally distributed under those numbers; their entries below are relabeled as consecutive 1.19.x versions for a consistent history. Git history retains the original package numbers.
+Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. Dates use the earliest release or import commit available in this repository, shown in the Asia/Kuala_Lumpur time zone. For v1.1.0–v1.3.2, the original game release commits are unavailable here, so 2026-09-23 is the archive import date, not a claimed release date. The v1.5.0 notes first appear in the 2026-09-24 import of v1.6.0. The 19.x builds were originally distributed under those numbers; their entries below are relabeled as consecutive 1.19.x versions for a consistent history. Git history retains the original package numbers.
 
 ## v1.22.2 [2026-09-29]
 
@@ -141,7 +141,7 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - Track per-match damage dealt on the server, reset it on rematch, and save it in both all-time totals and recent match logs. Expose damage and deaths in `/leaderboard` without enlarging 30 Hz game snapshots.
 - Migrate old saved leaderboards and match logs without a damage field, defaulting their missing values to zero; add combat, persistence and period regression tests.
 
-## v1.15.0 [2026-09-27]
+## v1.15.0 [2026-09-26]
 
 - Replace the admin's plain resource numbers with system CPU and memory gauges, showing game usage separately.
 - Show Pi load over 1, 5 and 15 minutes with per-core values, reference markers, and a recent 60-second trend.
@@ -149,7 +149,7 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - Add `system-metrics.cjs`: lazy host CPU deltas, Linux available-memory accounting, process usage, load averages and one-second caching. Preserve legacy admin fields and include the module in the container.
 - Add responsive SVG gauges and a bounded load-history chart to `admin.html`; prevent overlapping refreshes and time out stalled requests.
 
-## v1.14.0 [2026-09-27]
+## v1.14.0 [2026-09-26]
 
 - About 70% less network traffic: snapshots are encoded once per room, numbers are rounded, shells carry only what the browser draws, and the map is resent once a second instead of 30 times.
 - Private admin page (`/admin` or your own `admin_path`, never linked from the game) with live mini-maps, scores and server load for every room, hidden-spectator **Watch live** and End room. Free through the Home Assistant sidebar; on the public address only with the new `admin_password` option.
@@ -157,21 +157,21 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - App-list icon and logo for Home Assistant. One or two rooms no longer stretch to fill the room list.
 - Leaner snapshots (`encodeState`, optional map with `mapId`), `/admin` with `admin.html`, and leaderboard periods and regions.
 
-## v1.13.0 [2026-09-27]
+## v1.13.0 [2026-09-26]
 
 - All-time leaderboard saved as `/data/leaderboard.json`: wins, matches, kills and deaths by player name, shown from the 🏆 button. Written atomically; bots are not ranked.
 - New `notify_service` option: a Home Assistant notification (via the Supervisor API, `homeassistant_api: true`) when someone opens a room, with a tap-to-join link when `public_url` is set. At most one a minute.
 - Option names and descriptions in the Configuration tab (`translations/en.yaml`).
 - 🏆 leaderboard (`/leaderboard`, new `leaderboard.cjs`) and a room-created hook used by the Home Assistant app for notifications.
 
-## v1.12.0 [2026-09-27]
+## v1.12.0 [2026-09-26]
 
 - Computer-controlled bots: the room starter adds or removes up to three bots in the waiting room and sets Easy, Normal or Hard skill.
 - Bots use normal player input and rules, aim with skill-based error and target leading, steer around walls, unstick themselves and fetch nearby power-ups.
 - People joining a full room replace a bot; bots never own rooms, vote on rematches or keep empty rooms alive.
 - Bots with three skill levels, controlled from the waiting room. New `bots.cjs`; the room directory lists open seats by people and marks bots.
 
-## v1.11.0 [2026-09-27]
+## v1.11.0 [2026-09-26]
 
 - Room browser: saved player name, Quick Play, and one-tap Join on every room row with its players and rules. Round icon buttons for effects and music.
 - Kill feed with streak banners, an end-of-match scoreboard (kills, deaths, hit rate) and a low-health heartbeat.
@@ -182,7 +182,7 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - Quick Play, one-tap Join, remembered name, kill feed and streaks, scoreboard, heartbeat, majority rematch, home-screen app support and a one-screen desktop battle view.
 - Destroyed events carry the attacker and streak; snapshots carry shots, hits, streak and the rematch vote target.
 
-## v1.10.0 [2026-09-27]
+## v1.10.0 [2026-09-26]
 
 - Redesign the room browser to fit one screen without scrolling: artwork beside the room panel on wide screens, above it on phones. Only the room list scrolls.
 - Turn How to Play into eight pages with Back/Next buttons, page dots, arrow keys and swipes; add a Getting Hit page and split power-ups into tokens and effects.
@@ -191,7 +191,7 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - One-screen room browser; paged How to Play guide with swipe and arrow keys.
 - Fiery screen-edge hit flash, damage numbers, destruction shockwave, Android vibration and low-health smoulder. Hit events now carry their damage.
 
-## v1.9.0 [2026-09-27]
+## v1.9.0 [2026-09-26]
 
 - Show the quarry artwork as a large header in the room browser. Forms, waiting rooms and battles now share one compact tagline instead of switching between large and small headers.
 - Add a How to Play guide with game screenshots: how to win, PC and phone controls, finding your tank, bouncing bullets and each power-up.
@@ -203,7 +203,7 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - How to Play guide with screenshots of controls, bouncing bullets, power-ups and the win screen.
 - Own-tank halo, Leave Room on the result card and automatic fullscreen when joining or starting.
 
-## v1.8.0 [2026-09-27]
+## v1.8.0 [2026-09-26]
 
 - Show the animated winner card in the arena and require every connected player to vote within 20 seconds for a rematch.
 - Keep results open after the deadline, reject new joins to ended rooms, and freeze gameplay while voting.
@@ -212,14 +212,14 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - Remove automatic restarts. Only unanimous votes from connected players during the 20-second window launch a new map and round.
 - Keep expired results visible until players leave; prevent late joins and freeze movement/aim controls while voting.
 
-## v1.7.1 [2026-09-27]
+## v1.7.1 [2026-09-26]
 
 - Keep the Create and Join forms visible without scrolling on narrow screens. Preserve the tagline in a compact line and hide inactive arena chrome while the form is open.
 - Keep the room browser and active game layouts unchanged; retain Home Assistant ingress and LAN multiplayer paths.
 - Use a dedicated compact phone layout for Create and Join, with the tagline on one line, tighter form spacing and a return to the top of the page.
 - Leave the room browser and active game views unchanged.
 
-## v1.7.0 [2026-09-27]
+## v1.7.0 [2026-09-24]
 
 - Match the Home Assistant app and game version numbers.
 - Raise music gain to 0.30, loop within the active phrases and preload battle music during the countdown.
@@ -227,7 +227,7 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - Raise background music gain from 0.10 to 0.30 and loop its active phrase without replaying the intro or faded ending.
 - Select and preload A or C during countdown; play three rising numbered countdown ticks and a separate battle-start recording.
 
-## v1.6.0 [2026-09-27]
+## v1.6.0 [2026-09-24]
 
 - Home Assistant app package 1.1.0: Sync the current main-game release, including the approved B pre-game music, random A/C battle music and four selected combat effects.
 - Serve seven additional versioned MP3s through both the authenticated sidebar and LAN game, retaining the ingress prefix and WebSocket behavior.
@@ -235,13 +235,13 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - Install the approved Cannon A for normal and machine-gun fire, Ricochet C for bounces, Power-up A for pickups and Destruction C for tank explosions. Keep the previous samples as per-asset fallbacks.
 - Preserve double cannon and other unaffected cues, voice limits, spatial playback and mute.
 
-## v1.5.0 [2026-09-27]
+## v1.5.0 [2026-09-24]
 
 - Play B — Overdrive before battles, including waiting and countdown.
 - Select A — Iron Advance or C — Steel Pressure locally for each battle; cache decoded tracks and use one looping music source.
 - Preserve independent music/effects controls and browser autoplay behavior.
 
-## v1.4.0 [2026-09-27]
+## v1.4.0 [2026-09-23]
 
 ### Pickups and aiming
 
@@ -256,12 +256,12 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - Battle music plays at 128 BPM; the splash/waiting arrangement is a calmer 112 BPM. Both remain below sound-effect volume, with independent saved music/effects switches.
 - Music still renders once per track locally, then uses one looping source. Two cached mono buffers total about 5.4 MiB; no music downloads or server audio processing are required.
 
-## v1.3.2 [2026-09-27]
+## v1.3.2 [2026-09-23]
 
 - Reduced laser damage from 5 to 4 per hit. A full-health, unprotected tank now survives two laser hits with 2 health and is destroyed by the third.
 - Updated the power-up guide, current rules and damage regression tests. Screen shake and other laser behavior are unchanged.
 
-## v1.3.1 [2026-09-27]
+## v1.3.1 [2026-09-23]
 
 ### Combat
 
@@ -269,7 +269,7 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - Double cannon now fires two parallel shells from separate barrel origins instead of a spreading volley. Both barrels share the same heading and independently stop spawning forward when obstructed by cover.
 - Shared barrel spacing between simulation and tank rendering; updated the power-up guide and current rules.
 
-## v1.3.0 [2026-09-27]
+## v1.3.0 [2026-09-23]
 
 ### Rooms and rounds
 
@@ -286,7 +286,7 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - Added independent Music and Effects switches to the top menu and splash screen, with browser-saved preferences. Hidden pages stop both channels; music resumes if enabled when returning.
 - Music uses one looping source and two cached mono buffers. Existing sound-effect voice limits remain in place.
 
-## v1.2.0 [2026-09-27]
+## v1.2.0 [2026-09-23]
 
 ### Audio
 
@@ -302,7 +302,7 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 
 - Samples download and decode once per page session after audio is activated. All mixing runs in the browser. No gameplay snapshot fields, simulation timers or per-room server work were added.
 
-## v1.1.1 [2026-09-27]
+## v1.1.1 [2026-09-23]
 
 ### Fixed
 
@@ -313,7 +313,7 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 
 - Added `SOUND_DESIGN.md` to explore a cartoon arcade sound direction. Audio behavior is unchanged in this patch.
 
-## v1.1.0 [2026-09-27]
+## v1.1.0 [2026-09-23]
 
 ### Added
 
@@ -340,7 +340,7 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 
 - Existing four-player, two-pickup and 96-shell room limits remain in place. Laser bullet clearing is a bounded scan per laser shot; Immortal and Restore add no background jobs.
 
-## v1.0.0 [2026-09-27]
+## v1.0.0 [2026-09-23]
 
 - Package Tank Frenzy v1.4.0 for 64-bit Raspberry Pi and AMD64 Home Assistant OS.
 - Add repository installation, a multi-architecture Dockerfile, health checks and startup/shutdown handling.

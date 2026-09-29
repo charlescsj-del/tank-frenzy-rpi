@@ -93,7 +93,7 @@ Every user-visible release bumps the version in all of these:
 1. `shared.js` (`version`), `package.json`, `package-lock.json` (top-level `version` and `packages[""].version`).
 2. `config.yaml` `version` (Supervisor only offers an update when this changes) and `Dockerfile` `ARG BUILD_VERSION`.
 3. `README.md` ("App package version" line and the v1.9.0–x.y summary), `DOCS.md` (`/health` version), `GAMEPLAY.md` ("Current release").
-4. `CHANGELOG.md`: one `## vx.y.z [YYYY-MM-DD]` heading per numeric game version, with user-visible and technical notes below it. Never put `-dev`, `App`, or descriptive text in the heading. Keep the full release history comparable on `dev` and `main` by synchronizing production notes back to `dev` after a release PR merges. Use the actual change date for new entries; older dates through v1.18.0 are archive import dates.
+4. `CHANGELOG.md`: one `## vx.y.z [YYYY-MM-DD]` heading per numeric game version, with user-visible and technical notes below it. Never put `-dev`, `App`, or descriptive text in the heading. Keep the full release history comparable on `dev` and `main` by synchronizing production notes back to `dev` after a release PR merges. Use the commit date in Asia/Kuala_Lumpur for new entries; for older entries use the earliest release commit in this repository, and identify import dates when the original release date is unavailable.
 
 Then document the feature in GAMEPLAY.md (and DOCS.md for options/operation), and regenerate tutorial screenshots if visuals changed:
 
