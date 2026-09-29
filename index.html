@@ -457,18 +457,15 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 @keyframes hero-shot{0%,11.99%{opacity:0;transform:translateX(0)}12%{opacity:1;transform:translateX(0)}36%{opacity:1;transform:translateX(288px)}52%,100%{opacity:0;transform:translateX(480px)}}
 @media(prefers-reduced-motion:reduce){.hero-burst,.hero-blast-ring,.hero-shell,.hero-smoke,.hero-sparks{opacity:0!important}}
 
-/* Live score and opponent health remain visible in the narrow play header. */
+/* Live scores remain visible in the narrow play header; tank health stays on the map. */
 .battle-hud[hidden]{display:none!important}
 .battle-hud{display:flex;align-items:center;gap:12px;padding:6px 12px;background:#fff9e8;border-bottom:2px solid #d6dfb8;color:#304e45;font-size:12px;font-weight:900}
 .battle-progress{flex:none;white-space:nowrap}.battle-progress small{display:block;font-size:10px;color:#657661}
 .battle-opponents{display:flex;align-items:center;gap:7px;min-width:0;overflow-x:auto;scrollbar-width:thin}
 .battle-opponent{display:flex;align-items:center;gap:5px;flex:none;padding:3px 7px;border-radius:8px;background:#fffdf0;border:1px solid #d3deb8;box-shadow:inset 3px 0 var(--tank)}
 .battle-opponent.ally{background:#edf7e8}.battle-opponent.offline{opacity:.55}
-.battle-opponent-name{max-width:95px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.battle-opponent-marker{color:var(--tank);font-size:12px;line-height:1}
 .battle-opponent-score{color:var(--tank);white-space:nowrap}
-.battle-health{width:42px;height:7px;overflow:hidden;border-radius:8px;background:#dbe1cd}
-.battle-health span{display:block;height:100%;background:var(--tank)}
-.battle-opponent-hp{font-size:10px;white-space:nowrap}
 @media(pointer:coarse) and (hover:none){
   .game.mobile-active .arena-header.has-battle-hud{height:80px;grid-template-rows:44px 36px;row-gap:0}
   .game.mobile-active .arena-header.has-battle-hud .room-title{display:none}
@@ -477,7 +474,6 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   .game.mobile-active .battle-progress small{font-size:8px}
   .game.mobile-active .battle-opponents{grid-column:1 / -1;grid-row:2;max-width:100%;padding:2px 0 4px}
   .game.mobile-active .battle-opponent{font-size:10px;padding:2px 5px}
-  .game.mobile-active .battle-opponent-name{max-width:75px}
 }
 
 /* A touch can begin anywhere in its half. Only the small translucent marker is drawn. */
@@ -515,27 +511,93 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   .lesson>img{max-height:calc(100dvh - 125px)}
 }
 /* The battle map uses the full arena height; only the useful HUD chips cover it. */
-.game.battle-live{position:relative}
-.game.battle-live .arena-header{position:absolute;top:0;left:0;right:0;z-index:4;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;grid-template-rows:auto auto;align-items:start;gap:5px 8px;min-height:0;padding:8px;pointer-events:none;background:none;border:0}
-.game.battle-live .room-strip,.game.battle-live .battle-hud{display:contents}
-.game.battle-live .room-title,.game.battle-live #viewNote,.game.battle-live .roster-card{display:none}
-.game.battle-live .scoreboard{display:flex;grid-column:2;grid-row:1;justify-self:center;min-width:0;max-width:100%;padding:0;gap:0;background:none;border:0;box-shadow:none;overflow:visible}
-.game.battle-live .roster-card.me{display:flex;align-items:center;gap:6px;min-width:0;max-width:100%;padding:6px 10px;border:1px solid #b7c99ca8;border-radius:12px;background:#fff9e8db;box-shadow:0 2px 8px #20362233;overflow:hidden}
-.game.battle-live .roster-name{min-width:0;max-width:150px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.game.battle-live .roster-stats{display:none}
-.game.battle-live .health{margin:0;flex-shrink:0}
-.game.battle-live .battle-progress{grid-column:1;grid-row:1;justify-self:start;max-width:100%;padding:5px 9px;border:1px solid #b7c99ca8;border-radius:11px;background:#fff9e8dc;box-shadow:0 2px 8px #20362233;overflow:hidden;text-overflow:ellipsis;font-size:12px}
-.game.battle-live .battle-opponents{grid-column:1/-1;grid-row:2;justify-self:start;width:max-content;max-width:100%;padding:0;overflow-x:auto;pointer-events:none}
-.game.battle-live .battle-opponent{background:#fffdf0e8;box-shadow:inset 3px 0 var(--tank),0 2px 8px #20362233}
-.game.battle-live .arena-menu-button{grid-column:3;grid-row:1;pointer-events:auto}
-.game.battle-live .room-actions{top:52px;right:8px;pointer-events:auto}
-.game.mobile-active.battle-live .arena-header{position:absolute;top:env(safe-area-inset-top);height:auto;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;grid-template-rows:auto auto;gap:5px 6px;padding:6px 8px;background:none;border:0}
-.game.mobile-active.battle-live .scoreboard{grid-column:2;grid-row:1;justify-self:center;overflow:visible}
-.game.mobile-active.battle-live .roster-card.me{padding:5px 7px;background:#fff9e8df}
-.game.mobile-active.battle-live .battle-progress{grid-column:1;grid-row:1;padding:4px 7px;font-size:11px}
-.game.mobile-active.battle-live .battle-opponents{grid-column:1/-1;grid-row:2;padding:0}
-.game.mobile-active.battle-live .arena-menu-button{grid-column:3;grid-row:1}
-.game.mobile-active.battle-live .room-actions{top:52px}
+.game.battle-field{position:relative}
+.game.battle-field .arena-header{position:absolute;top:0;left:0;right:0;z-index:4;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;grid-template-rows:auto auto;align-items:start;gap:5px 8px;min-height:0;padding:8px;pointer-events:none;background:none;border:0}
+.game.battle-field .room-strip,.game.battle-field .battle-hud{display:contents}
+.game.battle-field .room-title,.game.battle-field #viewNote,.game.battle-field .roster-card{display:none}
+.game.battle-field .scoreboard{display:flex;grid-column:2;grid-row:1;justify-self:center;min-width:0;max-width:100%;padding:0;gap:0;background:none;border:0;box-shadow:none;overflow:visible}
+.game.battle-field .roster-card.me{display:flex;align-items:center;gap:6px;min-width:0;max-width:100%;padding:6px 10px;border:1px solid #b7c99ca8;border-radius:12px;background:#fff9e8db;box-shadow:0 2px 8px #20362233;overflow:hidden}
+.game.battle-field .roster-card.me .roster-name{display:none}
+.game.battle-field .roster-stats{display:none}
+.game.battle-field .roster-card.me .health{display:flex;width:clamp(100px,22vw,170px);max-width:100%;height:16px;margin:0;gap:3px;flex-shrink:1}
+.game.battle-field .roster-card.me .pip{flex:1;min-width:0;width:auto;height:100%}
+.game.battle-field .battle-progress{grid-column:1;grid-row:1;justify-self:start;max-width:100%;padding:5px 9px;border:1px solid #b7c99ca8;border-radius:11px;background:#fff9e8dc;box-shadow:0 2px 8px #20362233;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.game.battle-field .battle-opponents{grid-column:1/-1;grid-row:2;justify-self:start;width:max-content;max-width:100%;padding:0;overflow-x:auto;pointer-events:none}
+.game.battle-field .battle-opponent{background:#fffdf0e8;box-shadow:inset 3px 0 var(--tank),0 2px 8px #20362233}
+.game.battle-field .arena-menu-button{grid-column:3;grid-row:1;pointer-events:auto}
+.game.battle-field .room-actions{top:52px;right:8px;pointer-events:auto}
+.game.mobile-active.battle-field .arena-header{position:absolute;top:env(safe-area-inset-top);height:auto;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;grid-template-rows:auto auto;gap:5px 6px;padding:6px 8px;background:none;border:0}
+.game.mobile-active.battle-field .scoreboard{grid-column:2;grid-row:1;justify-self:center;overflow:visible}
+.game.mobile-active.battle-field .roster-card.me{padding:5px 7px;background:#fff9e8df}
+.game.mobile-active.battle-field .battle-progress{grid-column:1;grid-row:1;padding:4px 7px;font-size:11px}
+.game.mobile-active.battle-field .battle-opponents{grid-column:1/-1;grid-row:2;padding:0}
+.game.mobile-active.battle-field .arena-menu-button{grid-column:3;grid-row:1}
+.game.mobile-active.battle-field .room-actions{top:52px}
+/* Let the battlefield reach the screen edges; keep controls clear of cutouts. */
+.game.mobile-active.battle-field,.game.battle-field:is(:fullscreen,:-webkit-full-screen,.expanded){padding:0}
+.game.battle-field .battlebar{position:absolute;bottom:0;left:0;right:0;z-index:3;padding:2px 12px;background:#e9efcdbb;pointer-events:none}
+.game.battle-field .arena-header{left:max(16px,env(safe-area-inset-left));right:max(16px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));padding:0}
+.game.mobile-active.battle-field .arena-header{left:max(18px,env(safe-area-inset-left));right:max(18px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));padding:0}
+.game.mobile-active.battle-field .battle-progress small{display:none}
+.game.mobile-active.battle-field .room-actions{right:0}
+/* Keep recent kills under the menu so notifications never cover its button. */
+.game.battle-field .kill-feed{top:max(68px,calc(env(safe-area-inset-top) + 56px));right:max(16px,env(safe-area-inset-right))}
+.game.mobile-active.battle-field .kill-feed{right:max(18px,env(safe-area-inset-right))}
+/* Keep the mobile battlefield edge to edge through countdown and results. */
+@media(pointer:coarse) and (hover:none){
+  .game.mobile-active.battle-field .results-screen{padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+  .in-room-form{overflow:hidden}
+  .in-room-form .page{display:flex;flex-direction:column;width:100%;max-width:none;height:100vh;height:100dvh;min-height:0;gap:6px;padding:max(10px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))}
+  .in-room-form .masthead{flex:none;padding:0 0 4px}
+  .in-room-form .intro{display:none}
+  .in-room-form .game{display:flex;flex:1;min-height:0;margin:0}
+  .game.room-form-open .stage{display:flex;flex:1;min-height:0}
+  .game.room-form-open .overlay{display:flex;flex:1;align-items:center;min-height:0;overflow:hidden;padding:6px}
+  .game.room-form-open .dialog{width:min(540px,100%);max-height:100%;margin:auto;overflow-y:auto;padding:12px}
+  .game.room-form-open .dialog>p,.game.room-form-open .room-settings p,.game.room-form-open .target-endpoints{display:none}
+  .game.room-form-open .join-fields{grid-template-columns:1fr 1fr;margin:8px 0;gap:8px}
+  .game.room-form-open .join-fields input{min-height:42px;margin-top:3px}
+  .game.room-form-open .room-settings{margin:5px 0 8px;padding:6px 10px}
+  .game.room-form-open .room-settings label{min-height:36px}
+  .game.room-form-open .target-setting{margin:2px 0 3px}
+  .game.room-form-open #action{width:100%;min-height:44px;padding:8px}
+  .game.room-form-open #browseRooms{min-height:40px;margin-top:8px}
+  .game.waiting-room .waiting-panel{display:grid;place-items:center;min-height:100%;padding:8px}
+  .game.waiting-room .waiting-panel .dialog{width:min(560px,100%);max-height:100%;overflow-y:auto;padding:12px}
+  .game.waiting-room #waitingTitle{font-size:clamp(18px,5vw,22px);line-height:1.2}
+  .game.waiting-room #waitingPlayers{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:8px 0}
+  .game.waiting-room #waitingPlayers li{padding:8px 9px;border-left-width:5px;font-size:12px}
+  .game.waiting-room .bot-controls{display:grid;grid-template-columns:1fr 1fr 1.1fr;gap:5px;margin:8px 0}
+  .game.waiting-room .bot-controls .tool{min-width:0;min-height:40px;padding:5px;font-size:11px}
+  .game.waiting-room .bot-controls label{justify-content:center;gap:3px;font-size:10px}
+  .game.waiting-room .bot-controls select{min-width:0;flex:1;min-height:40px;padding:4px 2px;font-size:11px}
+  .game.waiting-room #waitingMessage{margin:5px 0;font-size:11px}
+  .game.waiting-room #startGame{min-height:44px}
+  .game.waiting-room #networkLinks{display:none}
+}
+@media(pointer:coarse) and (hover:none) and (max-height:520px){
+  .in-room-form .masthead{display:none}
+  .game.room-form-open .dialog{width:min(780px,100%);padding:6px 10px}
+  .game.room-form-open .dialog h2{font-size:20px;margin:0 0 3px}
+  .game.room-form-open #joinForm{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:4px 10px;align-items:start}
+  .game.room-form-open .join-fields{grid-column:1;grid-row:1;grid-template-columns:1fr;margin:0;gap:3px}
+  .game.room-form-open .join-fields input{min-height:36px;padding:5px}
+  .game.room-form-open .room-settings{grid-column:2;grid-row:1;display:grid;grid-template-columns:1fr 1fr;gap:1px 8px;margin:0;padding:3px 8px}
+  .game.room-form-open .room-settings>label:first-of-type,.game.room-form-open .target-setting{grid-column:1/-1}
+  .game.room-form-open .room-settings label{min-height:30px}
+  .game.room-form-open .room-settings select{min-height:30px}
+  .game.room-form-open .target-heading{font-size:12px}.game.room-form-open .target-heading output{font-size:13px;padding:1px 6px}
+  .game.room-form-open .target-controls button{width:36px;height:36px}.game.room-form-open .room-settings #targetScore{height:28px}
+  .game.room-form-open #action{grid-column:1/-1;grid-row:2;min-height:40px}
+  .game.room-form-open #browseRooms{min-height:36px;margin-top:4px;padding:5px}
+  .game.waiting-room .waiting-panel .dialog{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 10px;width:min(780px,100%);padding:8px 12px}
+  .game.waiting-room .waiting-panel .eyebrow{display:none}
+  .game.waiting-room #waitingTitle{grid-column:1/-1;margin:0;font-size:20px}
+  .game.waiting-room #waitingPlayers{grid-column:1;grid-row:2/5;margin:0}
+  .game.waiting-room .bot-controls{grid-column:2;grid-row:2;margin:0}
+  .game.waiting-room #waitingMessage{grid-column:2;grid-row:3;margin:0}
+  .game.waiting-room #startGame{grid-column:2;grid-row:4;min-height:40px}
+}
 </style>
 </head>
 <body>
@@ -585,7 +647,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 <div id="battleHud" class="battle-hud" aria-label="Live battle scores" hidden><div id="battleProgress" class="battle-progress"></div><div id="battleOpponents" class="battle-opponents"></div></div>
 </div>
 <div class="stage">
-<section id="waitingRoom" class="waiting-panel" aria-labelledby="waitingTitle" hidden><div class="dialog"><p class="eyebrow">GATHER YOUR SQUAD</p><h2 id="waitingTitle">Waiting for players</h2><ul id="waitingPlayers" aria-label="Players in this arena" aria-live="polite"></ul><div id="botControls" class="bot-controls" hidden><button id="addBot" class="tool" type="button">🤖 ADD BOT</button><button id="removeBot" class="tool" type="button">REMOVE BOT</button><label>Bot skill <select id="botSkill"><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></label></div><p id="waitingMessage" role="status"></p><button id="startGame" class="primary" type="button" hidden>START GAME</button><p id="networkLinks" class="hint network-detail">Open this address in another browser and join the same arena.</p></div></section>
+<section id="waitingRoom" class="waiting-panel" aria-labelledby="waitingTitle" hidden><div class="dialog"><p class="eyebrow">GATHER YOUR SQUAD</p><h2 id="waitingTitle">Waiting for players</h2><ul id="waitingPlayers" aria-label="Players in this arena" aria-live="polite"></ul><div id="botControls" class="bot-controls" hidden><button id="addBot" class="tool" type="button">🤖 ADD BOT</button><button id="removeBot" class="tool" type="button">REMOVE BOT</button><label>Skill <select id="botSkill" aria-label="Bot skill"><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></label></div><p id="waitingMessage" role="status"></p><button id="startGame" class="primary" type="button" hidden>START GAME</button><p id="networkLinks" class="hint network-detail">Open this address in another browser and join the same arena.</p></div></section>
 <div id="countdown" class="countdown" role="status" aria-live="polite" hidden><span>GET READY</span><strong id="countdownNumber">3</strong></div>
 <section id="results" class="results-screen" aria-labelledby="resultsTitle" hidden><div class="results-card">
 <svg class="results-tank" viewBox="0 0 120 120" aria-hidden="true"><path d="M60 5 66 20 82 15 77 30 92 40 76 45 78 62 60 54 42 62 44 45 28 40 43 30 38 15 54 20Z" fill="#ffd65a"/><rect x="22" y="73" width="76" height="33" rx="14" fill="#385b43"/><g class="results-turret"><path d="M43 76 55 48h10l12 28" fill="currentColor" stroke="#385b43" stroke-width="5" stroke-linejoin="round"/><rect x="52" y="35" width="16" height="33" rx="5" fill="currentColor" stroke="#385b43" stroke-width="4"/></g><circle cx="41" cy="90" r="8" fill="#fff3cf"/><circle cx="60" cy="90" r="8" fill="#fff3cf"/><circle cx="79" cy="90" r="8" fill="#fff3cf"/></svg>
@@ -644,7 +706,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 <li><b>Left half:</b> touch anywhere and drag to drive.</li>
 <li><b>Right half:</b> touch anywhere and drag to aim and fire. Let go to stop.</li>
 <li><b>Menu</b> (top right): Full Map, sound, invite and Leave Arena.</li>
-<li>In Close View, <b>ENEMY arrows</b> point toward opponents beyond the screen.</li>
+<li>In Close View, <b>red ENEMY</b> and <b>teal ALLY</b> arrows point toward tanks beyond the screen.</li>
 <li>Turn your phone sideways for a wider battlefield.</li>
 </ul></div></article>
 <article id="lessonFind" class="lesson" hidden><img src="./tutorial/find-tank.webp" alt="Close-up: your tank has a thick glowing ring and a star after its name" width="1200" height="613" loading="lazy"><div><p class="eyebrow">FIND YOUR TANK</p><h3>Look for the glowing ring.</h3><ul>

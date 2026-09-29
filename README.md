@@ -2,9 +2,11 @@
 
 Install Tank Frenzy as a Home Assistant app (formerly called an add-on). The Pi hosts the multiplayer game; players use Safari, Edge, Chrome, or another modern browser on their phones, tablets, or computers. Rendering and sound run on each player's device.
 
-**Tank Frenzy v1.19.9**, developed directly in this repository. Touch play uses translucent controls across the left and right halves of the screen; creators can choose a 5–50 kill win target. Mobile close view points toward off-screen opponents; 2 vs 2 marks allies and enemies and groups match results by team. The persistent leaderboard shows damage dealt and deaths. The Pi app provides separate Home Assistant sidebar and LAN listeners.
+**Tank Frenzy v1.22.2**, developed directly in this repository. Touch play uses translucent controls across the left and right halves of the screen; creators can choose a 5–50 kill win target. Mobile close view points toward off-screen teammates and opponents; 2 vs 2 marks allies and enemies and groups match results by team. The persistent leaderboard shows damage dealt and deaths. The Pi app provides separate Home Assistant sidebar and LAN listeners.
 
-During battle, the top strip shows your score, kills needed to win and the other tanks' kills and health. In team play, the score counts both teammates' kills. The lobby artwork fires steadily moving shells that fade near the end, with a brief layered muzzle blast; animation stops outside the lobby, when the tab is hidden, or when reduced motion is preferred.
+On phones, the create form and waiting-room controls fit in one viewport; the map keeps its full-screen layout through countdown and results.
+
+During battle, the floating header shows your score, a larger health bar and the other tanks' kills; their health appears below each tank. In team play, the score counts both teammates' kills. Brief mobile interruptions preserve your tank while the game reconnects. The lobby artwork fires steadily moving shells that fade near the end, with a brief layered muzzle blast; animation stops outside the lobby, when the tab is hidden, or when reduced motion is preferred.
 
 ## Install
 
@@ -56,6 +58,6 @@ docker run --rm -p 8765:8765 tank-frenzy-rpi
 
 Run the build on the intended architecture (or use Docker Buildx with `--platform linux/arm64`). The repository includes CI for tests and ARM64/AMD64 container builds. A physical Pi/Home Assistant installation and mobile play must still be checked on the target device; automated tests do not establish Pi performance under load.
 
-App package version: **1.19.9**. Game version: **1.19.9**. Production retains the `tank_frenzy` slug, data and host port across upgrades; releases bump the numeric version in several files at once. See the release checklist in [AGENTS.md](AGENTS.md).
+App package version: **1.22.2**. Game version: **1.22.2**. Production retains the `tank_frenzy` slug, data and host port across upgrades; releases bump the numeric version in several files at once. See the release checklist in [AGENTS.md](AGENTS.md).
 
 The How to Play screenshots in `tutorial/` are rendered by the game itself. After a visual change, run `npm start` and then `npx -y -p playwright node tools/tutorial-screenshots.cjs` to regenerate them (set `ONLY=win.webp` for one image).

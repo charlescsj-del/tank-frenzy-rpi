@@ -4,6 +4,7 @@ const F=require('./shared.js');
 const {generateMap}=require('./map-generator.cjs');
 const Bots=require('./bots.cjs');
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const reconnectGrace=90;
 function hitRect(x,y,r,w){return (x-clamp(x,w.x,w.x+w.w))**2+(y-clamp(y,w.y,w.y+w.h))**2<r*r;}
 // First contact along a relative motion segment, as a fraction of one tick.
 function contactTime(x,y,dx,dy,r){
@@ -176,7 +177,7 @@ class Room {
   }
   step(dt){
     this.time+=dt;
-    for(const p of this.players.values())if(!p.connected&&this.time-p.disconnectedAt>15)this.remove(p);
+    for(const p of this.players.values())if(!p.connected&&this.time-p.disconnectedAt>reconnectGrace)this.remove(p);
     this.refreshOwner();
     if(this.phase==='waiting')return;
     if(this.phase==='countdown'){

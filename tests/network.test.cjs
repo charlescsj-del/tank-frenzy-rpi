@@ -65,7 +65,7 @@ test('four unique slots, capacity, winner, voted rematch, disconnect expiry',()=
   assert.equal(r.phase,'results','two of four is not a majority');assert.equal(r.snapshot().rematchNeeded,3);
   assert.equal(r.voteRematch(ps[2]),true);assert.equal(r.phase,'countdown');assert.equal(r.voteRematch(ps[3]),false);
   assert.notEqual(r.map.id,previousMap);assert.equal(r.winner,null);assert.equal(ps[0].kills,0);
-  r.disconnect(ps[3]);step(r,15.1);assert(!r.players.has(ps[3].id));
+  r.disconnect(ps[3]);step(r,90.1);assert(!r.players.has(ps[3].id));
 });
 test('unrotated projection and mouse aiming match at all canvas sizes',()=>{
   for(const [x,y]of [[26,26],[800,520],[1574,1014]])for(const scale of [.32,.8,1.2]){

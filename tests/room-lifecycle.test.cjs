@@ -45,7 +45,8 @@ test('starter transfers on leave or disconnection before start, never after star
 test('all-disconnected waiting room recovers a starter on reconnect and expires reservations',()=>{
   const r=new Room('BACK'),a=r.add('A');r.disconnect(a);assert.equal(r.ownerId,null);
   a.connected=true;r.step(.01);assert.equal(r.ownerId,a.id);
-  r.disconnect(a);r.step(16);assert.equal(r.players.size,0);assert.equal(r.ownerId,null);
+  r.disconnect(a);r.step(60);assert.equal(r.players.size,1,'a returning phone keeps its tank during a brief outage');
+  r.step(31);assert.equal(r.players.size,0);assert.equal(r.ownerId,null);
 });
 
 test('a win freezes play and requires every connected player to vote for a rematch within 20 seconds',()=>{
