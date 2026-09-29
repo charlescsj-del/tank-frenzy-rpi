@@ -26,7 +26,7 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   const gameMemoryArc=Number((await page.locator('#memoryGameArc').getAttribute('stroke-dasharray')).split(' ')[0]);
   assert(Math.abs(gameCpuArc-16.2/4)<.001,'game CPU uses the whole Pi as the gauge denominator');
   assert(Math.abs(gameMemoryArc-72/4096*100)<.001,'game RSS uses total RAM as the gauge denominator');
-  assert.equal(await page.locator('#cpuGameValue').textContent(),'Game 4.0% (16.2% core)');
+  assert.equal(await page.locator('#cpuGameValue').textContent(),'Game 4.0%');
   assert.equal(await page.locator('#memoryGameValue').textContent(),'Game 1.8% (72 MiB)');
   assert.equal(await page.locator('#memoryAvailable').textContent(),'1.55 GiB available');
   assert.equal(await page.locator('#gameMemory').count(),0,'no duplicate game memory line below the gauge');
@@ -34,6 +34,7 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   assert.equal(await page.evaluate(()=>loadHistory.length),61);assert.equal(await page.locator('#cpuGauge').getAttribute('aria-valuenow'),'36.4');
   for(const width of [1440,768,390,320]){
     await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow at '+width);
+    if(width<=390)assert(await page.evaluate(()=>['cpuGameValue','memoryGameValue'].every(id=>{const text=document.getElementById(id),box=text.getBoundingClientRect(),scale=text.parentNode.querySelector('.scale').getBoundingClientRect();return box.bottom+2<scale.top&&box.width<text.ownerSVGElement.getBoundingClientRect().width*.85})),'mobile gauge labels clear the scale and fit their arcs');
     await page.screenshot({path:out+'/admin-'+width+'.png',fullPage:true});
   }
   console.log('Desktop, tablet and phone gauges rendered; history bounded.');
