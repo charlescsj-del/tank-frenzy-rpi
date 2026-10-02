@@ -251,7 +251,7 @@ test('winner fills the arena, rematch vote is one-shot, and expiry does not rest
   assert.equal(c.elements.get('results').hidden,false);
   assert.equal(c.elements.get('resultsTitle').textContent,'Friend wins!');
   assert.equal(c.elements.get('resultsOutcome').textContent,'GOOD BATTLE!');
-  assert.equal(c.elements.get('resultsVotes').textContent,'0 / 2 votes needed for a rematch');
+  assert.equal(c.elements.get('resultsVotes').textContent,'0 / 2 ready to play again');
   assert.match(c.elements.get('resultsTimer').textContent,/20s/);
   assert.equal(c.elements.get('respawn').textContent,'');
   assert.equal(c.elements.get('thumbControls').hidden,true);
@@ -261,7 +261,7 @@ test('winner fills the arena, rematch vote is one-shot, and expiry does not rest
   c.run("latest.rematchVotes=['me'];updateRoomPhase(latest)");
   assert.equal(c.elements.get('rematch').textContent,'READY ✓');
   c.run("latest.phase='postgame';latest.rematchIn=0;updateRoomPhase(latest)");
-  assert.equal(c.elements.get('rematch').textContent,'REMATCH CLOSED');
+  assert.equal(c.elements.get('rematch').textContent,'ROUND FINISHED');
   const sent=c.sent.length;c.elements.get('rematch').events.click();assert.equal(c.sent.length,sent);
   c.run("latest.phase='countdown';latest.winner=null;latest.countdownIn=3;updateRoomPhase(latest)");
   assert.equal(c.elements.get('results').hidden,true);
@@ -345,9 +345,9 @@ test('full and ended rooms cannot be joined; empty lists and request failures ex
   const [full,done]=c.elements.get('roomList').children.map(row=>row.children[1]);
   assert.deepEqual([full.textContent,full.disabled,done.textContent,done.disabled],['FULL',true,'ENDED',true]);
   rooms([]);await c.run('refreshRooms()');
-  assert.equal(c.elements.get('roomList').children.length,0);assert.match(c.elements.get('roomListStatus').textContent,/Quick Play finds a group/);
+  assert.equal(c.elements.get('roomList').children.length,0);assert.equal(c.elements.get('publicArenas').hidden,true);
   c.sandbox.fetch=async()=>{throw Error('offline');};await c.run('refreshRooms()');
-  assert.match(c.elements.get('roomListStatus').textContent,/Tap Refresh/);
+  assert.match(c.elements.get('roomListStatus').textContent,/Tap refresh/);assert.equal(c.elements.get('publicArenas').hidden,false);
 });
 
 test('Quick Play requests matchmaking directly without selecting an existing arena',async()=>{
@@ -559,7 +559,7 @@ test('kills appear in a short feed, streaks get a banner, and the result card sh
   c.run(`latest={phase:'results',winner:{id:'me',name:'Me'},rematchIn:15,rematchVotes:['b'],rematchNeeded:2,settings:{mode:'ffa'},players:${JSON.stringify(players)}};updateRoomPhase(latest)`);
   const rows=c.elements.get('resultsRows').children;
   assert.deepEqual(rows.map(r=>r.children.map(cell=>cell.textContent)),[['Me ★','3','1','45%'],['Bo','1','3','25%']].map(r=>r.map((v,i)=>i?Number.isNaN(+v)?v:+v:v)));
-  assert.equal(c.elements.get('resultsVotes').textContent,'1 / 2 votes needed for a rematch');
+  assert.equal(c.elements.get('resultsVotes').textContent,'1 / 2 ready to play again');
 });
 
 test('the match-end damage list opens on tap and closes for the next round',()=>{
@@ -629,7 +629,7 @@ test('the leaderboard pop-up lists the top players and closes with Escape',async
   await c.run('openLeaderboard()');
   assert.equal(c.elements.get('leaderboard').hidden,false);
   const rows=c.elements.get('leaderboardRows').children.filter(r=>r.className!=='leaderboard-details').map(r=>r.children.map(cell=>String(cell.textContent)));
-  assert.deepEqual(rows,[['🥇','Ann','3','4','30','247','10','3.0'],['🥈','Bo','1','4','12','61','0','12.0']]);
+  assert.deepEqual(rows,[['1','Ann','3','4','30','247','10','3.0'],['2','Bo','1','4','12','61','0','12.0']]);
   assert.match(c.elements.get('leaderboardNote').textContent,/Scores saved/);
   assert.match(urls.at(-1),/\/leaderboard\?period=week&country=&player=$/);
   assert.equal(c.elements.get('leaderboardRegion').children.length,2,'All regions plus each country seen');

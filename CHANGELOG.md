@@ -2,6 +2,15 @@
 
 Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. Dates use the earliest release or import commit available in this repository, shown in the Asia/Kuala_Lumpur time zone. For v1.1.0–v1.3.2, the original game release commits are unavailable here, so 2026-09-23 is the archive import date, not a claimed release date. The v1.5.0 notes first appear in the 2026-09-24 import of v1.6.0. The 19.x builds were originally distributed under those numbers; their entries below are relabeled as consecutive 1.19.x versions for a consistent history. Git history retains the original package numbers.
 
+## v3.0.0 [2026-10-03]
+
+- Redesign the home screen around one prominent Play action, compact mode selection and direct Create arena / Join with code actions. Remove the empty directory panel; show public arenas only when available, with a retry action on errors.
+- Use the quarry backdrop, larger tank portraits and a simplified Ready action for matchmaking. Preserve the existing search deadlines, adaptive AI and shared countdown.
+- Put winner artwork and weekly rank progress first on results. Keep player reactions visible in a compact scorecard, reveal deaths, hit rate and damage through Match Details, and keep Play Again, Lobby and Leave accessible on small phones and landscape screens.
+- Replace font-dependent menu and reaction icons with inline SVG artwork; use clear numeric ranks. Refine leaderboard spacing, filter tabs, name truncation and text contrast.
+- Adapt the home layout for desktop, tablet, phone and short landscape screens, respect reduced motion, and update browser checks and the tutorial result image.
+- Keep the existing scoring, guest profiles, room protocol and separate dev app identity.
+
 ## v2.0.0 [2026-10-03]
 
 - Make Quick Play one tap: group same-mode arrivals for up to eight seconds, fill spare slots with adaptive AI, reveal four tanks with a five-second timer, and start immediately when all humans are ready.

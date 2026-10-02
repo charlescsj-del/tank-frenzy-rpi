@@ -60,7 +60,7 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   await page.goto(base+'/');await page.locator('#leaderboardButton').click();
   assert.deepEqual(await page.locator('#leaderboard thead th').allTextContents(),['#','Player','Wins','Matches','Kills','Damage','Deaths','K/D']);
   await page.waitForFunction(()=>document.querySelectorAll('#leaderboardRows tr').length>0);
-  assert.deepEqual(await page.locator('#leaderboardRows tr:first-child td').allTextContents(),['🥇','Commander','1','1','3','27','2','1.5']);
+  assert.deepEqual(await page.locator('#leaderboardRows tr:first-child td').allTextContents(),['1','Commander','1','1','3','27','2','1.5']);
   await page.setViewportSize({width:390,height:844});
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'phone page must not overflow');
   assert(await page.locator('.leaderboard-body').evaluate(el=>el.scrollWidth<=el.clientWidth+1),'compact leaderboard fits the phone');

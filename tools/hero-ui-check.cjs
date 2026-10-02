@@ -39,12 +39,17 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
   }
   assert.equal(await shell.locator('use[href="#heroProjectile"]').count(),1,'shell uses the pointed shaded projectile');
   // Freeze a firing moment for repeatable responsive screenshots.
-  for(const [width,height] of [[1440,900],[390,844],[844,390]]){
+  for(const [width,height] of [[1440,900],[390,844],[320,640],[768,1024],[844,390]]){
    await page.setViewportSize({width,height});
    await page.evaluate(()=>document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=720)));
    assert(await flash.evaluate(el=>Number(getComputedStyle(el).opacity)>.3),'muzzle flash appears during the shot');
    assert(await ring.evaluate(el=>Number(getComputedStyle(el).opacity)>.1),'expanding muzzle ring appears during the shot');
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal page overflow');
+   for(const id of ['quickPlay','createRoom','joinCodeButton']){
+    const b=await page.locator('#'+id).boundingBox();assert(b&&b.x>=0&&b.y>=0&&b.x+b.width<=width+1&&b.y+b.height<=height+1,id+' is visible without scrolling at '+width+'x'+height);
+   }
+   assert.equal(await page.locator('#publicArenas').isVisible(),false,'empty public directory takes no space');
+   for(const id of ['leaderboardButton','sound','music'])assert.equal(await page.locator('#'+id+' svg use').count(),1,'menu icons use dependable SVGs');
    await page.screenshot({path:out+'/lobby-'+width+'.png',fullPage:true});
    if(width===390){await page.evaluate(()=>document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=0)));await page.screenshot({path:out+'/lobby-idle-390.png',fullPage:true});}
   }

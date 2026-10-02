@@ -38,13 +38,16 @@ fs.mkdirSync(output,{recursive:true});
     await phone.locator('#reactionToggle').click();await phone.locator('#reactionOptions button').first().click();
     await Promise.all([pc.waitForFunction(()=>document.querySelector('.reaction-bubble')?.textContent==='GG!'),phone.waitForFunction(()=>document.querySelector('.reaction-bubble')?.textContent==='GG!')]);
     await fits(pc,'.results-card');await fits(phone,'.results-card');
+    await pc.locator('#resultStatsToggle').click();assert(await pc.locator('#resultDamage').isVisible());assert(await pc.locator('#resultsBoard th').nth(3).isVisible());await pc.locator('#resultStatsToggle').click();
+    assert.equal(await pc.locator('#resultsBoard th').nth(3).isVisible(),false);
+    assert.equal(await phone.locator('#reactionOptions svg').count(),4,'emoji reactions have cross-platform SVG artwork');
     await screenshot(pc,'results-desktop');await screenshot(phone,'results-phone');
     await phone.evaluate(async()=>{if(document.fullscreenElement)await document.exitFullscreen();setExpanded(true);});
     for(const [width,height]of [[320,640],[844,390]]){
       await phone.setViewportSize({width,height});await fits(phone,'.results-card');for(const id of ['rematch','resultsLobby','resultsLeave'])await fits(phone,'#'+id);await screenshot(phone,'results-'+width);
     }
     await phone.setViewportSize({width:390,height:844});
-    await phone.locator('#muteReactions').click();assert.equal(await phone.locator('.reaction-bubble').count(),0);
+    await phone.locator('#reactionToggle').click();await screenshot(phone,'reactions-phone');await phone.locator('#muteReactions').click();assert.equal(await phone.locator('.reaction-bubble').count(),0);
     await pc.locator('#resultsLobby').click();await Promise.all([pc.waitForFunction(()=>latest?.phase==='waiting'),phone.waitForFunction(()=>latest?.phase==='waiting')]);
     await pc.locator('#lobbyRules summary').click();await pc.locator('#lobbyMode').selectOption('teams');await pc.locator('#lobbyTarget').fill('25');await pc.locator('#lobbyPrivate').check();await pc.locator('#saveLobbyRules').click();
     await phone.waitForFunction(()=>latest.settings.mode==='teams'&&latest.settings.targetScore===25&&latest.private);

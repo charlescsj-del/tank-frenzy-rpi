@@ -33,8 +33,9 @@ syncHeroVisibility();
 function status(text){$('status').textContent=spectating?'👁 WATCHING (HIDDEN) · '+text:text;}
 function resetResultDamage(){
   $('resultDamage').hidden=true;
+  $('resultsBoard').classList.remove('expanded-stats');
   $('resultStatsToggle').setAttribute('aria-expanded','false');
-  $('resultStatsToggle').textContent='SHOW DAMAGE ▾';
+  $('resultStatsToggle').textContent='MATCH DETAILS +';
 }
 function hideBattleHud(){
   $('battleHud').hidden=true;$('arenaHeader').classList.remove('has-battle-hud');$('arena').classList.remove('battle-live');
@@ -43,8 +44,9 @@ function hideBattleHud(){
 $('resultStatsToggle').addEventListener('click',()=>{
   const open=$('resultDamage').hidden;
   $('resultDamage').hidden=!open;
+  $('resultsBoard').classList.toggle('expanded-stats',open);
   $('resultStatsToggle').setAttribute('aria-expanded',String(open));
-  $('resultStatsToggle').textContent=open?'HIDE DAMAGE ▴':'SHOW DAMAGE ▾';
+  $('resultStatsToggle').textContent=open?'LESS DETAIL −':'MATCH DETAILS +';
 });
 function networkMessage(title,text,form=false){
   if(form)leaveFullscreen();
@@ -92,7 +94,8 @@ function renderRooms(){
     join.addEventListener('click',()=>joinRoomNow(room.code));
     row.append(info,join);$('roomList').append(row);
   }
-  $('roomListStatus').textContent=rooms.length?'Join a public arena, or Quick Play to find opponents.':'No public arenas yet. Quick Play finds a group and fills empty seats with AI.';
+  $('publicArenas').hidden=!rooms.length;
+  $('roomListStatus').textContent=rooms.length+' public '+(rooms.length===1?'arena':'arenas');
 }
 async function refreshRooms(){
   if(!lobbyVisible)return;
@@ -104,11 +107,11 @@ async function refreshRooms(){
     lobbyRooms=data.rooms;renderRooms();
   }catch{
     if(!lobbyVisible||request!==roomRequest)return;
-    lobbyRooms=[];renderRooms();$('roomListStatus').textContent='Could not load arenas. Tap Refresh to try again.';
+    lobbyRooms=[];renderRooms();$('publicArenas').hidden=false;$('roomListStatus').textContent='Arenas unavailable. Tap refresh.';
   }
 }
 function showLobby(){
-  networkMessage('Find your battle.','Pick an arena to see who is playing, or create your own.');
+  networkMessage('Ready to roll?','Pick an arena to see who is playing, or create your own.');
   lobbyVisible=true;joinMode=null;lobbyRooms=[];$('roomBrowser').hidden=false;
   document.body.classList.toggle('in-lobby',true);$('arena').classList.toggle('lobby-open',true);
   renderRooms();$('roomListStatus').textContent='Loading arenas…';refreshRooms();
@@ -266,8 +269,9 @@ function tankPortrait(slot){
   const art=document.createElement('span');art.className='tank-portrait';art.setAttribute('aria-hidden','true');art.style.setProperty('--tank',colors[slot]||colors[0]);
   if(document.createElementNS){
     const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg'),sprite=document.createElementNS(ns,'use');
-    const crops=['20 180 580 380','1050 270 700 470','600 255 450 240','1640 260 408 310'],names=['orange','blue','green','purple'],index=slot%4;
-    svg.setAttribute('viewBox',crops[index]);sprite.setAttribute('href','#heroTankSprites');sprite.setAttribute('clip-path','url(#heroClip-'+names[index]+')');svg.append(sprite);art.append(svg);art.classList.add('has-sprite');
+    const crops=['20 180 580 420','1140 275 570 430','600 280 360 255','1680 310 355 285'],names=['orange','blue','green','purple'],index=slot%4;
+    svg.setAttribute('viewBox',crops[index]);sprite.setAttribute('href','#heroTankSprites');sprite.setAttribute('clip-path','url(#heroClip-'+names[index]+')');
+    const crop=document.createElementNS(ns,'g');crop.setAttribute('clip-path','url(#portraitCrop-'+names[index]+')');crop.append(sprite);svg.append(crop);art.append(svg);art.classList.add('has-sprite');
   }
   return art;
 }
@@ -275,9 +279,9 @@ function renderMatchmaking(data){
   const searching=data.phase==='searching';$('matchmakingTitle').textContent=searching?'Finding opponents':'Meet your rivals';
   $('matchmaking').classList.toggle('is-teams',data.settings?.mode==='teams');
   const humanCount=data.players.filter(p=>!p.bot&&p.connected).length;
-  $('matchmakingNote').textContent=searching?humanCount+'/4 people · Empty seats fill with AI when the search ends.':'All humans ready? Start now—or let the timer finish.';
-  $('matchmakingTime').textContent=searching?'Searching · '+Math.ceil(data.searchIn)+'s':'Starts in '+Math.ceil(data.readyIn)+'s';
-  const ready=(data.readyIds||[]).includes(myId);$('readyButton').hidden=searching;$('readyButton').disabled=ready;$('readyButton').textContent=ready?'READY ✓':'READY — START SOONER';
+  $('matchmakingNote').textContent=searching?humanCount+'/4 players found · AI fills any open seats.':'Everyone ready? The battle starts immediately.';
+  $('matchmakingTime').textContent=searching?'Finding a match · '+Math.ceil(data.searchIn)+'s':'Battle in '+Math.ceil(data.readyIn)+'s';
+  const ready=(data.readyIds||[]).includes(myId);$('readyButton').hidden=searching;$('readyButton').disabled=ready;$('readyButton').textContent=ready?'READY ✓':'READY';
   const signature=JSON.stringify([data.phase,data.players.map(p=>[p.id,p.name,p.slot,p.bot,p.team]),data.readyIds]);
   if($('matchmakingPlayers').signature===signature)return;$('matchmakingPlayers').signature=signature;$('matchmakingPlayers').replaceChildren();
   const players=data.settings?.mode==='teams'?[...data.players].sort((a,b)=>(a.team??0)-(b.team??0)):data.players;
@@ -289,7 +293,13 @@ function renderMatchmaking(data){
     card.append(name,detail);$('matchmakingPlayers').append(card);
   }
 }
-const reactionLabels={gg:'GG!',nice:'Nice shot!',rematch:'Rematch?',thanks:'Thanks!',thumb:'👍',laugh:'😂',wow:'😮',smoke:'💨'};
+const reactionLabels={gg:'GG!',nice:'Nice shot!',rematch:'Rematch?',thanks:'Thanks!',thumb:'Like!',laugh:'Haha!',wow:'Wow!',smoke:'Whoosh!'};
+function reactionContent(element,id){
+  element.textContent=reactionLabels[id]||'';
+  if(!document.createElementNS||!['thumb','laugh','wow','smoke'].includes(id))return;
+  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg'),use=document.createElementNS(ns,'use');
+  svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('class','ui-icon');svg.setAttribute('aria-hidden','true');use.setAttribute('href','#ui-'+id);svg.append(use);element.replaceChildren(svg);element.setAttribute('aria-label',reactionLabels[id]);element.title=reactionLabels[id];
+}
 function renderRankChange(){
   if(!lastResult||!latest?.winner||(latest.roundId&&lastResult.roundId!==latest.roundId)){ $('rankChange').hidden=true;return; }
   const key=lastResult.roundId;if(rankSignature===key)return;rankSignature=key;$('rankChange').hidden=false;
@@ -320,10 +330,12 @@ function updateRoomPhase(data){
     $('resultsOutcome').textContent=won?'VICTORY!':'GOOD BATTLE!';
     const connected=data.players.filter(p=>p.connected),votes=data.rematchVotes||[],voted=votes.includes(myId);
     const needed=data.rematchNeeded||connected.length,ready=votes.filter(id=>connected.some(p=>p.id===id)).length;
-    $('resultsVotes').textContent=postgame?'The rematch window has closed.':ready+' / '+needed+' votes needed for a rematch';
+    $('resultsVotes').textContent=postgame?'Round finished':ready+' / '+needed+' ready to play again';
     const board=JSON.stringify([data.settings?.mode,data.winner.team,data.teamScores,data.players.map(p=>[p.id,p.team,p.kills,p.deaths,p.damageDealt,p.shots,p.hits,p.reaction]),muteReactions]);
     if(board!==resultsSignature){
       resultsSignature=board;$('resultsRows').replaceChildren();$('resultDamageRows').replaceChildren();
+      const winners=data.players.filter(p=>data.settings?.mode==='teams'?p.team===data.winner.team:p.id===data.winner.id);
+      $('resultsWinnerArt').replaceChildren(...winners.map(p=>tankPortrait(p.slot)));
       const teams=data.settings?.mode==='teams';
       for(const team of teams?[0,1]:[null]){
         if(teams){
@@ -338,7 +350,7 @@ function updateRoomPhase(data){
         for(const p of data.players.filter(p=>!teams||p.team===team).sort((a,b)=>b.kills-a.kills||a.deaths-b.deaths)){
         const row=document.createElement('tr');if(p.id===myId)row.className='me';
          const cells=[p.name+(p.bot?' · AI':'')+(p.id===myId?' ★':''),p.kills,p.deaths,p.shots?Math.round(100*Math.min(p.hits,p.shots)/p.shots)+'%':'—'].map(value=>{const cell=document.createElement('td');cell.textContent=value;return cell;});
-         cells[0].prepend?.(tankPortrait(p.slot));if(!muteReactions&&p.reaction){const bubble=document.createElement('span');bubble.className='reaction-bubble';bubble.textContent=reactionLabels[p.reaction]||'';cells[0].append(bubble);}
+         cells[0].prepend?.(tankPortrait(p.slot));if(!muteReactions&&p.reaction){const bubble=document.createElement('span');bubble.className='reaction-bubble';reactionContent(bubble,p.reaction);cells[0].append(bubble);}
         cells[0].style.color=colors[p.slot];row.append(...cells);$('resultsRows').append(row);
         const damageRow=document.createElement('tr');if(p.id===myId)damageRow.className='me';
         for(const value of [p.name+(p.id===myId?' ★':''),Number.isFinite(p.damageDealt)?p.damageDealt:'—']){
@@ -349,8 +361,8 @@ function updateRoomPhase(data){
       }
     }
     $('rematch').disabled=postgame||voted||!joined;
-    $('rematch').textContent=postgame?'REMATCH CLOSED':voted?'READY ✓':'REMATCH';
-    $('resultsTimer').textContent=postgame?'Leave the arena to start or join a new battle.':'Rematch starts when most players vote. '+Math.ceil(data.rematchIn)+'s left.';
+    $('rematch').textContent=postgame?'ROUND FINISHED':voted?'READY ✓':'PLAY AGAIN';
+    $('resultsTimer').textContent=postgame?'Return to the lobby for another battle.':'Back to lobby in '+Math.ceil(data.rematchIn)+'s';
   }
   $('reactionToggle').hidden=!results||spectating;$('reactionStrip').hidden=!results||$('reactionStrip').hidden;$('resultsLobby').hidden=!(results||postgame)||spectating;renderRankChange();
   if(waiting){
@@ -392,7 +404,7 @@ $('saveLobbyRules').addEventListener('click',()=>{
   send({type:'room',action:'rules',settings,private:$('lobbyPrivate').checked});selectGameMode(settings.mode);try{localStorage.setItem('tank-frenzy-rules',JSON.stringify(settings));}catch{}
 });
 $('reactionToggle').addEventListener('click',()=>{const open=$('reactionStrip').hidden;$('reactionStrip').hidden=!open;$('reactionToggle').setAttribute('aria-expanded',String(open));});
-for(const [id,label]of Object.entries(reactionLabels)){const button=document.createElement('button');button.type='button';button.textContent=label;button.setAttribute('aria-label','Send '+label);button.addEventListener('click',()=>{send({type:'reaction',reaction:id});$('reactionStrip').hidden=true;$('reactionToggle').setAttribute('aria-expanded','false');});$('reactionOptions').append(button);}
+for(const [id,label]of Object.entries(reactionLabels)){const button=document.createElement('button');button.type='button';reactionContent(button,id);button.setAttribute('aria-label','Send '+label);button.addEventListener('click',()=>{send({type:'reaction',reaction:id});$('reactionStrip').hidden=true;$('reactionToggle').setAttribute('aria-expanded','false');});$('reactionOptions').append(button);}
 $('muteReactions').addEventListener('click',()=>{muteReactions=!muteReactions;$('muteReactions').textContent=muteReactions?'REACTIONS OFF':'REACTIONS ON';$('muteReactions').setAttribute('aria-pressed',String(!muteReactions));try{localStorage.setItem('tank-frenzy-reactions',muteReactions?'off':'on');}catch{}resultsSignature='';if(latest)updateRoomPhase(latest);});
 $('muteReactions').textContent=muteReactions?'REACTIONS OFF':'REACTIONS ON';$('muteReactions').setAttribute('aria-pressed',String(!muteReactions));
 $('reactionPrev').addEventListener('click',()=>$('reactionOptions').scrollBy?.({left:-180,behavior:reducedMotion?'auto':'smooth'}));$('reactionNext').addEventListener('click',()=>$('reactionOptions').scrollBy?.({left:180,behavior:reducedMotion?'auto':'smooth'}));
@@ -530,12 +542,12 @@ async function loadLeaderboard(){
     const response=await fetch(appUrl('leaderboard?period='+leaderboardPeriod+'&country='+leaderboardCountry+'&player='+encodeURIComponent(profileId)));if(!response.ok)throw Error();
     const data=await response.json();if(request!==leaderboardRequest)return;
     $('leaderboardPodium').replaceChildren();$('starterRivals').hidden=Boolean(data.players.length);
-    data.players.slice(0,3).forEach((p,i)=>{const card=document.createElement('div');card.className='podium-player';const name=document.createElement('strong'),score=document.createElement('small');name.textContent=['🥇','🥈','🥉'][i]+' '+p.name;score.textContent=p.wins+' wins · '+p.kills+' kills';card.append(tankPortrait(p.slot??i),name,score);$('leaderboardPodium').append(card);});
+    data.players.slice(0,3).forEach((p,i)=>{const card=document.createElement('div');card.className='podium-player';const name=document.createElement('strong'),score=document.createElement('small'),rank=document.createElement('span');rank.className='podium-place';rank.textContent='#'+(i+1);name.textContent=p.name;name.title=p.name;score.textContent=p.wins+' wins · '+p.kills+' kills';card.append(rank,tankPortrait(p.slot??i),name,score);$('leaderboardPodium').append(card);});
     $('leaderboardYou').textContent=data.you?'YOUR RANK · #'+data.you.rank+' · '+data.you.wins+' wins · '+data.you.kills+' kills':'YOUR RANK · Finish a battle to enter the board. Solo battles count too.';
     data.players.forEach((p,i)=>{
       const row=document.createElement('tr');
       if(p.profileId&&p.profileId===profileId)row.className='me';
-      for(const value of [i<3?['🥇','🥈','🥉'][i]:i+1,p.name+(p.country?' '+flagOf(p.country):''),p.wins,p.matches,p.kills,p.damageDealt??0,p.deaths,(p.kills/Math.max(1,p.deaths)).toFixed(1)]){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}
+      for(const value of [i+1,p.name+(p.country?' '+flagOf(p.country):''),p.wins,p.matches,p.kills,p.damageDealt??0,p.deaths,(p.kills/Math.max(1,p.deaths)).toFixed(1)]){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}
       const more=document.createElement('tr');more.hidden=true;more.className='leaderboard-details';const detail=document.createElement('td');detail.colSpan=8;detail.textContent=p.matches+' matches · '+p.deaths+' deaths · '+(p.damageDealt??0)+' damage · '+(p.kills/Math.max(1,p.deaths)).toFixed(1)+' K/D';more.append(detail);
       row.tabIndex=0;row.setAttribute('aria-expanded','false');row.setAttribute('aria-label',p.name+', '+p.wins+' wins. Show statistics');const toggle=()=>{more.hidden=!more.hidden;row.setAttribute('aria-expanded',String(!more.hidden));};row.addEventListener('click',toggle);row.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});$('leaderboardRows').append(row,more);
     });
@@ -569,8 +581,8 @@ $('tutorialBody').addEventListener('pointerup',e=>{
   if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5)showTutorialPage(tutorialPage+(dx<0?1:-1));
 });
 function updateAudioButtons(){
-  $('sound').textContent=sound?'EFFECTS ON':'EFFECTS OFF';$('sound').setAttribute('aria-pressed',String(sound));$('sound').setAttribute('data-icon',sound?'🔊':'🔇');
-  $('music').textContent=music?'MUSIC ON':'MUSIC OFF';$('music').setAttribute('aria-pressed',String(music));$('music').setAttribute('data-icon',music?'🎵':'🔕');
+  $('sound').setAttribute('aria-pressed',String(sound));
+  $('music').setAttribute('aria-pressed',String(music));
   $('sound').setAttribute('aria-label',sound?'Mute effects':'Unmute effects');$('sound').title=sound?'Mute effects':'Unmute effects';
   $('music').setAttribute('aria-label',music?'Mute music':'Unmute music');$('music').title=music?'Mute music':'Unmute music';
 }
