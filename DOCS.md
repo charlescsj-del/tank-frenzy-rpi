@@ -26,7 +26,7 @@ The complete repository must be inside `/addons/tank_frenzy`, with `config.yaml`
 - **Network → 8765/tcp**: Host port for LAN players. Default: `8765`. Set a different free host port if occupied, or disable to use only Home Assistant ingress.
 - **Show in sidebar**: Opens the game through Home Assistant authentication. The dedicated ingress listener accepts only the Supervisor proxy at `172.30.32.2`.
 
-The app has no HA configuration/media mappings. It uses the Home Assistant API only to send the optional notifications. `/data` holds Supervisor options and `leaderboard.json`: all-time totals (wins, matches, kills, damage dealt, deaths and country by player name, at most 200 names) plus the last 62 days of match results, which power the Today, This week and This month views. It is saved about a second after every finished match and again when the app stops, written to a temporary file first so a power cut cannot corrupt it. It survives app restarts, updates and Pi reboots, and is included in Home Assistant backups of the app; uninstalling the app deletes it. Existing leaderboard files keep their scores, but damage from matches before v1.16.0 was not recorded and starts at zero. Only matches with at least two people are saved. To remove one name or reset everything, use the Leaderboard section at the bottom of the admin page (or delete the file with the app stopped). When more than 200 names exist, those with the fewest matches are dropped first, so a flood of made-up names cannot push out regular players. Days and weeks (Monday to Sunday) follow Home Assistant's time zone. Rooms and matches in progress are not persisted: app restarts/updates end active matches.
+The app has no HA configuration/media mappings. It uses the Home Assistant API only for optional notifications. `/data/leaderboard.json` stores schema-2 statistics for up to 200 guest profiles plus 62 days of match history (at most 20000 matches). Every finished match with at least one human counts, including solo games against AI; bots never enter real rankings. Earned kills, damage and deaths from a player who leaves are retained if the round finishes, without a completion or win for that player. Saves are debounced one second, written atomically, and flushed on shutdown. Data survives app updates and is included in Home Assistant backups. On the first load of an older schema, the app preserves `/data/leaderboard.json.legacy-v1.json`; existing scores remain separate legacy entries. A new guest cannot claim an old entry simply by typing its name. Guest credentials are kept in browser local storage, reconnect tokens in session storage. Changing the guest name preserves their identity; another device, browser origin, private session or cleared storage creates a separate profile. The credential must be kept private; no account linking or cross-device recovery is implemented. Periods reset at midnight in Malaysia (UTC+8), with weeks beginning Monday. The admin can remove all records matching a name or reset the board. When over capacity, profiles with the fewest matches are pruned first. Rooms and rounds in progress are not persisted.
 
 ## Reading the admin resource charts
 
@@ -41,7 +41,7 @@ The app has no HA configuration/media mappings. It uses the Home Assistant API o
 1. The app log should show listeners on game port `8765` and internal ingress port `8099`.
 2. Open **Web UI**: the lobby, banner and room list should load.
 3. Open `http://YOUR_PI_IP:8765` on two devices. Create and join one arena, set a win count between 5 and 50 (default 10), start a round, move, shoot, and confirm sound after interacting.
-4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `1.22.2`.
+4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `2.0.0`.
 5. Test an invitation generated from the sidebar after setting `public_url`.
 
 ## Updates
@@ -91,6 +91,6 @@ Fair-use limits protect the server from one visitor filling it: each address can
 | No room notifications | Check `notify_service` under **Developer tools → Actions**; at most one notification is sent per minute. |
 | Leaderboard has no regions | Only players arriving through Cloudflare have a country. |
 | "Too many arenas" | One address already has 6 open arenas. Join one of them, or end idle ones from the admin page. |
-| A finished solo match is missing from the leaderboard | Only matches with at least two people are ranked. |
+| A finished solo match is missing from the leaderboard | Finish the round, then check the matching period and region. Unknown countries appear under All regions. Solo matches count from v2.0.0 onward; older solo matches cannot be reconstructed. |
 
 The container uses the maintained `node:22-alpine` tag; patch updates may change the underlying image on future rebuilds. ARM64 build success and real-device performance are separate checks.

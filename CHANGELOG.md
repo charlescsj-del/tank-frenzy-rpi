@@ -2,6 +2,18 @@
 
 Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. Dates use the earliest release or import commit available in this repository, shown in the Asia/Kuala_Lumpur time zone. For v1.1.0–v1.3.2, the original game release commits are unavailable here, so 2026-09-23 is the archive import date, not a claimed release date. The v1.5.0 notes first appear in the 2026-09-24 import of v1.6.0. The 19.x builds were originally distributed under those numbers; their entries below are relabeled as consecutive 1.19.x versions for a consistent history. Git history retains the original package numbers.
 
+## v2.0.0 [2026-10-03]
+
+- Make Quick Play one tap: group same-mode arrivals for up to eight seconds, fill spare slots with adaptive AI, reveal four tanks with a five-second timer, and start immediately when all humans are ready.
+- Create friend arenas immediately with remembered rules; join invitations directly. Add local QR invitations, host rule editing, friends-only privacy, readiness and balanced team swaps.
+- Keep friend groups together between rounds; return to an editable lobby when the rematch window expires or a participant chooses Back to Lobby.
+- Use natural AI callsigns with visible AI labels. Choose Quick Play difficulty from recent human performance, with easy-bot weighting and beginner protection.
+- Record completed solo battles against AI. Separate guest identity from display names, preserve legacy totals and an untouched migration backup, deduplicate round recording, and retain departed players’ earned statistics when a round finishes.
+- Default the leaderboard to This week, add a podium and personal rank, make phone rows expandable, use Malaysia reset times, and animate genuine weekly rank movement and statistic gains after matches.
+- Add shared result reactions with a swipeable/mouse-wheel picker, three-second bubbles, cooldown and local mute.
+- Show labelled AI starter targets separately from real regional player records; do not invent human population or countries.
+- Add server, migration, lifecycle and mobile regressions plus real desktop/phone/landscape browser checks in CI. Keep the dev app’s separate slug and port.
+
 ## v1.22.2 [2026-09-29]
 
 - Remove player names from the top battle score chips while retaining color, kills and accessible labels. Place the kill feed below the menu button.

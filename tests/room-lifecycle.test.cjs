@@ -5,6 +5,27 @@ const {Room}=require('../game-server.cjs');
 function input(r,p){r.setInput(p,{seq:p.seq+1,x:1,y:0,aimX:1200,aimY:500,fire:true});}
 function running(){const r=new Room('TEST'),a=r.add('A');r.start(a);r.step(3);r.map.walls=[];return {r,a};}
 
+test('Quick Play caps waiting, replaces disconnected pregame seats, and starts without another tap',()=>{
+  const r=new Room('QUICK'),a=r.add('A');r.configureQuick();r.disconnect(a);r.step(.01);assert.equal(r.players.size,0,'abandoned queue never makes a bot-only match');
+  const room=new Room('QUICK2'),human=room.add('A');room.configureQuick();room.step(8);assert.equal(room.phase,'ready');assert.equal(room.players.size,4);assert.equal(room.botSkill,'easy');
+  const x=human.x;input(room,human);room.step(4.9);assert.equal(human.x,x);assert.equal(room.phase,'ready');room.step(.11);assert.equal(room.phase,'playing');
+  const full=new Room('FULL');for(let i=0;i<4;i++)full.add('P'+i);full.configureQuick();full.step(.01);const leaver=full.humans()[0];full.disconnect(leaver);full.step(.01);assert.equal(full.players.size,4);assert.equal(full.humans().length,3);
+  const peers=full.humans();full.ready(peers[0]);full.ready(peers[1]);full.disconnect(peers[2]);full.step(.01);assert.equal(full.phase,'playing','a departed unready human cannot hold back ready peers');
+});
+
+test('results reactions are authorized, rate-limited, short-lived, and confined to their room',()=>{
+  const {r,a}=running(),b=r.add('B');assert.equal(r.react(a,'gg'),false);b.shieldUntil=0;a.kills=9;r.damage(b,a.id,10);
+  assert.equal(r.react({...a},'gg'),false);assert.equal(r.react(a,'invalid'),false);assert.equal(r.react(a,'gg'),true);assert.equal(r.react(a,'wow'),false);
+  assert.equal(r.snapshot().players.find(p=>p.id===a.id).reaction,'gg');r.step(1.51);assert.equal(r.react(a,'wow'),true);r.step(3.01);assert.equal(r.snapshot().players.find(p=>p.id===a.id).reaction,null);
+  const other=new Room('OTHER');assert.equal(other.react(a,'gg'),false);assert.equal(other.events.length,0);
+});
+
+test('host team swaps preserve two seats per side and changed rules clear readiness',()=>{
+  const r=new Room('TEAMS',{mode:'teams'}),a=r.add('A');for(let i=0;i<3;i++)r.add('P'+i);
+  r.ready(a);assert.equal(r.roomCommand(a,{action:'team',player:a.id,team:1}),true);assert.equal(r.readyIds.size,0);assert.deepEqual([0,1].map(t=>[...r.players.values()].filter(p=>p.team===t).length),[2,2]);
+  assert.equal(r.roomCommand(r.humans()[1],{action:'rules',settings:{mode:'ffa'}}),false);
+});
+
 test('waiting rooms stay frozen indefinitely; only the connected starter can start',()=>{
   const r=new Room('WAIT'),a=r.add('A'),b=r.add('B'),x=a.x,y=a.y;
   assert.equal(r.snapshot().phase,'waiting');assert.equal(r.ownerId,a.id);
@@ -62,11 +83,11 @@ test('a win freezes play and requires every connected player to vote for a remat
   input(r,a);const nextX=a.x;r.step(2.9);assert.equal(a.x,nextX);assert.equal(r.phase,'countdown');r.step(.11);assert.equal(r.phase,'playing');
 });
 
-test('an expired rematch stays ended, rejects late votes, and never auto-starts',()=>{
+test('an expired rematch returns everyone to a usable lobby without auto-starting',()=>{
   const {r,a}=running(),b=r.add('B');b.shieldUntil=0;a.kills=9;r.damage(b,a.id,10);
-  assert.equal(r.voteRematch(a),true);r.step(20);assert.equal(r.phase,'postgame');assert(r.winner);
+  assert.equal(r.voteRematch(a),true);r.step(20);assert.equal(r.phase,'waiting');assert.equal(r.winner,null);
   assert.equal(r.snapshot().rematchIn,0);assert.deepEqual(r.snapshot().rematchVotes,[]);
-  assert.equal(r.voteRematch(b),false);assert.equal(r.start(a),false);r.step(200);assert.equal(r.phase,'postgame');
+  assert.equal(r.voteRematch(b),false);r.step(200);assert.equal(r.phase,'waiting');assert.equal(r.start(a),true);
 });
 
 test('rematch authorization excludes disconnected players but admits late joins and reconnects',()=>{

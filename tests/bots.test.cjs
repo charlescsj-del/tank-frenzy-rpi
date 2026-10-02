@@ -10,7 +10,7 @@ test('only the room starter adds, removes and tunes bots, and only while waiting
   assert.equal(r.botCommand(owner,{action:'add'}),true);assert.equal(r.botCommand(owner,{action:'add'}),true);
   assert.equal(r.botCommand(owner,{action:'add'}),false,'four seats at most');
   const bots=[...r.players.values()].filter(p=>p.bot);
-  assert.equal(bots.length,2);assert(bots.every(b=>b.name.startsWith('🤖 ')));assert.equal(r.ownerId,owner.id);
+  assert.equal(bots.length,2);assert(bots.every(b=>b.bot&&!b.name.startsWith('🤖 ')));assert.equal(new Set(bots.map(b=>b.name)).size,2);assert.equal(r.ownerId,owner.id);
   assert.equal(r.botCommand(owner,{action:'skill',skill:'hard'}),true);assert.equal(r.botSkill,'hard');
   assert.equal(r.botCommand(owner,{action:'skill',skill:'godlike'}),false);assert.equal(r.snapshot().botSkill,'hard');
   assert.equal(r.botCommand(owner,{action:'remove'}),true);assert.equal(r.humans().length,2);assert.equal(r.players.size,3);

@@ -16,11 +16,12 @@ Multiplayer browser tank game packaged as a **Home Assistant app** (formerly add
 | `server.cjs` | `createGameServer(options)`: HTTP routes, static allowlist (`files` map), admin routes, WebSocket protocol, 120 Hz tick loop, snapshot broadcast. `npm start` runs it standalone on port 8765. Exports `{createGameServer,countryOf}`. |
 | `game-server.cjs` | `Room`: players, bots, phases, movement, shells, lasers, pickups, damage, scoring, rematch votes, `snapshot()`. Exports `{Room,hitRect,encodeState}`. |
 | `bots.cjs` | Bot brain: `think(room,p,rayBox)` writes normal player input. `skills` (easy/normal/hard), `botNames`. |
-| `leaderboard.cjs` | `Leaderboard(file,now)`: all-time totals (≤200 names) plus a 62-day match log (≤20000 matches); `top({period,country,count})`, `countries()`; atomic save (temp file then rename), debounced 1 s and again on close. |
+| `leaderboard.cjs` | Schema-2 guest-profile totals (≤200 profiles), 62-day history (≤20000 matches), adaptive difficulty, rank deltas, atomic saves and preserved legacy backup. |
 | `addon.cjs` | HA entry point (`CMD` in Dockerfile). `readOptions('/data/options.json')` validates options; `homeAssistantNotifier()` posts to `http://supervisor/core/api/services/notify/<service>` with `SUPERVISOR_TOKEN`, at most once a minute. Starts both listeners with `leaderboardFile:'/data/leaderboard.json'`. |
 | `map-generator.cjs` | Seeded random walls on a 5×4 grid of cells with connected lanes. |
 | `shared.js` | `FIELD` constants shared by browser and server (version, sizes, limits, powers, palette, projection). UMD-style: `window.FIELD` / `require()`. |
 | `client.js` | Whole browser client (vanilla JS, canvas): lobby, tutorial pager, leaderboard modal, input, rendering, effects, fullscreen, spectating. |
+| `qr.js` | Vendored MIT QRCode encoder from Kazuhiko Arase / gtanner/qrcode-terminal; draws invite QR codes locally, no external service. |
 | `index.html` | Page markup and all CSS (inline `<style>`). |
 | `admin.html` | Standalone admin UI (polls state, draws mini-maps, Watch live, End room). |
 | `system-metrics.cjs` | Lazy one-second resource sampler shared by admin viewers: host CPU, available RAM, load averages, and separate game CPU/RSS. No background timer. |
@@ -34,8 +35,8 @@ Multiplayer browser tank game packaged as a **Home Assistant app** (formerly add
 ## HTTP routes (server.cjs)
 
 - `/health` → `{status:'ok',version}` (used by the HA watchdog and CI).
-- `/rooms` → open rooms with players, settings, phase, `available` (human seats; 0 in `postgame`).
-- `/leaderboard?period=day|week|month|all&country=XX` → `{players,countries,period,country,persistent}`.
+- `/rooms` → public friend rooms with human-seat availability. Private and Quick Play rooms are omitted; invitations can join private rooms.
+- `/leaderboard?period=day|week|month|all&country=XX&player=<profileId>` → `{players,countries,period,country,persistent,you,timezone}`. `you` includes an exact rank even outside the top ten.
 - `/network-info` → LAN URLs, `publicUrl`, whether the request came through ingress.
 - Admin root (`/admin`, or `/<admin_path>`): `GET /` admin.html, `GET /state`, `POST /watch` → `{pass,room}`, `POST /close` → 204, `GET /leaderboard` (all names), `POST /leaderboard/remove?name=` → 204/404, `POST /leaderboard/reset` → 204. POSTs require the header `X-Tank-Admin: 1` (CSRF guard). Ingress requests skip auth; otherwise HTTP Basic with `admin_password` (constant-time SHA-256 compare, 429 for one visitor after 10 failures a minute, or for everyone after 300). With no password, the admin root returns 404 on the game port. When `admin_path` is set, `/admin` is an ordinary 404.
 - Ingress requests to `/` get `<base href="<ingress path>">` injected so relative asset URLs work under the sidebar. Every browser URL in the client must stay **relative** (`./audio/...`, `rooms`, `ws`).
@@ -47,21 +48,21 @@ Multiplayer browser tank game packaged as a **Home Assistant app** (formerly add
 ## WebSocket protocol
 
 Client → server (JSON, max 2048 bytes, max 150 messages/s):
-- `{type:'join',room,name,mode:'create'|'join'|undefined,settings:{mode:'ffa'|'teams',bouncing,powers},token?}`. A `token` from an earlier `welcome` reconnects to the reserved tank (90 s reservation).
+- `{type:'join',room,name,mode:'create'|'join'|undefined,settings:{mode,bouncing,powers,targetScore},private?,profile?,token?}`. `token` reconnects for 90 s during battle. `{type:'quick',name,settings:{mode},profile?}` groups contemporaneous arrivals. Duplicate active profile membership is rejected.
 - `{type:'input',seq,x,y,aimX,aimY,fire}`. `seq` must increase; input is ignored outside the `playing` phase.
 - `{type:'start'}` (owner only, while waiting), `{type:'rematch'}`, `{type:'bot',action:'add'|'remove'|'skill',skill}` (owner, waiting), `{type:'ping',sent}`, `{type:'leave'}`.
 - `{type:'spectate',room,pass}`: hidden admin spectator; must be the first message.
 
-Server → client: `welcome {id,token,slot,room,seq}`, `state` (snapshot), `spectating {room}`, `error {title?,message}` (then close), `pong {sent}`.
+Server → client: `welcome {id,token,profile:{secret,id},slot,room,seq}`, `state`, private `result {roundId,saved,period,country,before,after,nearby}` rank data, `spectating`, `error`, `pong`. The secret goes only to its owner; it is never included in snapshots or public rankings. Additional commands: `ready`, `lobby`, `room {action:rules|team,...}` (host/waiting only), `reaction {reaction}` (results only; fixed IDs, 1.5 s cooldown, 3 s bubble).
 
 Snapshots (`Room.snapshot({withMap})` → `encodeState`): one `JSON.stringify` per room per broadcast, numbers rounded to tenths (angles `a`/`aim` to hundredths). Shells carry only `id,x,y,slot`. `map` is included only when it changed or once a second (`tick%60===0`); every snapshot has `mapId`, and `welcome` is followed by a full snapshot with the map. Client code must use `latest.mapId ?? latest.map?.id` and keep the last received map. Snapshots go out at 30 Hz (the 60 Hz interval sends on even ticks); simulation runs at 120 Hz. `events` (hit, destroyed, shot, bounce, pickup, laser, …) are sent once, then cleared.
 
-Phases: `waiting` → `countdown` (3 s) → `playing` → `results` (20 s rematch vote; needs `floor(connected humans/2)+1`) → `postgame` (no new joins; room lives until everyone leaves).
+Phases: friend `waiting` → `countdown` (3 s) → `playing` → `results` (20 s majority rematch). Expiry or `lobby` returns the group to `waiting`; only all-offline results enter `postgame`. Quick Play adds `searching` (up to 8 s, same-mode FIFO grouping) → `ready` (bots fill to four, 5 s shared timer) → `playing`; all human Ready votes skip that timer. Cancel removes the membership; disconnected pregame humans are removed promptly and never produce bot-only rounds.
 
 ## Game rules that code depends on
 
-- The owner is the first connected human; ownership passes on leave/disconnect before the first start, then is cleared. Bots never own, vote or keep a room alive: the last human leaving removes them. A human joining a full room replaces the newest bot.
-- Leaderboard: recorded once per match when `room.winner` first appears (`room.recorded`), only with at least two humans. Over 200 names, the fewest-match names are pruned first. Bots are skipped; names match case-insensitively; in teams the whole winning team wins. Periods use the server's local time zone; weeks start Monday. Country comes from `CF-IPCountry` (`/^[A-Z]{2}$/`, excluding `XX` and `T1`).
+- The owner is a connected human in waiting/results/postgame; play clears ownership and returning to the lobby restores it. Bots cannot own, vote or keep rooms alive. Friend joins can replace bots. Host rule/team/bot edits clear readiness.
+- Leaderboard: save synchronously through `room.onFinish` before a rematch can reset state, once per round UUID. Rank every completed round with at least one human. Preserve departed players via `matchPlayers`, retaining earned statistics without a win/completion when their round finishes. New profiles key by SHA-256 of a 24-byte guest secret, independent of display name; legacy entries key by case-folded name and remain separate. Schema-1 loads create an untouched `.legacy-v1.json` backup. Periods use UTC+8 with Monday weeks. Difficulty uses the strongest recent human plus group average, discounts easy AI rounds, starts beginners Easy and caps mixed beginner groups at Normal. Country is exclusively `CF-IPCountry`, excluding `XX` and `T1`.
 - Hidden spectators live in the server's `spectators` Map, never in `room.players`, so they never appear in counts, `/rooms` or snapshots. Watch passes are random hex, single room, 10-minute expiry; the client strips `?spectate=…&pass=…` from the address bar with `history.replaceState`.
 
 ## Home Assistant options
@@ -70,7 +71,7 @@ Phases: `waiting` → `countdown` (3 s) → `playing` → `results` (20 s rematc
 
 ## Tests
 
-`npm test` runs `node --test tests/*.test.cjs` (about 155 tests, around 10 seconds). CI (`.github/workflows/verify.yml`) runs the tests, builds the Docker image on amd64 and aarch64, checks `/health` and `/rooms`, and runs `tools/admin-ui-check.cjs` in Chromium at desktop/tablet/phone widths. The UI job temporarily installs Playwright and uploads screenshots; it adds no game runtime dependency.
+`npm test` runs `node --test tests/*.test.cjs` (174 tests, about 10 seconds). CI also builds amd64/aarch64 containers and checks admin, hero and multiplayer UI. `tools/multiplayer-ui-check.cjs` exercises real HTTP/WebSocket grouping, Ready, results, shared reactions, ranks, privacy, QR invitations and direct invite joining at desktop, phone and landscape sizes. Playwright is a CI-only dependency. Browser check artifacts go under `artifacts/`; local tools may set `CHROMIUM_EXECUTABLE_PATH` and `ARTIFACT_DIR`.
 
 Harness quirks:
 - `client.js` and `server.cjs` are loaded into `vm` sandboxes with hand-made fake DOM elements (children, `append`, `prepend`, `replaceChildren`, `classList`, events, `setAttribute`). They have no `querySelector`, `closest` or `dataset`; if new client code uses a browser API, add it to the fake (or guard the call), or the sandbox throws.

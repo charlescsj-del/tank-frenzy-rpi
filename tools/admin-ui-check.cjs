@@ -9,7 +9,7 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
  let browser;
  const errors=[];
  try{
-  browser=await chromium.launch({headless:true});
+  browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.CHROMIUM_EXECUTABLE_PATH,args:['--no-sandbox']}:{})});
   const page=await browser.newPage({viewport:{width:1440,height:1000},httpCredentials:{username:'admin',password:'review-only-password'},reducedMotion:'reduce'});
   // The Content-Security-Policy must not block anything the pages use.
   const blocked=message=>{if(/Content Security Policy|Refused to/i.test(message.text()))errors.push(message.text());};
@@ -55,7 +55,7 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   await page.unroute('**/private-test/state');await page.evaluate(async()=>{refreshing=false;await refresh();clearTimeout(timer);refreshing=true});
   assert.equal(await page.locator('#freshness').getAttribute('data-stale'),'false');assert(await page.locator('.room').count()>0);
   game.rooms.delete(room.code);
-  room.add('Rookie');// Matches count only with two people.
+  room.add('Rookie');
   const player=room.players.values().next().value;player.kills=3;player.deaths=2;player.damageDealt=27;room.winner={id:player.id,name:player.name};game.leaderboard.record(room);
   await page.goto(base+'/');await page.locator('#leaderboardButton').click();
   assert.deepEqual(await page.locator('#leaderboard thead th').allTextContents(),['#','Player','Wins','Matches','Kills','Damage','Deaths','K/D']);
@@ -63,7 +63,8 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   assert.deepEqual(await page.locator('#leaderboardRows tr:first-child td').allTextContents(),['🥇','Commander','1','1','3','27','2','1.5']);
   await page.setViewportSize({width:390,height:844});
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'phone page must not overflow');
-  assert(await page.locator('.leaderboard-body').evaluate(el=>el.scrollWidth>el.clientWidth),'wide leaderboard scrolls within the dialog on a phone');
+  assert(await page.locator('.leaderboard-body').evaluate(el=>el.scrollWidth<=el.clientWidth+1),'compact leaderboard fits the phone');
+  await page.locator('#leaderboardRows tr:first-child').click();assert(await page.locator('.leaderboard-details').first().isVisible(),'tapping reveals secondary statistics');
   await page.screenshot({path:out+'/leaderboard-phone.png',fullPage:true});
   await page.setViewportSize({width:1440,height:1000});await page.goto(base+'/private-test');
   await page.waitForFunction(()=>document.querySelectorAll('#boardRows tr').length===3);
@@ -75,13 +76,15 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   const touch=await browser.newPage({viewport:{width:390,height:780},hasTouch:true,isMobile:true,deviceScaleFactor:1,reducedMotion:'reduce'});
   touch.on('pageerror',e=>errors.push(e.message));touch.on('console',blocked);await touch.goto(base+'/');
   await touch.locator('#createRoom').click();
+  await touch.waitForFunction(()=>joined&&latest?.phase==='waiting');
+  await touch.evaluate(async()=>{if(document.fullscreenElement)await document.exitFullscreen();setExpanded(true);});
   for(const [width,height] of [[390,780],[844,390]]){
     await touch.setViewportSize({width,height});
-    const form=await touch.evaluate(()=>({scroll:document.documentElement.scrollHeight,viewport:innerHeight,action:$('action').getBoundingClientRect().bottom,browse:$('browseRooms').getBoundingClientRect().bottom,settings:$('roomSettings').getBoundingClientRect().bottom}));
-    assert(form.scroll<=form.viewport+2&&form.action<=form.viewport&&form.browse<=form.viewport&&form.settings<=form.viewport,'create arena fits one '+width+'×'+height+' screen: '+JSON.stringify(form));
+    const form=await touch.evaluate(()=>({scroll:document.documentElement.scrollHeight,viewport:innerHeight,lobby:$('waitingRoom').querySelector('.dialog').getBoundingClientRect().bottom,start:$('startGame').getBoundingClientRect().bottom}));
+    assert(form.scroll<=form.viewport+2&&form.lobby<=form.viewport&&form.start<=form.viewport,'one-tap creation opens a usable lobby at '+width+'×'+height+': '+JSON.stringify(form));
     await touch.screenshot({path:out+'/create-arena-'+width+'.png'});
   }
-  await touch.setViewportSize({width:390,height:780});await touch.locator('#browseRooms').click();
+  await touch.setViewportSize({width:390,height:780});await touch.evaluate(()=>leave());
   const combat={type:'state',room:'QUARRY',settings:{mode:'teams',bouncing:true,powers:true},phase:'playing',countdownIn:0,ownerId:null,teamScores:[4,3],pickups:[],map:{id:777,walls:[],spawns:[[90,90],[1510,950],[1510,90],[90,950]]},time:42,winner:null,rematchIn:0,rematchVotes:[],players:[
     {id:'me',name:'Commander',slot:0,team:0,x:800,y:520,a:0,aim:0,hp:10,kills:2,deaths:1,shots:10,hits:5,life:1,connected:true},
     {id:'ally',name:'Moss',slot:2,team:0,x:1510,y:520,a:0,aim:0,hp:10,kills:2,deaths:1,shots:10,hits:5,life:1,connected:true},
@@ -148,7 +151,8 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   await touch.screenshot({path:out+'/lobby-after-battle-phone.png',fullPage:true});
   const resume=await browser.newPage({viewport:{width:390,height:780},hasTouch:true,isMobile:true});
   resume.on('pageerror',e=>errors.push(e.message));resume.on('dialog',dialog=>dialog.accept());
-  await resume.goto(base+'/?room=RECOVER');await resume.locator('#callsign').fill('Returning');await resume.locator('#action').click();
+  const recoverRoom=new Room('RECOVER');recoverRoom.add('Host');game.rooms.set('RECOVER',recoverRoom);
+  await resume.addInitScript(()=>localStorage.setItem('tank-frenzy-name','Returning'));await resume.goto(base+'/?room=RECOVER');
   await resume.waitForFunction(()=>joined&&myId&&token);const originalId=await resume.evaluate(()=>myId);
   await resume.reload();await resume.waitForFunction(id=>joined&&myId===id,originalId);
   assert.equal(await resume.locator('#waitingRoom').isVisible(),true,'same-tab reload recovers the reserved tank');

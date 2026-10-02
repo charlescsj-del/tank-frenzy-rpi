@@ -82,7 +82,7 @@ button.danger{border-color:#c46a4a;background:#ffe5da;color:#9b3b1d}
 const adminRoot=location.pathname.replace(/\/+$/,''),base=adminRoot.slice(0,adminRoot.lastIndexOf('/')+1);
 const $=id=>document.getElementById(id);
 const flag=code=>code?String.fromCodePoint(...[...code].map(c=>127397+c.charCodeAt(0))):'';
-const phaseNames={waiting:'Waiting',countdown:'Starting',playing:'Playing',results:'Rematch vote',postgame:'Ended'};
+const phaseNames={searching:'Finding opponents',ready:'Meet your rivals',waiting:'Waiting',countdown:'Starting',playing:'Playing',results:'Rematch vote',postgame:'Ended'};
 const time=s=>s>=3600?Math.floor(s/3600)+'h '+Math.floor(s%3600/60)+'m':s>=60?Math.floor(s/60)+'m '+(s%60)+'s':s+'s';
 const cards=new Map();
 let loadHistory=[],lastSample=null;

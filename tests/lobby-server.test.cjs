@@ -41,6 +41,46 @@ function server(options={}){
   return {game,join,list,read,watch,connect,tick};
 }
 
+test('Quick Play groups same-mode arrivals, fills bots at the deadline, and excludes late joins',()=>{
+  const s=server(),quick=(mode='ffa')=>{const ws=s.connect();ws.emit('message',JSON.stringify({type:'quick',name:'Guest',settings:{mode}}));return ws;};
+  const a=quick(),b=quick(),team=quick('teams'),welcome=ws=>ws.messages.find(m=>m.type==='welcome');
+  assert.equal(welcome(a).room,welcome(b).room);assert.notEqual(welcome(a).room,welcome(team).room);assert.equal(s.list().body.rooms.length,0);
+  const room=s.game.rooms.get(welcome(a).room);room.step(7.9);assert.equal(room.phase,'searching');assert.equal(room.players.size,2);
+  room.step(.11);assert.equal(room.phase,'ready');assert.equal(room.players.size,4);assert.equal(room.humans().length,2);assert.equal(room.botSkill,'easy');
+  const late=quick();assert.notEqual(welcome(late).room,room.code);
+  a.emit('message',JSON.stringify({type:'ready'}));assert.equal(room.phase,'ready');b.emit('message',JSON.stringify({type:'ready'}));assert.equal(room.phase,'playing');
+  const other=s.game.rooms.get(welcome(late).room);late.emit('message',JSON.stringify({type:'leave'}));assert.equal(other.players.size,0);
+});
+
+test('full human groups reveal immediately; reconnect preserves the profile and duplicate tabs cannot rank twice',()=>{
+  const s=server(),sockets=Array.from({length:4},()=>{const ws=s.connect();ws.emit('message',JSON.stringify({type:'quick'}));return ws;}),welcome=sockets[0].messages.find(m=>m.type==='welcome'),room=s.game.rooms.get(welcome.room);
+  room.step(.01);assert.equal(room.phase,'ready');assert.equal(room.humans().length,4);
+  const duplicate=s.connect();duplicate.emit('message',JSON.stringify({type:'quick',profile:welcome.profile.secret}));assert.match(duplicate.messages.at(-1).message,/already in an arena/);
+  sockets[0].close();const again=s.join(welcome.room,'join','Rename',welcome.token);assert.equal(again.messages.find(m=>m.type==='welcome').profile.id,welcome.profile.id);
+  room.step(5);assert.equal(room.phase,'playing');
+});
+
+test('expired reconnect credentials never create an unintended empty arena',()=>{
+  const s=server(),ws=s.join('EXPIRED',undefined,'Guest','bad-token');assert.equal(ws.messages.at(-1).code,'session_expired');assert.equal(s.game.rooms.size,0);
+});
+
+test('friends-only rooms accept invitations but stay out of the directory; only hosts edit rules',()=>{
+  const s=server(),host=s.join('FRIENDS','create','Host'),guest=s.join('FRIENDS','join','Guest'),room=s.game.rooms.get('FRIENDS');
+  guest.emit('message',JSON.stringify({type:'room',action:'rules',settings:{mode:'teams'},private:true}));assert.equal(room.settings.mode,'ffa');
+  host.emit('message',JSON.stringify({type:'room',action:'rules',settings:{mode:'teams',targetScore:25,bouncing:false,powers:false},private:true}));
+  assert.equal(room.settings.targetScore,25);assert.equal(s.list().body.rooms.length,0);assert(s.join('FRIENDS','join','Friend').messages.some(m=>m.type==='welcome'));
+});
+
+test('results save before an immediate rematch and the endpoint returns the player rank',async()=>{
+  const s=server(),ws=s.join('SAVE','create','Ann'),welcome=ws.messages.find(m=>m.type==='welcome'),room=s.game.rooms.get('SAVE'),human=room.players.get(welcome.id);
+  ws.emit('message',JSON.stringify({type:'bot',action:'add'}));ws.emit('message',JSON.stringify({type:'start'}));room.step(3);
+  const bot=[...room.players.values()].find(p=>p.bot);human.kills=9;bot.shieldUntil=0;room.damage(bot,human.id,10);
+  const result=ws.messages.find(m=>m.type==='result');assert.equal(result.after.rank,1);assert.equal(result.after.wins,1);
+  ws.emit('message',JSON.stringify({type:'rematch'}));assert.equal(room.phase,'countdown');assert.equal(s.game.leaderboard.top()[0].matches,1);
+  const board=JSON.parse((await s.read('/leaderboard?period=week&player='+welcome.profile.id)).body.toString());assert.equal(board.you.rank,1);assert.equal(board.players.length,1);
+  assert.equal((await s.read('/qr.js')).status,200);
+});
+
 test('approved audio is served with the right type/cache policy and unrelated files stay private',async()=>{
   const s=server(),asset=await s.read('/audio/cartoon-v1.mp3');
   assert.equal(asset.status,200);assert.equal(asset.headers['Content-Type'],'audio/mpeg');assert.match(asset.headers['Cache-Control'],/immutable/);assert(asset.body.length>100000);
@@ -130,15 +170,15 @@ test('rematch messages are accepted only from joined players during a live vote'
   a.emit('message',JSON.stringify({type:'rematch'}));assert.deepEqual(room.snapshot().rematchVotes,[]);
 });
 
-test('ended rooms stay listed but cannot trap a new joiner after the vote closes',()=>{
+test('ended rooms return to the lobby and allow friends to join after the vote closes',()=>{
   const s=server(),a=s.join('FINISH','create','Alice'),room=s.game.rooms.get('FINISH');
   a.emit('message',JSON.stringify({type:'start'}));room.step(3);
   const b=s.join('FINISH','join','Bob'),[alice,bob]=[...room.players.values()];
   bob.shieldUntil=0;alice.kills=9;room.damage(bob,alice.id,10);room.step(20);
-  assert.equal(s.list().body.rooms[0].available,0);
-  const c=s.join('FINISH','join','Charlie');assert.match(c.messages.at(-1).message,/match has ended/i);
-  assert.equal(room.players.size,2);assert.equal(room.phase,'postgame');
-  b.emit('message',JSON.stringify({type:'rematch'}));assert.equal(room.phase,'postgame');
+  assert.equal(s.list().body.rooms[0].available,2);
+  const c=s.join('FINISH','join','Charlie');assert(c.messages.some(m=>m.type==='welcome'));
+  assert.equal(room.players.size,3);assert.equal(room.phase,'waiting');
+  b.emit('message',JSON.stringify({type:'rematch'}));assert.equal(room.phase,'waiting');
 });
 
 test('tutorial screenshots are served as cached WebP images',async()=>{
@@ -170,7 +210,7 @@ test('the leaderboard endpoint lists the top ten, and creating a room triggers t
   sandboxServer.join('ALPHA','create','Ann');sandboxServer.join('ALPHA','join','Bo');
   assert.equal(created.length,1);assert.equal(created[0].code,'ALPHA');assert.equal(created[0].name,'Ann');assert.equal(created[0].url,'http://pi.local:8765/?room=ALPHA');
   const board=await sandboxServer.read('/leaderboard');assert.equal(board.status,200);
-  assert.deepEqual(JSON.parse(board.body.toString()),{players:[],countries:[],period:'all',country:'',persistent:false});
+  assert.deepEqual(JSON.parse(board.body.toString()),{players:[],countries:[],period:'all',country:'',persistent:false,you:null,timezone:'Asia/Kuala_Lumpur'});
 });
 
 test('/admin is hidden without a password, asks for one, and shows and ends rooms with it',async()=>{

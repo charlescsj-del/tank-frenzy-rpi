@@ -21,6 +21,8 @@ let lobbyVisible=false,lobbyRooms=[],joinMode=null,roomRequest=0;
 let selectedGameMode='ffa',leaveDialogOpen=false,tutorialOpen=false,tutorialReturn=null,leaderboardOpen=false;
 let roundAudioMap=null,resultAudioKey=null,countdownAudioKey=null,activePower=null,lastMenuSound=-Infinity;
 let music=true,musicPlayer,waitingSignature='',resultsSignature='',roomPhase=null,nextHeartbeat=0;
+let quickRequested=false,profileSecret='',profileId='',lastResult=null,rankSignature='',muteReactions=false;
+try{const profile=JSON.parse(localStorage.getItem('tank-frenzy-profile')||'null');profileSecret=profile?.secret||'';profileId=profile?.id||'';muteReactions=localStorage.getItem('tank-frenzy-reactions')==='off';selectedGameMode=localStorage.getItem('tank-frenzy-mode')==='teams'?'teams':'ffa';}catch{}
 try{sound=localStorage.getItem('tank-frenzy-sfx')!=='off';music=localStorage.getItem('tank-frenzy-music')!=='off';}catch{/* Storage can be unavailable in private browsing. */}
 const cueVoices=new Set();
 $('roomInput').value=roomCode;$('roomCode').textContent=roomCode||'—';
@@ -48,6 +50,7 @@ function networkMessage(title,text,form=false){
   if(form)leaveFullscreen();
   resetResultDamage();
   hideBattleHud();
+  $('matchmaking').hidden=true;$('reactionStrip').hidden=true;$('rankChange').hidden=true;$('shareDialog').hidden=true;shareOpen=false;$('arena').classList.remove('matchmaking-open');
   $('waitingRoom').hidden=true;$('countdown').hidden=true;$('results').hidden=true;$('arena').classList.toggle('waiting-room',false);$('arena').classList.remove('battle-field');
   document.body.classList.toggle('in-lobby',false);document.body.classList.toggle('in-room-form',form);
   $('arena').classList.toggle('lobby-open',false);$('arena').classList.toggle('room-form-open',form);
@@ -68,7 +71,7 @@ $('targetScore').addEventListener('input',syncTargetScore);
 for(const [id,step] of [['targetScoreLess',-1],['targetScoreMore',1]])$(id).addEventListener('click',()=>{
   const slider=$('targetScore');slider.value=Math.max(5,Math.min(50,Number(slider.value)+step));syncTargetScore();
 });
-function selectGameMode(mode){selectedGameMode=mode;$('ffaMode').setAttribute('aria-pressed',String(mode==='ffa'));$('teamMode').setAttribute('aria-pressed',String(mode==='teams'));renderRooms();}
+function selectGameMode(mode){selectedGameMode=mode;try{localStorage.setItem('tank-frenzy-mode',mode);}catch{}$('ffaMode').setAttribute('aria-pressed',String(mode==='ffa'));$('teamMode').setAttribute('aria-pressed',String(mode==='teams'));renderRooms();}
 $('ffaMode').addEventListener('click',()=>selectGameMode('ffa'));
 $('teamMode').addEventListener('click',()=>selectGameMode('teams'));
 const phaseNames={waiting:'WAITING',countdown:'STARTING',results:'REMATCH VOTE',postgame:'MATCH ENDED'};
@@ -79,7 +82,7 @@ function renderRooms(){
   for(const room of rooms){
     const row=document.createElement('div');row.className='room-row';
     const info=document.createElement('div');info.className='room-choice';
-    const title=document.createElement('strong');title.textContent=room.code+' · '+room.players.filter(p=>p.connected).length+'/'+room.capacity+' · '+(phaseNames[room.phase]||'IN GAME');
+    const title=document.createElement('strong'),people=room.players.filter(p=>!p.bot).length,bots=room.players.filter(p=>p.bot).length;title.textContent=room.code+' · '+people+' people'+(bots?' + '+bots+' AI':'')+' · '+(phaseNames[room.phase]||'IN GAME');
     const players=document.createElement('small');players.textContent=room.players.map(p=>p.name+(p.team!=null?' ('+(p.team===0?'Orange':'Blue')+')':'')+(p.connected?'':' · reconnecting')).join(', ')||'Empty';
     const rules=document.createElement('small');rules.textContent='First to '+(room.settings?.targetScore||FIELD.targetScore)+' · Bounce '+(room.settings?.bouncing===false?'off':'on')+' · Powers '+(room.settings?.powers===false?'off':'on');
     info.append(title,players,rules);
@@ -89,7 +92,7 @@ function renderRooms(){
     join.addEventListener('click',()=>joinRoomNow(room.code));
     row.append(info,join);$('roomList').append(row);
   }
-  $('roomListStatus').textContent=rooms.length?'Tap Join, or Quick Play to jump into an arena.':'No arenas in this mode yet. Quick Play creates one.';
+  $('roomListStatus').textContent=rooms.length?'Join a public arena, or Quick Play to find opponents.':'No public arenas yet. Quick Play finds a group and fills empty seats with AI.';
 }
 async function refreshRooms(){
   if(!lobbyVisible)return;
@@ -113,28 +116,29 @@ function showLobby(){
 $('refreshRooms').addEventListener('click',refreshRooms);
 $('browseRooms').addEventListener('click',showLobby);
 const newRoomCode=()=>'ARENA-'+Math.random().toString(36).slice(2,7).toUpperCase();
-$('createRoom').addEventListener('click',()=>showRoomForm(newRoomCode(),'create'));
+$('createRoom').addEventListener('click',()=>joinRoomNow(newRoomCode(),'create'));
+$('joinCodeButton').addEventListener('click',()=>showRoomForm('','join'));
 // The player's name is remembered on this device and shared by the lobby and the Create/Join form.
 function rememberName(value){
   for(const id of ['lobbyName','callsign'])if($(id).value!==value)$(id).value=value;
   try{localStorage.setItem('tank-frenzy-name',value);}catch{}
 }
-try{rememberName(localStorage.getItem('tank-frenzy-name')||'');}catch{}
+try{rememberName(localStorage.getItem('tank-frenzy-name')||'Rookie'+Math.floor(1000+Math.random()*9000));}catch{rememberName('Rookie'+Math.floor(1000+Math.random()*9000));}
 for(const id of ['lobbyName','callsign'])$(id).addEventListener('input',()=>rememberName($(id).value));
 function joinRoomNow(code,mode='join'){
+  if(connecting||joined)return;
   enterFullscreen();audioReady=true;
   joinMode=mode;$('roomInput').value=code;$('roomInput').readOnly=mode==='join';
-  if(mode==='create'){$('gameMode').value=selectedGameMode;$('bounceOption').checked=true;$('powersOption').checked=true;$('targetScore').value=FIELD.targetScore;syncTargetScore();}
+  quickRequested=false;
+  if(mode==='create'){
+    let settings;try{settings=JSON.parse(localStorage.getItem('tank-frenzy-rules')||'null');}catch{}
+    $('gameMode').value=selectedGameMode;$('bounceOption').checked=settings?.bouncing!==false;$('powersOption').checked=settings?.powers!==false;$('targetScore').value=settings?.targetScore||FIELD.targetScore;syncTargetScore();
+  }
   connect();
 }
-// Quick Play prefers a waiting room, then the fullest open one, in the chosen mode; otherwise it makes a room.
+// The server groups Quick Play arrivals; the first arrival owns the deadline.
 async function quickPlay(){
-  enterFullscreen();
-  let rooms=lobbyRooms;
-  try{const response=await fetch(appUrl('rooms'));if(response.ok)rooms=(await response.json()).rooms;}catch{/* Use the last list shown. */}
-  const open=rooms.filter(room=>(room.settings?.mode||'ffa')===selectedGameMode&&room.available>0&&!['results','postgame'].includes(room.phase))
-    .sort((a,b)=>(a.phase==='waiting'?0:1)-(b.phase==='waiting'?0:1)||a.available-b.available);
-  if(open.length)joinRoomNow(open[0].code);else joinRoomNow(newRoomCode(),'create');
+  if(connecting||joined)return;enterFullscreen();audioReady=true;quickRequested=true;joinMode='quick';$('roomInput').value='';$('gameMode').value=selectedGameMode;connect();
 }
 $('quickPlay').addEventListener('click',quickPlay);
 setInterval(()=>{if(lobbyVisible&&!document.hidden)refreshRooms();},5000);
@@ -150,25 +154,33 @@ function connect(){
   if(connecting||joined)return;
   intentional=false;connecting=true;clearTimeout(retryTimer);
   if(retry===0){roomCode=$('roomInput').value.toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,16);token=null;}
-  if(!roomCode){connecting=false;networkMessage('Choose an arena code.','Enter letters, numbers or hyphens.',true);return;}
+  if(!roomCode&&!quickRequested){connecting=false;networkMessage('Choose an arena code.','Enter letters, numbers or hyphens.',true);return;}
   $('roomCode').textContent=roomCode;updateInvite();
   networkMessage(retry?'Reconnecting...':'Joining the field...',retry?'Your tank is reserved briefly while the connection returns.':'Connecting you to arena '+roomCode+'.');
   status('CONNECTING');$('latency').textContent='CONNECTING';
   const wsUrl=new URL(appUrl('ws'));wsUrl.protocol=wsUrl.protocol==='https:'?'wss:':'ws:';
   const ws=new WebSocket(wsUrl.href);socket=ws;
   const timeout=setTimeout(()=>{if(ws.readyState!==WebSocket.OPEN)ws.close();},15000);
-  ws.addEventListener('open',()=>{clearTimeout(timeout);ws.send(JSON.stringify({type:'join',room:roomCode,name:$('callsign').value,token,mode:joinMode,settings:{mode:$('gameMode').value,bouncing:$('bounceOption').checked,powers:$('powersOption').checked,targetScore:Number($('targetScore').value)}}));});
+  ws.addEventListener('open',()=>{clearTimeout(timeout);ws.send(JSON.stringify({type:quickRequested&&!token?'quick':'join',room:roomCode,name:$('callsign').value||'Rookie',profile:profileSecret,token,mode:joinMode,settings:{mode:$('gameMode').value,bouncing:$('bounceOption').checked,powers:$('powersOption').checked,targetScore:Number($('targetScore').value)}}));});
   ws.addEventListener('message',event=>{
     if(socket!==ws)return;
     let data;try{data=JSON.parse(event.data);}catch{return;}
     if(data.type==='welcome'){
+      roomCode=data.room;$('roomInput').value=roomCode;$('roomCode').textContent=roomCode;quickRequested=false;
+      if(data.profile){profileSecret=data.profile.secret;profileId=data.profile.id;try{localStorage.setItem('tank-frenzy-profile',JSON.stringify(data.profile));}catch{}}updateInvite();
       myId=data.id;token=data.token;joinMode=null;seq=Math.max(seq,data.seq+1);joined=true;connecting=false;retry=0;lastEvent=0;rosterSignature='';pointer.active=false;
       try{sessionStorage.setItem(sessionKey,JSON.stringify({room:roomCode,token,name:$('callsign').value}));}catch{}
       touchAim=null;$('overlay').classList.add('hidden');$('leave').hidden=false;updateTouchControls();canvas.focus({preventScroll:true});
       history.replaceState(null,'','?room='+encodeURIComponent(roomCode));sendInput();
     }else if(data.type==='state'){applySnapshot(data);}
+    else if(data.type==='result'){lastResult=data;renderRankChange();}
     else if(data.type==='pong'){$('latency').textContent=Math.round(performance.now()-data.sent)+' MS';}
-    else if(data.type==='error'){intentional=true;joined=false;connecting=false;try{sessionStorage.removeItem(sessionKey);}catch{}networkMessage(data.title||'Cannot join this arena.',data.message,true);status('CHOOSE AN ARENA');}
+    else if(data.type==='error'){
+      const requeue=data.code==='session_expired'&&latest?.quick&&['searching','ready'].includes(latest.phase);
+      intentional=true;joined=false;connecting=false;try{sessionStorage.removeItem(sessionKey);}catch{}
+      if(requeue){token=null;retry=0;networkMessage('Finding another group…','Your previous group moved on. Rejoining Quick Play automatically.');retryTimer=setTimeout(quickPlay,150);}
+      else{networkMessage(data.title||'Cannot join this arena.',data.message,true);status('CHOOSE AN ARENA');}
+    }
   });
   ws.addEventListener('error',()=>{});
   ws.addEventListener('close',()=>{
@@ -206,6 +218,7 @@ function leave(){
   if(spectating){spectating=false;document.body.classList.remove('spectating');$('leave').setAttribute('aria-label','Leave arena');$('leave').title='Leave arena';}
   intentional=true;clearTimeout(retryTimer);release();send({type:'leave'});socket?.close();socket=null;joined=false;connecting=false;myId=null;token=null;retry=0;
   try{sessionStorage.removeItem(sessionKey);}catch{}
+  quickRequested=false;lastResult=null;rankSignature='';$('matchmaking').hidden=true;$('reactionStrip').hidden=true;$('rankChange').hidden=true;
   latest=null;tanks=[];shells=[];tracks=[];pickups=[];beams=[];pickupFlashes=[];floaters=[];rings=[];hurt=0;$('killFeed').replaceChildren();$('streakBanner').hidden=true;resultsSignature='';$('leave').hidden=true;$('respawn').textContent='';$('latency').textContent='OFFLINE';$('roster').replaceChildren();
   touchAim=null;updateTouchControls();
   roundAudioMap=null;resultAudioKey=null;countdownAudioKey=null;activePower=null;roomPhase=null;waitingSignature='';stopCueSounds();syncMusic();
@@ -249,10 +262,53 @@ function applySnapshot(data){
   }
   updateRoomPhase(data);updateHud(data);
 }
+function tankPortrait(slot){
+  const art=document.createElement('span');art.className='tank-portrait';art.setAttribute('aria-hidden','true');art.style.setProperty('--tank',colors[slot]||colors[0]);
+  if(document.createElementNS){
+    const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg'),sprite=document.createElementNS(ns,'use');
+    const crops=['20 180 580 380','1050 270 700 470','600 255 450 240','1640 260 408 310'],names=['orange','blue','green','purple'],index=slot%4;
+    svg.setAttribute('viewBox',crops[index]);sprite.setAttribute('href','#heroTankSprites');sprite.setAttribute('clip-path','url(#heroClip-'+names[index]+')');svg.append(sprite);art.append(svg);art.classList.add('has-sprite');
+  }
+  return art;
+}
+function renderMatchmaking(data){
+  const searching=data.phase==='searching';$('matchmakingTitle').textContent=searching?'Finding opponents':'Meet your rivals';
+  $('matchmaking').classList.toggle('is-teams',data.settings?.mode==='teams');
+  const humanCount=data.players.filter(p=>!p.bot&&p.connected).length;
+  $('matchmakingNote').textContent=searching?humanCount+'/4 people · Empty seats fill with AI when the search ends.':'All humans ready? Start now—or let the timer finish.';
+  $('matchmakingTime').textContent=searching?'Searching · '+Math.ceil(data.searchIn)+'s':'Starts in '+Math.ceil(data.readyIn)+'s';
+  const ready=(data.readyIds||[]).includes(myId);$('readyButton').hidden=searching;$('readyButton').disabled=ready;$('readyButton').textContent=ready?'READY ✓':'READY — START SOONER';
+  const signature=JSON.stringify([data.phase,data.players.map(p=>[p.id,p.name,p.slot,p.bot,p.team]),data.readyIds]);
+  if($('matchmakingPlayers').signature===signature)return;$('matchmakingPlayers').signature=signature;$('matchmakingPlayers').replaceChildren();
+  const players=data.settings?.mode==='teams'?[...data.players].sort((a,b)=>(a.team??0)-(b.team??0)):data.players;
+  for(let i=0;i<4;i++){
+    const p=players[i],card=document.createElement('div');card.className='match-player'+(p?.id===myId?' is-you':'')+(!p?' is-searching':'');
+    const name=document.createElement('strong'),detail=document.createElement('small');
+    if(p){card.append(tankPortrait(p.slot));name.textContent=p.name+(p.id===myId?' · YOU':'');detail.textContent=(p.bot?'AI · ':'')+(p.team!=null?(p.team===0?'ORANGE':'BLUE')+' TEAM · ':'')+(p.bot||(data.readyIds||[]).includes(p.id)?'READY ✓':'MATCHED');}
+    else{const radar=document.createElement('span');radar.className='search-radar';card.append(radar);name.textContent='Searching…';detail.textContent='Finding your rival';}
+    card.append(name,detail);$('matchmakingPlayers').append(card);
+  }
+}
+const reactionLabels={gg:'GG!',nice:'Nice shot!',rematch:'Rematch?',thanks:'Thanks!',thumb:'👍',laugh:'😂',wow:'😮',smoke:'💨'};
+function renderRankChange(){
+  if(!lastResult||!latest?.winner||(latest.roundId&&lastResult.roundId!==latest.roundId)){ $('rankChange').hidden=true;return; }
+  const key=lastResult.roundId;if(rankSignature===key)return;rankSignature=key;$('rankChange').hidden=false;
+  const before=lastResult.before,after=lastResult.after,delta=before&&after?before.rank-after.rank:0;
+  $('rankChangeTitle').textContent=!after?'Score saved':!before?'NEW ENTRY · #'+after.rank:delta>0?'↑ '+delta+' '+(delta===1?'place':'places')+' · #'+after.rank:delta<0?'↓ '+Math.abs(delta)+' places · #'+after.rank:'HOLDING #'+after.rank;
+  $('rankChangeNote').textContent='Score saved · This week · Global';$('rankChangeRows').replaceChildren();
+  const started=performance.now(),from=lastResult.before||{wins:0,kills:0,damageDealt:0},to=lastResult.after||from;
+  const count=()=>{if(rankSignature!==key)return;const progress=reducedMotion?1:Math.min(1,(performance.now()-started)/800),ease=1-(1-progress)**3;$('rankChangeScore').textContent=['wins','kills','damageDealt'].map((s,i)=>Math.round(from[s]+(to[s]-from[s])*ease)+' '+['wins','kills','damage'][i]).join(' · ');if(progress<1)requestAnimationFrame(count);};count();
+  for(const p of lastResult.nearby||[]){
+    const row=document.createElement('div');row.className='rank-row'+(p.profileId===profileId?' rank-self':'');
+    const rank=document.createElement('b'),name=document.createElement('span'),wins=document.createElement('strong');rank.textContent='#'+p.rank;name.textContent=p.name;wins.textContent=p.wins+' W · '+p.kills+' K';row.append(rank,tankPortrait(p.slot||0),name,wins);
+    row.style.setProperty('--rank-offset',Math.max(-3,Math.min(3,(p.beforeRank??p.rank)-p.rank))*44+'px');if(!reducedMotion)row.classList.add('rank-moving');$('rankChangeRows').append(row);
+  }
+}
 function updateRoomPhase(data){
   const waiting=data.phase==='waiting',countdown=data.phase==='countdown',results=data.phase==='results',postgame=data.phase==='postgame';
+  const matching=['searching','ready'].includes(data.phase);$('matchmaking').hidden=!matching;$('arena').classList.toggle('matchmaking-open',matching);if(matching)renderMatchmaking(data);
   $('waitingRoom').hidden=!waiting;$('arena').classList.toggle('waiting-room',waiting);
-  $('arena').classList.toggle('battle-field',!waiting&&(joined||spectating));
+  $('arena').classList.toggle('battle-field',!waiting&&!matching&&(joined||spectating));
   $('countdown').hidden=!countdown;
   $('results').hidden=!(results||postgame);
   if(!results&&!postgame&&!$('resultDamage').hidden)resetResultDamage();
@@ -265,7 +321,7 @@ function updateRoomPhase(data){
     const connected=data.players.filter(p=>p.connected),votes=data.rematchVotes||[],voted=votes.includes(myId);
     const needed=data.rematchNeeded||connected.length,ready=votes.filter(id=>connected.some(p=>p.id===id)).length;
     $('resultsVotes').textContent=postgame?'The rematch window has closed.':ready+' / '+needed+' votes needed for a rematch';
-    const board=JSON.stringify([data.settings?.mode,data.winner.team,data.teamScores,data.players.map(p=>[p.id,p.team,p.kills,p.deaths,p.damageDealt,p.shots,p.hits])]);
+    const board=JSON.stringify([data.settings?.mode,data.winner.team,data.teamScores,data.players.map(p=>[p.id,p.team,p.kills,p.deaths,p.damageDealt,p.shots,p.hits,p.reaction]),muteReactions]);
     if(board!==resultsSignature){
       resultsSignature=board;$('resultsRows').replaceChildren();$('resultDamageRows').replaceChildren();
       const teams=data.settings?.mode==='teams';
@@ -281,7 +337,8 @@ function updateRoomPhase(data){
         }
         for(const p of data.players.filter(p=>!teams||p.team===team).sort((a,b)=>b.kills-a.kills||a.deaths-b.deaths)){
         const row=document.createElement('tr');if(p.id===myId)row.className='me';
-        const cells=[p.name+(p.id===myId?' ★':''),p.kills,p.deaths,p.shots?Math.round(100*Math.min(p.hits,p.shots)/p.shots)+'%':'—'].map(value=>{const cell=document.createElement('td');cell.textContent=value;return cell;});
+         const cells=[p.name+(p.bot?' · AI':'')+(p.id===myId?' ★':''),p.kills,p.deaths,p.shots?Math.round(100*Math.min(p.hits,p.shots)/p.shots)+'%':'—'].map(value=>{const cell=document.createElement('td');cell.textContent=value;return cell;});
+         cells[0].prepend?.(tankPortrait(p.slot));if(!muteReactions&&p.reaction){const bubble=document.createElement('span');bubble.className='reaction-bubble';bubble.textContent=reactionLabels[p.reaction]||'';cells[0].append(bubble);}
         cells[0].style.color=colors[p.slot];row.append(...cells);$('resultsRows').append(row);
         const damageRow=document.createElement('tr');if(p.id===myId)damageRow.className='me';
         for(const value of [p.name+(p.id===myId?' ★':''),Number.isFinite(p.damageDealt)?p.damageDealt:'—']){
@@ -295,17 +352,22 @@ function updateRoomPhase(data){
     $('rematch').textContent=postgame?'REMATCH CLOSED':voted?'READY ✓':'REMATCH';
     $('resultsTimer').textContent=postgame?'Leave the arena to start or join a new battle.':'Rematch starts when most players vote. '+Math.ceil(data.rematchIn)+'s left.';
   }
+  $('reactionToggle').hidden=!results||spectating;$('reactionStrip').hidden=!results||$('reactionStrip').hidden;$('resultsLobby').hidden=!(results||postgame)||spectating;renderRankChange();
   if(waiting){
-    const signature=JSON.stringify([data.ownerId,data.players.map(p=>[p.id,p.name,p.connected,p.team])]);
+    const signature=JSON.stringify([data.ownerId,data.readyIds,data.settings,data.private,data.players.map(p=>[p.id,p.name,p.connected,p.team,p.bot])]);
     if(signature!==waitingSignature){
       waitingSignature=signature;$('waitingPlayers').replaceChildren();
       for(const p of data.players){
         const item=document.createElement('li');item.style.setProperty('--tank',colors[p.slot]);
-        item.textContent=p.name+(p.id===myId?' · YOU':'')+(p.team!=null?' · '+(p.team===0?'Orange team':'Blue team'):'')+(p.id===data.ownerId?' · STARTER':'')+(p.connected?'':' · Reconnecting');
+        const name=document.createElement('strong'),detail=document.createElement('small');name.textContent=p.name+(p.id===myId?' · YOU':'');detail.textContent=(p.bot?'AI · ':'')+(p.team!=null?(p.team===0?'Orange':'Blue')+' team · ':'')+(p.id===data.ownerId?'HOST · ':'')+(p.connected?(p.bot||(data.readyIds||[]).includes(p.id)?'READY ✓':'Joined'):'Reconnecting');
+        const copy=document.createElement('span');copy.append(name,detail);item.append(tankPortrait(p.slot),copy);
+        if(data.ownerId===myId&&p.team!=null){const swap=document.createElement('button');swap.type='button';swap.className='tool team-swap';swap.textContent='⇄';swap.setAttribute('aria-label','Swap '+p.name+' to the other team');swap.addEventListener('click',()=>send({type:'room',action:'team',player:p.id,team:1-p.team}));item.append(swap);}
         $('waitingPlayers').append(item);
       }
     }
     const mine=data.ownerId===myId,owner=data.players.find(p=>p.id===data.ownerId);
+    $('lobbyRules').hidden=!mine;$('waitingReady').disabled=(data.readyIds||[]).includes(myId);$('waitingReady').textContent=$('waitingReady').disabled?'READY ✓':'READY';
+    const ruleSignature=JSON.stringify([data.settings,data.private]);if($('lobbyRules').signature!==ruleSignature){$('lobbyRules').signature=ruleSignature;$('lobbyMode').value=data.settings?.mode||'ffa';$('lobbyTarget').value=data.settings?.targetScore||10;$('lobbyBounce').checked=data.settings?.bouncing!==false;$('lobbyPowers').checked=data.settings?.powers!==false;$('lobbyPrivate').checked=data.private;}
     $('startGame').hidden=!mine;$('startGame').disabled=!mine;
     $('waitingTitle').textContent='Arena '+data.room+' · first to '+(data.settings?.targetScore||FIELD.targetScore);
     const bots=data.players.filter(p=>p.bot).length,skill=data.botSkill||'normal';
@@ -314,7 +376,7 @@ function updateRoomPhase(data){
     $('waitingMessage').textContent=mine?(data.players.length===1?'Playing alone? Add bots or invite friends, then press Start Game.':'Press Start Game when everyone is ready.')+(bots?' Bots: '+skill+'.':'')
       :'Waiting for '+(owner?.name||'a player')+' to start the game.'+(bots?' Bots: '+skill+'.':'');
   }
-  if(roomPhase!==data.phase){roomPhase=data.phase;release();updateTouchControls();resize();syncMusic();}
+  if(roomPhase!==data.phase){if(!results){rankSignature='';$('rankChange').hidden=true;}$('reactionStrip').hidden=true;$('reactionToggle').setAttribute('aria-expanded','false');roomPhase=data.phase;release();updateTouchControls();resize();syncMusic();}
 }
 $('addBot').addEventListener('click',()=>send({type:'bot',action:'add'}));
 $('removeBot').addEventListener('click',()=>send({type:'bot',action:'remove'}));
@@ -323,6 +385,18 @@ $('startGame').addEventListener('click',()=>{if(joined&&latest?.phase==='waiting
 $('rematch').addEventListener('click',()=>{if(joined&&latest?.phase==='results'&&latest.rematchIn>0&&!latest.rematchVotes?.includes(myId)){send({type:'rematch'});$('rematch').disabled=true;}});
 // The round is over, so leaving from the result card needs no extra confirmation.
 $('resultsLeave').addEventListener('click',leave);
+$('readyButton').addEventListener('click',()=>send({type:'ready'}));$('waitingReady').addEventListener('click',()=>send({type:'ready'}));$('cancelMatchmaking').addEventListener('click',leave);
+$('resultsLobby').addEventListener('click',()=>send({type:'lobby'}));
+$('saveLobbyRules').addEventListener('click',()=>{
+  const settings={mode:$('lobbyMode').value,targetScore:Number($('lobbyTarget').value),bouncing:$('lobbyBounce').checked,powers:$('lobbyPowers').checked};
+  send({type:'room',action:'rules',settings,private:$('lobbyPrivate').checked});selectGameMode(settings.mode);try{localStorage.setItem('tank-frenzy-rules',JSON.stringify(settings));}catch{}
+});
+$('reactionToggle').addEventListener('click',()=>{const open=$('reactionStrip').hidden;$('reactionStrip').hidden=!open;$('reactionToggle').setAttribute('aria-expanded',String(open));});
+for(const [id,label]of Object.entries(reactionLabels)){const button=document.createElement('button');button.type='button';button.textContent=label;button.setAttribute('aria-label','Send '+label);button.addEventListener('click',()=>{send({type:'reaction',reaction:id});$('reactionStrip').hidden=true;$('reactionToggle').setAttribute('aria-expanded','false');});$('reactionOptions').append(button);}
+$('muteReactions').addEventListener('click',()=>{muteReactions=!muteReactions;$('muteReactions').textContent=muteReactions?'REACTIONS OFF':'REACTIONS ON';$('muteReactions').setAttribute('aria-pressed',String(!muteReactions));try{localStorage.setItem('tank-frenzy-reactions',muteReactions?'off':'on');}catch{}resultsSignature='';if(latest)updateRoomPhase(latest);});
+$('muteReactions').textContent=muteReactions?'REACTIONS OFF':'REACTIONS ON';$('muteReactions').setAttribute('aria-pressed',String(!muteReactions));
+$('reactionPrev').addEventListener('click',()=>$('reactionOptions').scrollBy?.({left:-180,behavior:reducedMotion?'auto':'smooth'}));$('reactionNext').addEventListener('click',()=>$('reactionOptions').scrollBy?.({left:180,behavior:reducedMotion?'auto':'smooth'}));
+$('reactionOptions').addEventListener('wheel',e=>{if($('reactionOptions').scrollWidth>$('reactionOptions').clientWidth&&Math.abs(e.deltaY)>Math.abs(e.deltaX)){e.preventDefault();$('reactionOptions').scrollBy({left:e.deltaY});}},{passive:false});
 function updateHud(data){
   const count=data.players.filter(p=>p.connected).length;
   $('roomCount').textContent=count+' / 4 PLAYERS';
@@ -371,6 +445,8 @@ function updateHud(data){
   }
   const me=data.players.find(p=>p.id===myId);
   if(data.phase==='waiting'){$('respawn').textContent='';status('WAITING / INVITE YOUR FRIENDS');}
+  else if(data.phase==='searching'){$('respawn').textContent='';status('FINDING OPPONENTS');}
+  else if(data.phase==='ready'){$('respawn').textContent='';status('GET READY / STARTING SOON');}
   else if(data.phase==='countdown'){$('respawn').textContent='';status('GET READY');}
   else if(data.winner){$('respawn').textContent='';status(data.phase==='results'?'MATCH COMPLETE / REMATCH VOTE':'MATCH COMPLETE / REMATCH CLOSED');}
   else if(me?.hp<=0){$('respawn').textContent='Tank destroyed. Respawning in '+Math.ceil(me.respawnIn)+'s';status('REGROUPING');}
@@ -401,6 +477,12 @@ fetch(appUrl('network-info')).then(r=>{if(!r.ok)throw Error();return r.json();})
   updateInvite();
 }).catch(()=>{$('networkLinks').textContent='Start the network server with npm start, then open its address in each browser.';});
 $('copy').addEventListener('click',async()=>{const invite=updateInvite();try{await navigator.clipboard.writeText(invite);$('copy').setAttribute('aria-label','Invite link copied');$('copy').title='Invite link copied';setTimeout(()=>{$('copy').setAttribute('aria-label','Share invite');$('copy').title='Share invite';},1800);}catch{$('networkNote').textContent='Invite link: '+invite;status('INVITE LINK SHOWN BELOW THE ARENA');}});
+let shareOpen=false;
+function closeShare(){shareOpen=false;$('shareDialog').hidden=true;$('shareRoom').focus();}
+$('shareRoom').addEventListener('click',()=>{release();shareOpen=true;$('shareDialog').hidden=false;$('shareTitle').textContent='Invite to '+roomCode;$('shareLink').value=updateInvite();$('shareStatus').textContent='Scan to join immediately. No code to type.';if(typeof TankQR!=='undefined')TankQR.draw($('shareQR'),$('shareLink').value);$('closeShare').focus();});
+$('closeShare').addEventListener('click',closeShare);
+$('shareDialog').addEventListener('click',e=>{if(e.target===$('shareDialog'))closeShare();});
+$('copyShare').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('shareLink').value);$('shareStatus').textContent='Invite link copied';}catch{$('shareLink').focus();$('shareLink').select?.();$('shareStatus').textContent='Copy the selected invite link';}});
 $('joinForm').addEventListener('submit',e=>{e.preventDefault();enterFullscreen();audioReady=true;playCue('menu');connect();});
 function closeLeaveDialog(){leaveDialogOpen=false;$('leaveDialog').hidden=true;}
 function requestLeave(){if(spectating){leave();return;}if(!joined)return;release();leaveDialogOpen=true;$('leaveDialog').hidden=false;$('cancelLeave').focus();}
@@ -437,7 +519,7 @@ function closeTutorial(){
 }
 $('howToPlay').addEventListener('click',openTutorial);
 // Leaderboard kept by the server (saved on the Pi in the Home Assistant app): by period and region.
-let leaderboardPeriod='all',leaderboardCountry='',leaderboardRequest=0;
+let leaderboardPeriod='week',leaderboardCountry='',leaderboardRequest=0;
 const flagOf=code=>/^[A-Z]{2}$/.test(code||'')?String.fromCodePoint(...[...code].map(c=>127397+c.charCodeAt(0))):'';
 function regionName(code){try{return new Intl.DisplayNames(['en'],{type:'region'}).of(code);}catch{return code;}}
 async function loadLeaderboard(){
@@ -445,18 +527,23 @@ async function loadLeaderboard(){
   for(const button of $('leaderboardPeriods').children||[])button.setAttribute?.('aria-pressed',String(button.dataset?.period===leaderboardPeriod));
   $('leaderboardRows').replaceChildren();$('leaderboardNote').textContent='Loading…';
   try{
-    const response=await fetch(appUrl('leaderboard?period='+leaderboardPeriod+'&country='+leaderboardCountry));if(!response.ok)throw Error();
+    const response=await fetch(appUrl('leaderboard?period='+leaderboardPeriod+'&country='+leaderboardCountry+'&player='+encodeURIComponent(profileId)));if(!response.ok)throw Error();
     const data=await response.json();if(request!==leaderboardRequest)return;
+    $('leaderboardPodium').replaceChildren();$('starterRivals').hidden=Boolean(data.players.length);
+    data.players.slice(0,3).forEach((p,i)=>{const card=document.createElement('div');card.className='podium-player';const name=document.createElement('strong'),score=document.createElement('small');name.textContent=['🥇','🥈','🥉'][i]+' '+p.name;score.textContent=p.wins+' wins · '+p.kills+' kills';card.append(tankPortrait(p.slot??i),name,score);$('leaderboardPodium').append(card);});
+    $('leaderboardYou').textContent=data.you?'YOUR RANK · #'+data.you.rank+' · '+data.you.wins+' wins · '+data.you.kills+' kills':'YOUR RANK · Finish a battle to enter the board. Solo battles count too.';
     data.players.forEach((p,i)=>{
       const row=document.createElement('tr');
+      if(p.profileId&&p.profileId===profileId)row.className='me';
       for(const value of [i<3?['🥇','🥈','🥉'][i]:i+1,p.name+(p.country?' '+flagOf(p.country):''),p.wins,p.matches,p.kills,p.damageDealt??0,p.deaths,(p.kills/Math.max(1,p.deaths)).toFixed(1)]){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}
-      $('leaderboardRows').append(row);
+      const more=document.createElement('tr');more.hidden=true;more.className='leaderboard-details';const detail=document.createElement('td');detail.colSpan=8;detail.textContent=p.matches+' matches · '+p.deaths+' deaths · '+(p.damageDealt??0)+' damage · '+(p.kills/Math.max(1,p.deaths)).toFixed(1)+' K/D';more.append(detail);
+      row.tabIndex=0;row.setAttribute('aria-expanded','false');row.setAttribute('aria-label',p.name+', '+p.wins+' wins. Show statistics');const toggle=()=>{more.hidden=!more.hidden;row.setAttribute('aria-expanded',String(!more.hidden));};row.addEventListener('click',toggle);row.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});$('leaderboardRows').append(row,more);
     });
     const regions=[['','All regions'],...(data.countries||[]).map(c=>[c.code,flagOf(c.code)+' '+regionName(c.code)+' ('+c.players+')'])];
     $('leaderboardRegion').replaceChildren(...regions.map(([code,label])=>{const option=document.createElement('option');option.value=code;option.textContent=label;return option;}));
     $('leaderboardRegion').value=leaderboardCountry;
     const when={day:'today',week:'this week',month:'this month',all:'yet'}[leaderboardPeriod];
-    $('leaderboardNote').textContent=(data.players.length?'':'No finished matches '+when+(leaderboardCountry?' in this region':'')+'. ')+(data.persistent?'Saved on the Pi across restarts.':'Resets when the game server restarts.');
+    $('leaderboardNote').textContent=(data.players.length?'':'No finished matches '+when+(leaderboardCountry?' in this region':'')+'. ')+'All battles, including solo vs AI. Ranked by wins, kills, then fewer deaths. Periods use Malaysia time (UTC+8); weeks reset Monday 00:00. '+(data.persistent?'Scores saved across restarts.':'Scores reset when this standalone server restarts.');
   }catch{if(request===leaderboardRequest)$('leaderboardNote').textContent='Could not load the leaderboard. Try again in a moment.';}
 }
 async function openLeaderboard(){
@@ -522,7 +609,7 @@ canvas.addEventListener('pointermove',aimAt);
 canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.button!==0||!joined)return;e.preventDefault();canvas.focus({preventScroll:true});canvas.setPointerCapture(e.pointerId);aimAt(e);audioReady=true;firing=true;sendInput();});
 for(const type of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(type,()=>{firing=false;sendInput();});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-window.addEventListener('keydown',e=>{if(e.code==='Escape'){release();if(leaderboardOpen){closeLeaderboard();return;}if(tutorialOpen){closeTutorial();return;}if(leaveDialogOpen){closeLeaveDialog();return;}if(expanded)setExpanded(false);}if(tutorialOpen&&(e.code==='ArrowRight'||e.code==='ArrowLeft')){e.preventDefault();showTutorialPage(tutorialPage+(e.code==='ArrowRight'?1:-1));return;}if(leaderboardOpen||tutorialOpen||leaveDialogOpen||!joined||e.target instanceof HTMLInputElement)return;if(moveKeys.has(e.code)){e.preventDefault();keys.add(e.code);if(!e.repeat)sendInput();}});
+window.addEventListener('keydown',e=>{if(e.code==='Escape'){release();if(shareOpen){closeShare();return;}if(leaderboardOpen){closeLeaderboard();return;}if(tutorialOpen){closeTutorial();return;}if(leaveDialogOpen){closeLeaveDialog();return;}if(expanded)setExpanded(false);}if(tutorialOpen&&(e.code==='ArrowRight'||e.code==='ArrowLeft')){e.preventDefault();showTutorialPage(tutorialPage+(e.code==='ArrowRight'?1:-1));return;}if(shareOpen||leaderboardOpen||tutorialOpen||leaveDialogOpen||!joined||e.target instanceof HTMLInputElement)return;if(moveKeys.has(e.code)){e.preventDefault();keys.add(e.code);if(!e.repeat)sendInput();}});
 window.addEventListener('keyup',e=>{if(moveKeys.has(e.code)){keys.delete(e.code);sendInput();}});
 window.addEventListener('blur',release);
 document.addEventListener('visibilitychange',()=>{syncHeroVisibility();if(document.hidden){release();stopCueSounds();}else{visibleSince=performance.now();if(!joined&&retry>0&&!connecting)connect();else if(joined)send({type:'ping',sent:performance.now()});}syncMusic();});
@@ -669,7 +756,7 @@ function updateMatchSounds(data){
     return;
   }
   countdownAudioKey=null;
-  if(data.phase==='waiting'){resultAudioKey=null;return;}
+  if(['waiting','searching','ready'].includes(data.phase)){resultAudioKey=null;return;}
   if(roundAudioMap!==map){roundAudioMap=map;resultAudioKey=null;if(!data.winner)playCue('start');}
   if(!data.winner){resultAudioKey=null;return;}
   const key=String(map)+':'+(data.winner.team??data.winner.id);
@@ -1121,5 +1208,6 @@ if(watchRoom&&watchParams.get('pass')){history.replaceState(null,'',location.pat
 else if(roomCode){
   let saved;try{saved=JSON.parse(sessionStorage.getItem(sessionKey));}catch{}
   if(saved?.room===roomCode&&typeof saved.token==='string'&&saved.token){token=saved.token;$('callsign').value=saved.name||'';$('roomInput').value=roomCode;joinMode='join';retry=1;connect();}
-  else showRoomForm(roomCode);
+  else joinRoomNow(roomCode,'join');
 }else showLobby();
+selectGameMode(selectedGameMode);

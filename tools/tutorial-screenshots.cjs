@@ -57,7 +57,7 @@ window.cursor=(x,y)=>{ctx.save();ctx.translate(x,y);ctx.beginPath();ctx.moveTo(0
 window.focusOn=(x,y,zoom)=>{const p=project(x,y);scale=zoom;offsetX=cssW/2-p.x*scale;offsetY=cssH/2-p.y*scale;};
 `;
 (async()=>{
-  const browser=await chromium.launch();
+  const browser=await chromium.launch({...(process.env.CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.CHROMIUM_EXECUTABLE_PATH,args:['--no-sandbox']}:{})});
   // Desktop scenes.
   const desk=await browser.newPage({viewport:{width:1240,height:860},deviceScaleFactor:1});
   await desk.goto(BASE);await desk.waitForTimeout(600);await desk.evaluate(helpers);

@@ -26,24 +26,70 @@ function rayBox(x,y,dx,dy,w){
 class Room {
   constructor(code,options={}){this.code=code;this.settings=Object.freeze({mode:options?.mode==='teams'?'teams':'ffa',bouncing:options?.bouncing!==false,powers:options?.powers!==false,targetScore:Number.isInteger(options?.targetScore)&&options.targetScore>=5&&options.targetScore<=50?options.targetScore:F.targetScore});this.phase='waiting';this.countdownUntil=0;this.ownerId=null;this.teamScores=[0,0];this.pickups=[];this.pickupId=0;this.nextPickup=6;this.map=generateMap();this.players=new Map();this.shells=[];this.events=[];this.time=0;this.eventId=0;this.shellId=0;this.winner=null;this.botSkill='normal';this.rematchUntil=0;this.rematchVotes=new Set();}
   emit(type,data){this.events.push({id:++this.eventId,type,...data});}
+  configureQuick(searchSeconds=8,readySeconds=5){this.quick=true;this.phase='searching';this.searchUntil=this.time+searchSeconds;this.readySeconds=readySeconds;this.readyIds=new Set();}
+  resetRound(){
+    this.winner=null;this.recorded=false;this.lastResults=null;this.rematchUntil=0;this.rematchVotes.clear();this.teamScores=[0,0];this.map=generateMap();this.matchPlayers=new Map();
+    for(const p of this.players.values()){p.kills=0;p.deaths=0;p.damageDealt=0;p.shots=0;p.hits=0;p.streak=0;p.reaction=null;}
+  }
+  lobby(p){
+    if(this.players.get(p?.id)!==p||!p?.connected||p.bot||!['results','postgame'].includes(this.phase))return false;
+    this.resetRound();this.quick=false;this.phase='waiting';this.readyIds=new Set();this.shells=[];this.pickups=[];this.refreshOwner();for(const t of this.players.values())this.spawn(t);return true;
+  }
+  ready(p){
+    if(!p?.connected||p.bot||this.players.get(p.id)!==p||!['waiting','ready'].includes(this.phase))return false;
+    this.readyIds??=new Set();this.readyIds.add(p.id);
+    if(this.phase==='ready'&&this.humans().filter(t=>t.connected).every(t=>this.readyIds.has(t.id)))this.beginQuickBattle();
+    return true;
+  }
+  fillQuick(){
+    this.botSkill=this.chooseBotSkill?.(this.humans())||'easy';
+    while(this.players.size<F.maxPlayers)this.add('',{bot:true});
+    this.phase='ready';this.readyUntil=this.time+this.readySeconds;this.readyIds=new Set();
+  }
+  beginQuickBattle(){this.botSkill=this.chooseBotSkill?.(this.humans())||this.botSkill;this.resetRound();this.beginCountdown(0);this.beginPlaying();}
+  beginPlaying(){this.phase='playing';for(const p of this.players.values()){p.input=neutral();p.pendingShot=false;p.lastInput=this.time;}this.emit('start',{});}
+  roomCommand(p,msg){
+    if(this.phase!=='waiting'||!p?.connected||p.id!==this.ownerId||this.players.get(p.id)!==p)return false;
+    if(msg.action==='team'&&this.settings.mode==='teams'){
+      const target=this.players.get(msg.player);if(!target||![0,1].includes(msg.team))return false;
+      const old=target.team,other=[...this.players.values()].find(t=>t!==target&&t.team===msg.team);
+      if([...this.players.values()].filter(t=>t.team===msg.team).length>=2&&target.team!==msg.team&&other)other.team=old;
+      target.team=msg.team;
+    }else if(msg.action==='rules'){
+      const s=msg.settings;if(!s||typeof s!=='object')return false;
+      this.settings=Object.freeze({mode:s.mode==='teams'?'teams':'ffa',bouncing:s.bouncing!==false,powers:s.powers!==false,targetScore:Number.isInteger(s.targetScore)&&s.targetScore>=5&&s.targetScore<=50?s.targetScore:10});
+      [...this.players.values()].forEach((t,i)=>t.team=this.settings.mode==='teams'?i%2:null);
+      if(typeof msg.private==='boolean')this.private=msg.private;
+    }else return false;
+    this.readyIds=new Set();return true;
+  }
+  react(p,reaction){
+    const allowed=['gg','nice','rematch','thanks','thumb','laugh','wow','smoke'];
+    if(this.phase!=='results'||!p?.connected||p.bot||this.players.get(p.id)!==p||!allowed.includes(reaction)||this.time<(p.nextReaction||0))return false;
+    p.nextReaction=this.time+1.5;p.reaction={value:reaction,until:this.time+3};this.emit('reaction',{player:p.id,reaction});return true;
+  }
   humans(){return [...this.players.values()].filter(p=>!p.bot);}
   add(name,{bot=false}={}){
     // A human joining a full room takes the most recently added bot's place.
     if(this.players.size>=F.maxPlayers&&!bot){const seat=[...this.players.values()].reverse().find(p=>p.bot);if(seat)this.players.delete(seat.id);}
     if(this.players.size>=F.maxPlayers)return null;
     const slot=Array.from({length:F.maxPlayers},(_,i)=>i).find(i=>![...this.players.values()].some(p=>p.slot===i));
-    const p={id:randomUUID(),slot,bot,name:bot?'🤖 '+Bots.botNames[slot*2+Math.floor(Math.random()*2)]:name||F.palette[slot].name,x:0,y:0,a:0,aim:0,hp:F.maxHealth,kills:0,deaths:0,damageDealt:0,shots:0,hits:0,streak:0,cool:0,respawnAt:0,shieldUntil:0,connected:true,disconnectedAt:0,input:neutral(),lastInput:this.time,seq:-1,life:0};
+    const used=new Set([...this.players.values()].map(t=>t.name));const botName=Bots.botNames.find(n=>!used.has(n))||'Nova';
+    const p={id:randomUUID(),slot,bot,name:bot?botName:name||F.palette[slot].name,x:0,y:0,a:0,aim:0,hp:F.maxHealth,kills:0,deaths:0,damageDealt:0,shots:0,hits:0,streak:0,cool:0,respawnAt:0,shieldUntil:0,connected:true,disconnectedAt:0,input:neutral(),lastInput:this.time,seq:-1,life:0};
     const teams=[0,1].map(team=>[...this.players.values()].filter(t=>t.team===team).length);
     p.team=this.settings.mode==='teams'?(teams[0]<=teams[1]?0:1):null;
     if(this.phase==='waiting'&&!bot)this.ownerId??=p.id;
-    this.players.set(p.id,p);this.spawn(p);return p;
+    this.players.set(p.id,p);if(this.phase==='playing'&&!bot)this.matchPlayers?.set(p.id,p);this.spawn(p);return p;
   }
   refreshOwner(){
-    if(this.phase!=='waiting'){this.ownerId=null;return;}
+    if(!['waiting','results','postgame'].includes(this.phase)){this.ownerId=null;return;}
     if(!this.players.get(this.ownerId)?.connected)this.ownerId=this.humans().find(p=>p.connected)?.id??null;
   }
   remove(p){
+    if(this.phase==='countdown'&&!p.bot)this.matchPlayers?.delete(p.id);
+    if(this.phase==='playing'&&!p.bot)this.matchPlayers?.set(p.id,{...p,left:true});
     this.players.delete(p.id);this.rematchVotes.delete(p.id);
+    this.readyIds?.delete(p.id);
     // Bots never keep an otherwise empty room alive.
     if(!this.humans().length)this.players.clear();
     this.refreshOwner();
@@ -52,15 +98,15 @@ class Room {
   botCommand(p,msg){
     this.refreshOwner();
     if(this.phase!=='waiting'||!p?.connected||p.id!==this.ownerId)return false;
-    if(msg.action==='add')return !!this.add('',{bot:true});
-    if(msg.action==='remove'){const bot=[...this.players.values()].reverse().find(t=>t.bot);if(!bot)return false;this.players.delete(bot.id);return true;}
-    if(msg.action==='skill'&&typeof msg.skill==='string'&&Object.hasOwn(Bots.skills,msg.skill)){this.botSkill=msg.skill;return true;}
+    if(msg.action==='add'){const added=!!this.add('',{bot:true});if(added)this.readyIds=new Set();return added;}
+    if(msg.action==='remove'){const bot=[...this.players.values()].reverse().find(t=>t.bot);if(!bot)return false;this.players.delete(bot.id);this.readyIds=new Set();return true;}
+    if(msg.action==='skill'&&typeof msg.skill==='string'&&Object.hasOwn(Bots.skills,msg.skill)){this.botSkill=msg.skill;this.readyIds=new Set();return true;}
     return false;
   }
   start(p){
     this.refreshOwner();
     if(this.phase!=='waiting'||!p?.connected||p.id!==this.ownerId||!this.players.has(p.id))return false;
-    this.beginCountdown();return true;
+    this.resetRound();this.beginCountdown();return true;
   }
   voteRematch(p){
     if(this.phase!=='results'||this.time>=this.rematchUntil||!p?.connected||p.bot||this.players.get(p.id)!==p||this.rematchVotes.has(p.id))return false;
@@ -74,12 +120,10 @@ class Room {
     if(this.phase!=='results')return;
     const votes=[...this.rematchVotes].filter(id=>this.players.get(id)?.connected).length;
     if(votes<this.rematchNeeded())return;
-    this.winner=null;this.rematchUntil=0;this.rematchVotes.clear();this.teamScores=[0,0];this.map=generateMap();
-    for(const player of this.players.values()){player.kills=0;player.deaths=0;player.damageDealt=0;player.shots=0;player.hits=0;player.streak=0;}
-    this.beginCountdown();this.emit('restart',{});
+    this.resetRound();if(this.quick)this.botSkill=this.chooseBotSkill?.(this.humans())||'easy';this.beginCountdown();this.emit('restart',{});
   }
-  beginCountdown(){
-    this.phase='countdown';this.ownerId=null;this.countdownUntil=this.time+3;
+  beginCountdown(seconds=3){
+    this.phase='countdown';this.ownerId=null;this.countdownUntil=this.time+seconds;this.roundId=randomUUID();this.matchPlayers=new Map(this.humans().map(p=>[p.id,p]));this.roundStarted=this.countdownUntil;
     this.shells=[];this.pickups=[];this.nextPickup=this.countdownUntil+6;
     for(const p of this.players.values())this.spawn(p);
   }
@@ -115,7 +159,7 @@ class Room {
     if(!attacker)return;
     attacker.kills++;
     const teams=this.settings.mode==='teams',score=teams?++this.teamScores[attacker.team]:attacker.kills;
-    if(score>=this.settings.targetScore){this.winner={id:attacker.id,team:attacker.team,name:teams?(attacker.team===0?'Orange team':'Blue team'):attacker.name};this.phase='results';this.rematchUntil=this.time+20;this.rematchVotes.clear();this.shells=[];this.pickups=[];}
+    if(score>=this.settings.targetScore){this.winner={id:attacker.id,team:attacker.team,name:teams?(attacker.team===0?'Orange team':'Blue team'):attacker.name};this.phase='results';this.rematchUntil=this.time+20;this.rematchVotes.clear();this.shells=[];this.pickups=[];this.refreshOwner();this.onFinish?.(this);}
   }
   spawnPickup(){
     if(!this.settings.powers||this.pickups.length>=2)return;
@@ -179,12 +223,19 @@ class Room {
     this.time+=dt;
     for(const p of this.players.values())if(!p.connected&&this.time-p.disconnectedAt>reconnectGrace)this.remove(p);
     this.refreshOwner();
-    if(this.phase==='waiting')return;
-    if(this.phase==='countdown'){
-      if(this.time>=this.countdownUntil){this.phase='playing';for(const p of this.players.values()){p.input=neutral();p.pendingShot=false;p.lastInput=this.time;}this.emit('start',{});}
+    if(this.phase==='searching'||this.phase==='ready'){
+      for(const p of this.humans())if(!p.connected)this.remove(p);
+      if(!this.humans().length)return;
+      if(this.phase==='searching'&&(this.humans().length>=F.maxPlayers||this.time>=this.searchUntil))this.fillQuick();
+      else if(this.phase==='ready'){while(this.players.size<F.maxPlayers)this.add('',{bot:true});if(this.time>=this.readyUntil||this.humans().every(p=>this.readyIds.has(p.id)))this.beginQuickBattle();}
       return;
     }
-    if(this.phase==='results'){this.checkRematch();if(this.phase==='results'&&this.time>=this.rematchUntil){this.phase='postgame';this.rematchVotes.clear();}return;}
+    if(this.phase==='waiting')return;
+    if(this.phase==='countdown'){
+      if(this.time>=this.countdownUntil)this.beginPlaying();
+      return;
+    }
+    if(this.phase==='results'){this.checkRematch();if(this.phase==='results'&&this.time>=this.rematchUntil){const p=this.humans().find(t=>t.connected);if(p)this.lobby(p);else{this.phase='postgame';this.rematchVotes.clear();}}return;}
     if(this.phase==='postgame')return;
     this.pickups=this.pickups.filter(p=>p.expiresAt>this.time);
     if(this.settings.powers&&this.time>=this.nextPickup){this.spawnPickup();this.nextPickup=this.time+F.pickupInterval;}
@@ -257,7 +308,8 @@ class Room {
   // The map is optional: the server resends it once a second and whenever it changes, not in every frame.
   snapshot({withMap=true}={}){
     const matchEnded=this.phase==='results'||this.phase==='postgame';
-    return {type:'state',room:this.code,settings:this.settings,phase:this.phase,countdownIn:this.phase==='countdown'?Math.max(0,this.countdownUntil-this.time):0,ownerId:this.ownerId,teamScores:this.teamScores,pickups:this.pickups,map:withMap?this.map:undefined,mapId:this.map.id,time:this.time,winner:this.winner,rematchIn:this.phase==='results'?Math.max(0,this.rematchUntil-this.time):0,rematchVotes:[...this.rematchVotes],botSkill:this.botSkill,rematchNeeded:this.phase==='results'?this.rematchNeeded():0,players:[...this.players.values()].map(({id,slot,bot,name,x,y,a,aim,hp,kills,deaths,damageDealt,shots,hits,streak,connected,respawnAt,shieldUntil,life,team,power,powerUntil})=>({id,slot,bot,name,x,y,a,aim,hp,kills,deaths,...(matchEnded?{damageDealt}:{}),shots,hits,streak,connected,respawnIn:Math.max(0,respawnAt-this.time),shield:shieldUntil>this.time,life,team,power,powerRemaining:Math.max(0,powerUntil-this.time)})),shells:this.shells.map(({id,x,y,slot})=>({id,x,y,slot})),events:this.events};
+    const pregame=['searching','ready','waiting'].includes(this.phase);
+    return {type:'state',room:this.code,settings:this.settings,phase:this.phase,quick:!!this.quick,private:!!this.private,roundId:this.roundId,...(pregame?{readyIds:[...(this.readyIds||[])],searchIn:Math.max(0,(this.searchUntil||0)-this.time),readyIn:Math.max(0,(this.readyUntil||0)-this.time)}:{}),countdownIn:this.phase==='countdown'?Math.max(0,this.countdownUntil-this.time):0,ownerId:this.ownerId,teamScores:this.teamScores,pickups:this.pickups,map:withMap?this.map:undefined,mapId:this.map.id,time:this.time,winner:this.winner,rematchIn:this.phase==='results'?Math.max(0,this.rematchUntil-this.time):0,rematchVotes:[...this.rematchVotes],botSkill:this.botSkill,rematchNeeded:this.phase==='results'?this.rematchNeeded():0,players:[...this.players.values()].map(({id,slot,bot,name,x,y,a,aim,hp,kills,deaths,damageDealt,shots,hits,streak,connected,respawnAt,shieldUntil,life,team,power,powerUntil,reaction})=>({id,slot,bot,name,x,y,a,aim,hp,kills,deaths,...(matchEnded?{damageDealt,reaction:reaction?.until>this.time?reaction.value:null}:{}),shots,hits,streak,connected,respawnIn:Math.max(0,respawnAt-this.time),shield:shieldUntil>this.time,life,team,power,powerRemaining:Math.max(0,powerUntil-this.time)})),shells:this.shells.map(({id,x,y,slot})=>({id,x,y,slot})),events:this.events};
   }
 }
 // Snapshots go out 30 times a second; tenths of a unit (hundredths of a radian for angles) look identical and are a quarter smaller.

@@ -53,7 +53,7 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
   await page.screenshot({path:out+'/lobby-purple-behind-blue.png',fullPage:true});
   await page.evaluate(()=>document.body.classList.remove('hero-suspended'));assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'running');
   await page.locator('#createRoom').click();assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'paused','animation pauses outside lobby');
-  await page.locator('#browseRooms').click();
+  await page.waitForFunction(()=>joined);await page.evaluate(()=>leave());
   await page.evaluate(()=>{document.body.classList.add('hero-suspended');});assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'paused');
   await page.evaluate(()=>document.body.classList.remove('hero-suspended'));
   await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationName),'none');

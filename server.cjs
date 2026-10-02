@@ -37,7 +37,7 @@ function securityHeaders(res,req,scriptHash=''){
   res.setHeader('Content-Security-Policy',`default-src 'self'; script-src 'self'${scriptHash?` '${scriptHash}'`:''}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors ${framing}`);
   res.setHeader('X-Frame-Options',req[ingressRequest]?'SAMEORIGIN':'DENY');res.setHeader('Referrer-Policy','no-referrer');
 }
-function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoomCreated=null,adminPassword='',adminPath='admin'}={}){
+function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoomCreated=null,adminPassword='',adminPath='admin',quickSearchSeconds=8,quickReadySeconds=5}={}){
   // The admin page lives at a private address of your choosing; nothing in the game links to it.
   const adminRoot='/'+(/^[A-Za-z0-9_-]{3,64}$/.test(adminPath)?adminPath:'admin');
   // Hidden spectators watch a room with a short-lived pass from the admin page. They are not
@@ -49,7 +49,12 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
   }
   function closeSpectators(room,title,message){for(const [ws,watch] of spectators)if(watch.room===room){send(ws,{type:'error',title,message});ws.close(1000,title);spectators.delete(ws);}}
   const rooms=new Map(),sessions=new Map(),leaderboard=new Leaderboard(leaderboardFile);
-  const files={'/':['index.html','text/html'],'/index.html':['index.html','text/html'],'/client.js':['client.js','text/javascript'],'/shared.js':['shared.js','text/javascript'],'/sound-bank.js':['sound-bank.js','text/javascript'],'/music.js':['music.js','text/javascript'],'/audio/cartoon-v1.mp3':['audio/cartoon-v1.mp3','audio/mpeg'],'/mode-banner.webp':['mode-banner.webp','image/webp'],'/mode-banner-idle.webp':['mode-banner-idle.webp','image/webp'],'/hero-quarry.webp':['hero-quarry.webp','image/webp'],'/hero-tanks.webp':['hero-tanks.webp','image/webp']};
+  function finish(room){
+    if(room.recorded||!room.winner)return;room.recorded=true;room.lastResults=leaderboard.record(room);
+    for(const s of sessions.values())if(s.room===room&&s.player.connected){const result=room.lastResults?.get(s.player.id);if(result)send(s.ws,result);}
+  }
+  function prepare(room){room.onFinish=finish;room.chooseBotSkill=players=>leaderboard.skill(players);return room;}
+  const files={'/':['index.html','text/html'],'/index.html':['index.html','text/html'],'/qr.js':['qr.js','text/javascript'],'/client.js':['client.js','text/javascript'],'/shared.js':['shared.js','text/javascript'],'/sound-bank.js':['sound-bank.js','text/javascript'],'/music.js':['music.js','text/javascript'],'/audio/cartoon-v1.mp3':['audio/cartoon-v1.mp3','audio/mpeg'],'/mode-banner.webp':['mode-banner.webp','image/webp'],'/mode-banner-idle.webp':['mode-banner-idle.webp','image/webp'],'/hero-quarry.webp':['hero-quarry.webp','image/webp'],'/hero-tanks.webp':['hero-tanks.webp','image/webp']};
   for(const name of ['iron-advance','overdrive','steel-pressure'])files[`/audio/music-${name}-v1.mp3`]=[`audio/music-${name}-v1.mp3`,'audio/mpeg'];
   for(const name of ['fire-a','ricochet-c','pickup-a','explosion-c'])files[`/audio/effects-${name}-v1.mp3`]=[`audio/effects-${name}-v1.mp3`,'audio/mpeg'];
   for(const name of ['countdown','battle-start'])files[`/audio/${name}-v1.mp3`]=[`audio/${name}-v1.mp3`,'audio/mpeg'];
@@ -126,7 +131,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
       res.setHeader('Content-Type','application/json');res.end(JSON.stringify({status:'ok',version:require('./package.json').version}));return;
     }
     if(url.pathname==='/rooms'){
-      const available=[...rooms.values()].filter(room=>room.players.size>0).map(room=>({
+      const available=[...rooms.values()].filter(room=>room.players.size>0&&!room.private&&!room.quick).map(room=>({
         code:room.code,capacity:maxPlayers,available:room.phase==='postgame'?0:maxPlayers-room.humans().length,settings:room.settings,phase:room.phase,
         players:[...room.players.values()].map(({name,slot,connected,team,bot})=>({name,slot,connected,team,bot}))
       })).sort((a,b)=>a.code.localeCompare(b.code));
@@ -135,7 +140,8 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
     if(url.pathname==='/leaderboard'){
       const period=url.searchParams.get('period')||'all',country=(url.searchParams.get('country')||'').toUpperCase().slice(0,2);
       res.setHeader('Content-Type','application/json');
-      res.end(JSON.stringify({players:leaderboard.top({period,country}),countries:leaderboard.countries(),period,country,persistent:!!leaderboardFile}));return;
+      const profileId=url.searchParams.get('player')||'';
+      res.end(JSON.stringify({players:leaderboard.top({period,country}),countries:leaderboard.countries(),you:leaderboard.position(profileId,{period,country}),period,country,timezone:'Asia/Kuala_Lumpur',persistent:!!leaderboardFile}));return;
     }
     if(url.pathname==='/network-info'){
       const port=server.address().port;
@@ -198,15 +204,23 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
         clearTimeout(joinTimeout);settle();spectators.set(ws,{room});send(ws,{type:'spectating',room:room.code});sendRaw(ws,encodeState(room.snapshot()));return;
       }
       if(spectators.has(ws))return;
-      if(msg.type==='join'&&!session){
-        const code=(text(msg.room)||'QUARRY').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,16)||'QUARRY';
+      if((msg.type==='join'||msg.type==='quick')&&!session){
+        let code=(text(msg.room)||'QUARRY').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,16)||'QUARRY';
+        if(msg.type==='quick'){
+          const mode=msg.settings?.mode==='teams'?'teams':'ffa';
+          const waiting=[...rooms.values()].find(r=>r.quick&&r.phase==='searching'&&r.settings.mode===mode&&r.humans().length<maxPlayers);
+          code=waiting?.code||'QUICK-'+randomBytes(4).toString('hex').toUpperCase();msg.settings={mode};msg.mode='quick';
+        }
         const existing=typeof msg.token==='string'?sessions.get(msg.token):null;
+        if(msg.token&&(!existing||existing.room.code!==code||!existing.room.players.has(existing.player.id))){send(ws,{type:'error',code:'session_expired',message:'Your arena reservation expired. Join a new match.'});ws.close();return;}
         if(existing&&existing.room.code===code&&existing.room.players.has(existing.player.id)){
           session=existing;const previous=session.ws;session.ws=ws;
           if(previous!==ws)previous.terminate();
           session.player.connected=true;session.player.disconnectedAt=0;session.player.pendingShot=false;session.player.input={x:0,y:0,aimX:session.player.x+100,aimY:session.player.y,fire:false};session.player.lastInput=session.room.time;
         }
         else{
+          const profile=leaderboard.identify(msg.profile);
+          if([...sessions.values()].some(s=>s.player.profileId===profile.id&&s.room.players.has(s.player.id))){send(ws,{type:'error',message:'This player is already in an arena. Return to that tab or leave it first.'});ws.close();return;}
           if(msg.mode==='create'&&rooms.has(code)&&rooms.get(code).players.size>0){send(ws,{type:'error',message:'That arena already exists. Choose another code or browse arenas to join it.'});ws.close();return;}
           if(msg.mode==='join'&&(!rooms.has(code)||rooms.get(code).players.size===0)){send(ws,{type:'error',message:'That arena is no longer available. Browse arenas or create a new one.'});ws.close();return;}
           if(rooms.has(code)&&rooms.get(code).players.size===0)rooms.delete(code);
@@ -214,21 +228,27 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
           if(!rooms.has(code)){
             if(rooms.size>=32){send(ws,{type:'error',message:'Server is full. Try an existing room.'});ws.close();return;}
             if(key&&[...rooms.values()].filter(room=>room.creator===key).length>=limits.arenas){send(ws,{type:'error',title:'Too many arenas',message:'Your network already has '+limits.arenas+' open arenas. Join one of them, or wait for one to end.'});ws.close();return;}
-            rooms.set(code,Object.assign(new Room(code,msg.settings),{creator:key}));
+            const room=prepare(Object.assign(new Room(code,msg.settings),{creator:key,private:msg.private===true}));
+            if(msg.type==='quick')room.configureQuick(quickSearchSeconds,quickReadySeconds);rooms.set(code,room);
           }
           const room=rooms.get(code);const name=typeof msg.name==='string'?msg.name.replace(/[\x00-\x1f<>]/g,'').trim().slice(0,16):'';
+          if(room.quick&&msg.type!=='quick'){send(ws,{type:'error',message:'This Quick Play group is already assigned. Use Quick Play to find a new match.'});ws.close();return;}
           if(room.phase==='postgame'){send(ws,{type:'error',message:'This match has ended and its rematch window closed. Choose another arena or create a new one.'});ws.close();return;}
           const player=room.add(name);if(!player){send(ws,{type:'error',message:'Arena full (4 players). Choose another arena code.'});ws.close();return;}
-          player.country=country;session={room,player,token:randomBytes(24).toString('hex'),ws};sessions.set(session.token,session);
+          player.profileId=profile.id;player.country=country;session={room,player,profile,token:randomBytes(24).toString('hex'),ws};sessions.set(session.token,session);
           if(created)try{onRoomCreated?.({code,name:player.name,mode:room.settings.mode,url:publicUrl?publicUrl+'/?room='+encodeURIComponent(code):''});}catch{/* Notifications never block play. */}
         }
-        session.ws=ws;clearTimeout(joinTimeout);settle();send(ws,{type:'welcome',id:session.player.id,token:session.token,slot:session.player.slot,room:code,seq:session.player.seq});sendRaw(ws,encodeState(session.room.snapshot()));return;
+        session.ws=ws;clearTimeout(joinTimeout);settle();send(ws,{type:'welcome',id:session.player.id,token:session.token,profile:session.profile,slot:session.player.slot,room:code,seq:session.player.seq});sendRaw(ws,encodeState(session.room.snapshot()));const result=session.room.lastResults?.get(session.player.id);if(result)send(ws,result);return;
       }
       if(!session)return;
       if(session.ws!==ws)return;
       if(msg.type==='start')session.room.start(session.player);
       if(msg.type==='rematch')session.room.voteRematch(session.player);
       if(msg.type==='bot')session.room.botCommand(session.player,msg);
+      if(msg.type==='ready')session.room.ready(session.player);
+      if(msg.type==='lobby')session.room.lobby(session.player);
+      if(msg.type==='room')session.room.roomCommand(session.player,msg);
+      if(msg.type==='reaction')session.room.react(session.player,msg.reaction);
       if(msg.type==='input')session.room.setInput(session.player,msg);
       if(msg.type==='ping')send(ws,{type:'pong',sent:msg.sent});
       if(msg.type==='leave'){session.room.remove(session.player);if(session.room.players.size===0)rooms.delete(session.room.code);sessions.delete(session.token);ws.close(1000,'Left room');}
@@ -249,7 +269,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
         // Arenas left waiting or finished for 15 minutes close, so idle arenas cannot fill the server.
         if(room.phase==='waiting'||room.phase==='postgame'){room.idleSince??=room.time;if(room.time-room.idleSince>limits.idleArenaSeconds){closeRoom(room,'Arena closed','This arena was idle for 15 minutes. Pick another arena or create a new one.');continue;}}else room.idleSince=null;
         // Record each finished match once, when its winner first appears.
-        if(room.winner&&!room.recorded){room.recorded=true;leaderboard.record(room);}else if(!room.winner)room.recorded=false;
+        if(room.winner&&!room.recorded)finish(room);else if(!room.winner)room.recorded=false;
         // Encode once per room, not once per player; include the map once a second or when it changes.
         const withMap=room.sentMapId!==room.map.id||tick%60===0;room.sentMapId=room.map.id;
         const snapshot=encodeState(room.snapshot({withMap}));for(const session of sessions.values())if(session.room===room&&session.player.connected)sendRaw(session.ws,snapshot);

@@ -17,7 +17,7 @@ function client(mobile=true,url='http://localhost:8765'){
   const sandbox={URL,FIELD:require('../shared.js'),performance:{now:()=>clock},location:{href:url,origin:'http://localhost:8765'},
     document:{hidden:false,body:element(),createElement:element,getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},addEventListener(n,f){documentEvents[n]=f;}},
     window:{addEventListener(n,f){windowEvents[n]=f;}},matchMedia:q=>q.includes('pointer')?media:{matches:false},
-    ResizeObserver:class{observe(){}},devicePixelRatio:1,setInterval(fn,ms){intervals.set(ms,fn);},requestAnimationFrame(){},fetch:()=>new Promise(()=>{}),WebSocket:{OPEN:1},sent};
+    ResizeObserver:class{observe(){}},devicePixelRatio:1,setInterval(fn,ms){intervals.set(ms,fn);},setTimeout:()=>0,clearTimeout(){},history:{replaceState(){}},requestAnimationFrame(){},fetch:()=>new Promise(()=>{}),WebSocket:class{static OPEN=1;addEventListener(){}close(){}},sent};
   vm.createContext(sandbox);vm.runInContext(fs.readFileSync('client.js','utf8'),sandbox);
   const run=code=>vm.runInContext(code,sandbox);
   run("joined=true;myId='me';tanks=[{id:'me',x:100,y:100,aim:0}];socket={readyState:1,bufferedAmount:0,send:data=>sent.push(JSON.parse(data))};updateTouchControls();");
@@ -115,7 +115,7 @@ test('mode choice filters rooms and new room options default to enabled',()=>{
   const c=client();c.run('lobbyRooms=[{code:"SOLO",settings:{mode:"ffa"},players:[],capacity:4,available:4},{code:"TEAM",settings:{mode:"teams"},players:[],capacity:4,available:4}]');
   c.elements.get('teamMode').events.click();assert.equal(c.elements.get('roomList').children.length,1);
   assert.match(c.elements.get('roomList').children[0].children[0].children[0].textContent,/TEAM/);
-  c.elements.get('createRoom').events.click();assert.equal(c.elements.get('gameMode').value,'teams');
+  c.run('joined=false');c.elements.get('createRoom').events.click();assert.equal(c.elements.get('gameMode').value,'teams');
   assert.equal(c.elements.get('bounceOption').checked,true);assert.equal(c.elements.get('powersOption').checked,true);
 });
 
@@ -287,11 +287,11 @@ test('countdown sounds once per number, start is distinct, and music/effects swi
   assert.equal(c.run('musicEvents.at(-1)'),'battle:BATTLE:77');
 });
 
-test('plain URLs open the room browser while room links keep the prefilled join form',()=>{
+test('plain URLs open the room browser while invitation links join automatically',()=>{
   const plain=client();assert.equal(plain.elements.get('roomBrowser').hidden,false);assert.equal(plain.elements.get('joinFields').hidden,true);
   const linked=client(false,'http://localhost:8765/?room=quarry');
   assert.equal(linked.elements.get('roomBrowser').hidden,true);assert.equal(linked.elements.get('roomInput').value,'QUARRY');
-  assert.equal(linked.elements.get('joinFields').hidden,false);
+  assert.equal(linked.elements.get('joinFields').hidden,true);assert.equal(linked.run('connecting'),true);
 });
 
 function lobbyClient(){
@@ -301,7 +301,7 @@ function lobbyClient(){
   return {c,sockets,rooms};
 }
 
-test('rooms list players inline with a one-tap Join; the saved name is shared; create opens the editable form',async()=>{
+test('rooms list players inline with one-tap Join and Create, sharing the saved name',async()=>{
   const {c,sockets,rooms}=lobbyClient();
   rooms([{code:'ALPHA',capacity:4,available:2,phase:'waiting',players:[{name:'Alice',connected:true},{name:'Bob',connected:false}]}]);
   await c.run('refreshRooms()');
@@ -313,7 +313,7 @@ test('rooms list players inline with a one-tap Join; the saved name is shared; c
   c.run('connecting=false');c.elements.get('createRoom').events.click();
   assert.equal(c.run('joinMode'),'create');assert.equal(c.elements.get('roomInput').readOnly,false);assert.match(c.elements.get('roomInput').value,/^ARENA-/);
   assert.equal(c.elements.get('callsign').value,'Zed');
-  assert(c.sandbox.document.body.classList.contains('in-room-form'));assert(c.elements.get('arena').classList.contains('room-form-open'));
+  assert.equal(sockets.length,2,'Create connects immediately');assert.equal(c.sandbox.document.body.classList.contains('in-room-form'),false);
   c.elements.get('browseRooms').events.click();
   assert.equal(c.sandbox.document.body.classList.contains('in-room-form'),false);
   assert.equal(c.elements.get('arena').classList.contains('room-form-open'),false);
@@ -345,20 +345,17 @@ test('full and ended rooms cannot be joined; empty lists and request failures ex
   const [full,done]=c.elements.get('roomList').children.map(row=>row.children[1]);
   assert.deepEqual([full.textContent,full.disabled,done.textContent,done.disabled],['FULL',true,'ENDED',true]);
   rooms([]);await c.run('refreshRooms()');
-  assert.equal(c.elements.get('roomList').children.length,0);assert.match(c.elements.get('roomListStatus').textContent,/Quick Play creates one/);
+  assert.equal(c.elements.get('roomList').children.length,0);assert.match(c.elements.get('roomListStatus').textContent,/Quick Play finds a group/);
   c.sandbox.fetch=async()=>{throw Error('offline');};await c.run('refreshRooms()');
   assert.match(c.elements.get('roomListStatus').textContent,/Tap Refresh/);
 });
 
-test('Quick Play joins the best open room in the chosen mode, or creates one',async()=>{
+test('Quick Play requests matchmaking directly without selecting an existing arena',async()=>{
   const {c,sockets,rooms}=lobbyClient();
   rooms([{code:'BUSY',phase:'playing',available:1,capacity:4,settings:{mode:'ffa'},players:[]},{code:'WAIT',phase:'waiting',available:3,capacity:4,settings:{mode:'ffa'},players:[]},
     {code:'VOTE',phase:'results',available:2,capacity:4,settings:{mode:'ffa'},players:[]},{code:'TEAM',phase:'waiting',available:3,capacity:4,settings:{mode:'teams'},players:[]}]);
-  await c.run('quickPlay()');assert.equal(c.run('joinMode'),'join');assert.equal(c.elements.get('roomInput').value,'WAIT');
-  c.run('connecting=false');rooms([{code:'BUSY',phase:'playing',available:1,capacity:4,settings:{mode:'ffa'},players:[]}]);
-  await c.run('quickPlay()');assert.equal(c.elements.get('roomInput').value,'BUSY');
-  c.run('connecting=false');rooms([]);await c.run('quickPlay()');
-  assert.equal(c.run('joinMode'),'create');assert.match(c.elements.get('roomInput').value,/^ARENA-/);assert.equal(sockets.length,3);
+  await c.run('quickPlay()');assert.equal(c.run('joinMode'),'quick');assert.equal(c.elements.get('roomInput').value,'');assert.equal(c.run('quickRequested'),true);
+  await c.run('quickPlay()');assert.equal(sockets.length,1,'double tap cannot create another connection');
 });
 
 test('mobile play uses a compact viewport and restores the page on leaving or switching input',()=>{
@@ -608,15 +605,33 @@ test('the room starter sees bot controls that send add, remove and skill command
   state([me,bot],'someone-else');assert.equal(c.elements.get('botControls').hidden,true);assert.match(c.elements.get('waitingMessage').textContent,/Bots: hard/);
 });
 
+test('Quick Play reveals a four-card group and sends ready or cancel without a form',()=>{
+  const c=client();c.run("latest={room:'QUICK',phase:'ready',settings:{mode:'teams'},readyIn:4,readyIds:[],players:[{id:'me',name:'Me',slot:0,team:0,connected:true},{id:'ai',name:'CopperFox',slot:1,team:1,bot:true,connected:true}]};updateRoomPhase(latest)");
+  assert.equal(c.elements.get('matchmaking').hidden,false);assert.equal(c.elements.get('matchmakingPlayers').children.length,4);assert.match(c.elements.get('matchmakingTime').textContent,/4/);
+  c.elements.get('readyButton').events.click();assert.equal(c.sent.at(-1).type,'ready');c.run('socket.close=()=>{}');c.elements.get('cancelMatchmaking').events.click();assert.equal(c.run('joined'),false);assert(c.sent.some(m=>m.type==='leave'));
+});
+
+test('network errors replace matchmaking instead of hiding underneath it',()=>{
+  const c=client();c.elements.get('matchmaking').hidden=false;c.elements.get('arena').classList.add('matchmaking-open');c.run("networkMessage('Connection lost','Trying again')");
+  assert.equal(c.elements.get('matchmaking').hidden,true);assert.equal(c.elements.get('arena').classList.contains('matchmaking-open'),false);assert.equal(c.elements.get('dialogTitle').textContent,'Connection lost');
+});
+
+test('results reactions open a horizontal picker, send fixed IDs and can be muted',()=>{
+  const c=client();c.run("latest={room:'TEST',phase:'results',roundId:'one',winner:{id:'me',name:'Me'},settings:{mode:'ffa'},rematchIn:10,rematchVotes:[],players:[{id:'me',name:'Me',slot:0,connected:true,kills:10,deaths:0,damageDealt:100,shots:10,hits:10,reaction:'gg'}]};updateRoomPhase(latest)");
+  c.elements.get('reactionToggle').events.click();assert.equal(c.elements.get('reactionStrip').hidden,false);
+  c.elements.get('reactionOptions').children[0].events.click();assert.equal(c.sent.at(-1).reaction,'gg');assert.equal(c.elements.get('reactionStrip').hidden,true);
+  c.elements.get('muteReactions').events.click();assert.equal(c.run('muteReactions'),true);assert.equal(c.elements.get('muteReactions').textContent,'REACTIONS OFF');
+});
+
 test('the leaderboard pop-up lists the top players and closes with Escape',async()=>{
   const c=client(false);c.sandbox.HTMLInputElement=class{};
   const urls=[];c.sandbox.fetch=async url=>{urls.push(url);return {ok:true,json:async()=>({persistent:true,countries:[{code:'MY',players:2}],players:[{name:'Ann',wins:3,matches:4,kills:30,damageDealt:247,deaths:10},{name:'Bo',wins:1,matches:4,kills:12,damageDealt:61,deaths:0}]})};};
   await c.run('openLeaderboard()');
   assert.equal(c.elements.get('leaderboard').hidden,false);
-  const rows=c.elements.get('leaderboardRows').children.map(r=>r.children.map(cell=>String(cell.textContent)));
+  const rows=c.elements.get('leaderboardRows').children.filter(r=>r.className!=='leaderboard-details').map(r=>r.children.map(cell=>String(cell.textContent)));
   assert.deepEqual(rows,[['🥇','Ann','3','4','30','247','10','3.0'],['🥈','Bo','1','4','12','61','0','12.0']]);
-  assert.match(c.elements.get('leaderboardNote').textContent,/Saved on the Pi/);
-  assert.match(urls.at(-1),/\/leaderboard\?period=all&country=$/);
+  assert.match(c.elements.get('leaderboardNote').textContent,/Scores saved/);
+  assert.match(urls.at(-1),/\/leaderboard\?period=week&country=&player=$/);
   assert.equal(c.elements.get('leaderboardRegion').children.length,2,'All regions plus each country seen');
   c.elements.get('leaderboardPeriods').events.click({target:{closest:()=>({dataset:{period:'week'}})}});await Promise.resolve();
   assert.match(urls.at(-1),/period=week/);
