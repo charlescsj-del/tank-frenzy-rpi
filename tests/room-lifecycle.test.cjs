@@ -7,7 +7,7 @@ function running(){const r=new Room('TEST'),a=r.add('A');r.start(a);r.step(3);r.
 
 test('Quick Play caps waiting, replaces disconnected pregame seats, and starts without another tap',()=>{
   const r=new Room('QUICK'),a=r.add('A');r.configureQuick();r.disconnect(a);r.step(.01);assert.equal(r.players.size,0,'abandoned queue never makes a bot-only match');
-  const room=new Room('QUICK2'),human=room.add('A');room.configureQuick();room.step(8);assert.equal(room.phase,'ready');assert.equal(room.players.size,4);assert.equal(room.botSkill,'easy');
+  const room=new Room('QUICK2'),human=room.add('A');room.configureQuick();room.step(12);assert.equal(room.phase,'ready');assert.equal(room.players.size,4);assert.equal(room.botSkill,'easy');
   const x=human.x;input(room,human);room.step(4.9);assert.equal(human.x,x);assert.equal(room.phase,'ready');room.step(.11);assert.equal(room.phase,'playing');
   const full=new Room('FULL');for(let i=0;i<4;i++)full.add('P'+i);full.configureQuick();full.step(.01);const leaver=full.humans()[0];full.disconnect(leaver);full.step(.01);assert.equal(full.players.size,4);assert.equal(full.humans().length,3);
   const peers=full.humans();full.ready(peers[0]);full.ready(peers[1]);full.disconnect(peers[2]);full.step(.01);assert.equal(full.phase,'playing','a departed unready human cannot hold back ready peers');

@@ -65,11 +65,12 @@ window.focusOn=(x,y,zoom)=>{const p=project(x,y);scale=zoom;offsetX=cssW/2-p.x*s
 
   // 1. PC controls: aim line toward the mouse, WASD movement arrows.
   await stage(desk,state({players:tanks,shells:[{id:1,x:700,y:398,vx:380,vy:150,slot:0,owner:'me'},{id:2,x:1060,y:545,vx:-400,vy:-60,slot:1,owner:'b'}]}),`
-    pointer={x:1120,y:560,active:true};
-    window.annotate=()=>{const me=project(520,330,0),m=project(1120,560,22);
+    pointer={x:780,y:390,active:true};
+    window.annotate=()=>{const P=(x,y,z=0)=>{const p=project(x,y,z);return {x:p.x*scale+offsetX,y:p.y*scale+offsetY};},me=P(520,330,0),m=P(780,390,22);
+      ctx.save();const dpr=Math.min(devicePixelRatio||1,2);ctx.setTransform(dpr,0,0,dpr,0,0);
       arrow([{x:me.x-8,y:me.y+28},{x:me.x-70,y:me.y+60}],'#365c4c',false);
       label('W A S D  =  drive',me.x-60,me.y+84);
-      cursor(m.x,m.y);label('Mouse  =  aim',m.x+20,m.y+48,'#b75226');label('Hold left click  =  fire',m.x+20,m.y+80,'#b75226');};`);
+      cursor(m.x,m.y);label('Mouse  =  aim',m.x+20,m.y+48,'#b75226');label('Hold left click  =  fire',m.x+20,m.y+80,'#b75226');ctx.restore();};`);
   await desk.evaluate(()=>{$('roster').scrollTop=0;});
   await toWebp(desk,await desk.locator('#arena').screenshot(),'pc-controls.webp');
 

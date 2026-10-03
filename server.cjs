@@ -37,7 +37,7 @@ function securityHeaders(res,req,scriptHash=''){
   res.setHeader('Content-Security-Policy',`default-src 'self'; script-src 'self'${scriptHash?` '${scriptHash}'`:''}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors ${framing}`);
   res.setHeader('X-Frame-Options',req[ingressRequest]?'SAMEORIGIN':'DENY');res.setHeader('Referrer-Policy','no-referrer');
 }
-function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoomCreated=null,adminPassword='',adminPath='admin',quickSearchSeconds=8,quickReadySeconds=5}={}){
+function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoomCreated=null,adminPassword='',adminPath='admin',quickSearchSeconds=12,quickReadySeconds=5}={}){
   // The admin page lives at a private address of your choosing; nothing in the game links to it.
   const adminRoot='/'+(/^[A-Za-z0-9_-]{3,64}$/.test(adminPath)?adminPath:'admin');
   // Hidden spectators watch a room with a short-lived pass from the admin page. They are not

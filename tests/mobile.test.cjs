@@ -307,7 +307,7 @@ test('rooms list players inline with one-tap Join and Create, sharing the saved 
   await c.run('refreshRooms()');
   const [info,join]=c.elements.get('roomList').children[0].children;
   assert.equal(info.children[1].textContent,'Alice, Bob · reconnecting');assert.equal(join.textContent,'JOIN');
-  c.elements.get('lobbyName').value='Zed';c.elements.get('lobbyName').events.input();assert.equal(c.elements.get('callsign').value,'Zed');
+  c.elements.get('profileButton').events.click();c.elements.get('lobbyName').value='Zed';c.elements.get('profileForm').events.submit({preventDefault(){}});assert.equal(c.elements.get('callsign').value,'Zed');
   join.events.click();
   assert.equal(c.run('joinMode'),'join');assert.equal(c.elements.get('roomInput').value,'ALPHA');assert.equal(sockets.length,1,'joins straight away');
   c.run('connecting=false');c.elements.get('createRoom').events.click();
@@ -318,6 +318,25 @@ test('rooms list players inline with one-tap Join and Create, sharing the saved 
   assert.equal(c.sandbox.document.body.classList.contains('in-room-form'),false);
   assert.equal(c.elements.get('arena').classList.contains('room-form-open'),false);
   assert.equal(c.elements.get('roomBrowser').hidden,false);
+});
+
+test('profile editor saves a name without changing identity and Back cancels the draft',()=>{
+  const c=client();c.run("rememberName('Mango');profileId='same-profile'");
+  c.elements.get('profileButton').events.click();assert.equal(c.elements.get('profileDialog').hidden,false);
+  c.elements.get('lobbyName').value='Draft';c.elements.get('closeProfile').events.click();assert.equal(c.elements.get('callsign').value,'Mango');
+  c.elements.get('profileButton').events.click();c.elements.get('lobbyName').value='   ';c.elements.get('profileForm').events.submit({preventDefault(){}});assert.equal(c.elements.get('profileDialog').hidden,false);
+  c.elements.get('lobbyName').value='  Blue Scout  ';c.elements.get('profileForm').events.submit({preventDefault(){}});
+  assert.equal(c.elements.get('callsign').value,'Blue Scout');assert.equal(c.run('profileId'),'same-profile');assert.equal(c.elements.get('profileDialog').hidden,true);
+});
+
+test('game gestures clear selection and block text dragging while inputs remain editable',()=>{
+  const c=client();let cleared=0,blocked=0;c.sandbox.document.getSelection=()=>({removeAllRanges(){cleared++;}});
+  c.run("latest={phase:'playing'}");c.elements.get('moveStick').events.pointerdown(c.event(1,82,50));assert.equal(cleared,1);
+  for(const type of ['selectstart','dragstart']){
+    c.documentEvents[type]({target:{closest:()=>null},preventDefault(){blocked++;}});
+    c.documentEvents[type]({target:{closest:()=>({})},preventDefault(){throw Error('must allow input editing');}});
+  }
+  assert.equal(blocked,2);c.elements.get('moveStick').events.pointerup(c.event(1));assert.equal(c.sent.at(-1).x,0);
 });
 
 test('creator sends the selected win target while quick play starts at ten',()=>{
@@ -388,9 +407,10 @@ test('mobile menu releases controls and closes on action, outside tap, Escape an
   assert.equal(arena.classList.contains('menu-open'),false);
 });
 
-test('mobile camera enlarges tanks, follows them, and keeps every corner visible',()=>{
-  const c=client();
-  for(const [width,height] of [[874,290],[390,620],[667,240],[320,430]]){
+test('mobile and PC cameras centre the tank at every corner, including respawn',()=>{
+ for(const mobile of [true,false]){
+  const c=client(mobile);
+  for(const [width,height] of [[1440,900],[874,290],[390,620],[667,240],[320,430]]){
     c.run(`cssW=${width};cssH=${height};tanks[0].x=800;tanks[0].y=520;updateCamera()`);
     assert(c.run('48*boardScale*scale')>=33.59,'tank width stays readable in CSS pixels');
     assert.equal(c.run('project(tanks[0].x,tanks[0].y).x*scale+offsetX'),width/2);
@@ -401,10 +421,11 @@ test('mobile camera enlarges tanks, follows them, and keeps every corner visible
       c.run(`tanks[0].x=${x};tanks[0].y=${y};updateCamera()`);
       const screenX=c.run('project(tanks[0].x,tanks[0].y).x*scale+offsetX');
       const screenY=c.run('project(tanks[0].x,tanks[0].y).y*scale+offsetY');
-      assert(screenX>=17.99&&screenX<=width-17.99);
-      assert(screenY>=17.99&&screenY<=height-17.99,'the camera uses map area at every edge while keeping the tank visible');
+      assert(Math.abs(screenX-width/2)<.001);
+      assert(Math.abs(screenY-height/2)<.001,'the tank stays centred even at the map edge');
     }
   }
+ }
 });
 
 test('overview fits the whole board and toggles back without changing touch aim',()=>{
@@ -445,7 +466,7 @@ test('close-view arrows identify off-screen allies and enemies and disappear out
   c.run('latest.phase="playing";tanks[0].hp=0');assert.equal(c.run('enemyMarkers().length'),0);
   c.run('tanks[0].hp=10;spectating=true');assert.equal(c.run('enemyMarkers().length'),0);
   const desktop=client(false);desktop.run("latest={phase:'playing',settings:{mode:'ffa'}};tanks.push({id:'foe',x:1500,y:500,hp:10});updateCamera()");
-  assert.equal(desktop.run('enemyMarkers().length'),0);
+  assert.equal(desktop.run('enemyMarkers().length'),1,'desktop close view also identifies off-screen opponents');
 });
 
 test('two-player and free-for-all off-screen opponents each receive a marker',()=>{
@@ -454,11 +475,15 @@ test('two-player and free-for-all off-screen opponents each receive a marker',()
   c.run('tanks[1].x=820');assert.equal(c.run('enemyMarkers().length'),0);
 });
 
-test('desktop camera and mouse unprojection remain unchanged',()=>{
+test('desktop following camera keeps the mouse aim under the cursor while moving',()=>{
   const c=client(false);c.run('cssW=1120;cssH=610;updateCamera()');
-  assert.equal(c.run('scale'),1);assert.equal(c.run('offsetX'),0);assert.equal(c.run('offsetY'),0);
   c.run('aimAt({pointerType:"mouse",clientX:560,clientY:319})');
-  assert.equal(c.run('pointer.x'),800);assert.equal(c.run('pointer.y'),527.7);
+  for(const [x,y]of [[26,26],[800,520],[1574,1014]]){
+    c.run(`tanks[0].x=${x};tanks[0].y=${y};updateCamera()`);
+    assert(Math.abs(c.run('project(pointer.x,pointer.y,22).x*scale+offsetX')-560)<.001);
+    assert(Math.abs(c.run('project(pointer.x,pointer.y,22).y*scale+offsetY')-319)<.001);
+  }
+  c.run('joined=false;updateCamera()');assert.equal(c.run('scale'),1);assert.equal(c.run('offsetX'),0);assert.equal(c.run('offsetY'),0,'spectator presentation remains unchanged');
 });
 
 test('fullscreen enters/exits and unavailable or rejected requests use a reversible expanded view',async()=>{
@@ -571,10 +596,21 @@ test('the match-end damage list opens on tap and closes for the next round',()=>
   const toggle=c.elements.get('resultStatsToggle'),details=c.elements.get('resultDamage');
   assert.equal(details.hidden,true);assert.equal(toggle.attributes['aria-expanded'],'false');
   toggle.events.click();assert.equal(details.hidden,false);assert.equal(toggle.attributes['aria-expanded'],'true');
-  assert.deepEqual(c.elements.get('resultDamageRows').children.map(row=>row.children.map(cell=>String(cell.textContent))),[['Me ★','37'],['Bo','12']]);
+  assert.deepEqual(c.elements.get('resultDamageRows').children.map(row=>row.children.map(cell=>String(cell.textContent))),[['Me · YOU','10','1','40%','37'],['Bo','3','10','40%','12']]);
   toggle.events.click();assert.equal(details.hidden,true);
   toggle.events.click();c.run("latest.phase='countdown';updateRoomPhase(latest)");
   assert.equal(details.hidden,true);assert.equal(toggle.attributes['aria-expanded'],'false');
+});
+
+test('Match Details preserves fullscreen and completed statistics through a lobby return',()=>{
+  const c=client(),arena=c.elements.get('arena');c.sandbox.document.fullscreenElement=arena;
+  c.run("setExpanded(true);latest={room:'TEST',phase:'results',winner:{id:'me',name:'Me'},settings:{mode:'ffa'},players:[{id:'me',name:'Me',slot:0,connected:true,kills:10,deaths:2,damageDealt:45,shots:20,hits:12}],rematchVotes:[],rematchIn:1};updateRoomPhase(latest)");
+  c.elements.get('resultStatsToggle').events.click();assert.equal(c.elements.get('matchDetails').hidden,false);
+  const rows=JSON.stringify(c.elements.get('resultDamageRows').children.map(r=>r.children.map(t=>t.textContent)));
+  c.run("latest.phase='waiting';latest.winner=null;latest.players[0].kills=0;updateRoomPhase(latest)");
+  assert.equal(c.elements.get('matchDetails').hidden,false);assert.equal(JSON.stringify(c.elements.get('resultDamageRows').children.map(r=>r.children.map(t=>t.textContent))),rows);
+  assert.equal(c.sandbox.document.fullscreenElement,arena);assert.equal(c.run('expanded'),true);
+  c.windowEvents.keydown({code:'Escape',preventDefault(){},target:{}});assert.equal(c.elements.get('matchDetails').hidden,true);assert.equal(c.run('expanded'),true);
 });
 
 test('2 vs 2 results split players into Orange and Blue groups with team scores',()=>{

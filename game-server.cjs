@@ -26,7 +26,7 @@ function rayBox(x,y,dx,dy,w){
 class Room {
   constructor(code,options={}){this.code=code;this.settings=Object.freeze({mode:options?.mode==='teams'?'teams':'ffa',bouncing:options?.bouncing!==false,powers:options?.powers!==false,targetScore:Number.isInteger(options?.targetScore)&&options.targetScore>=5&&options.targetScore<=50?options.targetScore:F.targetScore});this.phase='waiting';this.countdownUntil=0;this.ownerId=null;this.teamScores=[0,0];this.pickups=[];this.pickupId=0;this.nextPickup=6;this.map=generateMap();this.players=new Map();this.shells=[];this.events=[];this.time=0;this.eventId=0;this.shellId=0;this.winner=null;this.botSkill='normal';this.rematchUntil=0;this.rematchVotes=new Set();}
   emit(type,data){this.events.push({id:++this.eventId,type,...data});}
-  configureQuick(searchSeconds=8,readySeconds=5){this.quick=true;this.phase='searching';this.searchUntil=this.time+searchSeconds;this.readySeconds=readySeconds;this.readyIds=new Set();}
+  configureQuick(searchSeconds=12,readySeconds=5){this.quick=true;this.phase='searching';this.searchUntil=this.time+searchSeconds;this.readySeconds=readySeconds;this.readyIds=new Set();}
   resetRound(){
     this.winner=null;this.recorded=false;this.lastResults=null;this.rematchUntil=0;this.rematchVotes.clear();this.teamScores=[0,0];this.map=generateMap();this.matchPlayers=new Map();
     for(const p of this.players.values()){p.kills=0;p.deaths=0;p.damageDealt=0;p.shots=0;p.hits=0;p.streak=0;p.reaction=null;}

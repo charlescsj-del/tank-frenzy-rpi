@@ -2,6 +2,16 @@
 
 Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. Dates use the earliest release or import commit available in this repository, shown in the Asia/Kuala_Lumpur time zone. For v1.1.0–v1.3.2, the original game release commits are unavailable here, so 2026-09-23 is the archive import date, not a claimed release date. The v1.5.0 notes first appear in the 2026-09-24 import of v1.6.0. The 19.x builds were originally distributed under those numbers; their entries below are relabeled as consecutive 1.19.x versions for a consistent history. Git history retains the original package numbers.
 
+## v3.1.0 [2026-10-03]
+
+- Keep your tank centred at every map edge and corner on mobile and PC, including respawns. Retain Full Map, add off-screen indicators on PC, and keep mouse aim aligned as the camera moves.
+- Open Match Details in a dedicated panel inside the arena, showing kills, deaths, hit rate and damage without leaving fullscreen. Preserve the completed statistics if the rematch timer returns the group to the lobby; Back closes the panel and a new battle clears it.
+- Extend Quick Play's human search window from eight to twelve seconds; four humans still reveal immediately and the five-second Ready timer is unchanged.
+- Put your own tank, name and rank above the leaderboard filters. Remember your most recent tank for views without a ranked entry.
+- Replace the home-screen name field with a top-right profile icon. Save commits a name change; Back discards the draft without changing the guest identity. Label the Join arena return action Back.
+- Prevent text selection and image dragging on game surfaces while keeping name and invitation inputs editable and copyable. Clear stale selection when control gestures begin.
+- Add regression coverage for corner-centred cameras, mouse aim, fullscreen details and expiry, profile editing, selection handling, and responsive browser flows.
+
 ## v3.0.0 [2026-10-03]
 
 - Redesign the home screen around one prominent Play action, compact mode selection and direct Create arena / Join with code actions. Remove the empty directory panel; show public arenas only when available, with a retry action on errors.

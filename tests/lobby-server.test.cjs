@@ -45,7 +45,7 @@ test('Quick Play groups same-mode arrivals, fills bots at the deadline, and excl
   const s=server(),quick=(mode='ffa')=>{const ws=s.connect();ws.emit('message',JSON.stringify({type:'quick',name:'Guest',settings:{mode}}));return ws;};
   const a=quick(),b=quick(),team=quick('teams'),welcome=ws=>ws.messages.find(m=>m.type==='welcome');
   assert.equal(welcome(a).room,welcome(b).room);assert.notEqual(welcome(a).room,welcome(team).room);assert.equal(s.list().body.rooms.length,0);
-  const room=s.game.rooms.get(welcome(a).room);room.step(7.9);assert.equal(room.phase,'searching');assert.equal(room.players.size,2);
+  const room=s.game.rooms.get(welcome(a).room);room.step(8);assert.equal(room.phase,'searching','keep searching beyond the old eight-second window');room.step(3.9);assert.equal(room.phase,'searching');assert.equal(room.players.size,2);
   room.step(.11);assert.equal(room.phase,'ready');assert.equal(room.players.size,4);assert.equal(room.humans().length,2);assert.equal(room.botSkill,'easy');
   const late=quick();assert.notEqual(welcome(late).room,room.code);
   a.emit('message',JSON.stringify({type:'ready'}));assert.equal(room.phase,'ready');b.emit('message',JSON.stringify({type:'ready'}));assert.equal(room.phase,'playing');
