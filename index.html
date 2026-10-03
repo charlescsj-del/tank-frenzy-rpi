@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Tank Frenzy — Cartoon Tank Battles</title>
-<meta name="theme-color" content="#365c4c">
+<meta name="theme-color" content="#153b32">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
@@ -720,6 +720,18 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .game.waiting-room #waitingPlayers li{border:1px solid #d4ddc3;background:#eef2e3;border-radius:14px}
 .game.waiting-room .lobby-rules{border:0;border-top:1px solid #d4ddc3;border-radius:0;padding:12px 0 0}
 /* Paint matchmaking to the edges; only its content avoids phone cutouts. */
+html{min-height:100%;background:#153b32}
+body.mobile-playing{background:#153b32;overscroll-behavior:none;overflow:hidden}
+@media(pointer:coarse) and (hover:none){.game.mobile-active{position:fixed;inset:0;margin:0;height:100%;height:100dvh}.mobile-playing .page{min-height:100vh;min-height:100dvh}}
+.countdown{z-index:20}
+.is-ready .matchmaking-time{font-size:68px;line-height:1;padding:8px 28px;border-radius:24px;min-width:132px;font-variant-numeric:tabular-nums}
+.is-ready .matchmaking-time::before{content:'BATTLE STARTS IN';display:block;font-size:10px;letter-spacing:1.5px;line-height:1.5;margin-bottom:3px}
+@media(max-height:700px){.is-ready .matchmaking-time{font-size:46px;padding:5px 22px}.is-ready .matchmaking-players{margin-top:12px;margin-bottom:12px}.is-ready .match-player{min-height:120px}}
+@media(max-height:700px) and (orientation:portrait){
+ .matchmaking-card{padding:4px 0}.matchmaking-card h2{font-size:25px}.matchmaking-card>.eyebrow{font-size:9px;letter-spacing:1.5px}
+ .matchmaking-players{margin:12px 0;gap:8px}.match-player{min-height:120px;padding:8px 4px;gap:4px}.match-player .tank-portrait{width:100px;height:65px}.match-player strong{font-size:12px}.match-player small{font-size:8px}.search-radar{width:48px;height:48px;margin:8px 0}
+ .matchmaking-time{font-size:18px}.matchmaking-card #matchmakingNote{font-size:10px;margin:6px auto 10px}.matchmaking-actions{flex-wrap:nowrap;gap:8px}.matchmaking-actions .primary{min-width:0;max-width:190px;flex:1;min-height:44px;font-size:16px}.matchmaking-actions .tool{min-height:44px;padding:8px 12px}
+}
 .game.matchmaking-open{padding:0;background:#153b32}
 .game.matchmaking-open .stage{min-height:0}
 .game.matchmaking-open .battlebar,.game.matchmaking-open #viewNote{display:none}
@@ -763,7 +775,7 @@ input,textarea,[contenteditable=true],.game input,.game textarea,.game [contente
 <symbol id="power-double" viewBox="-16 -16 32 32"><g fill="currentColor"><rect x="-11" y="-9" width="8" height="21" rx="3"/><rect x="3" y="-9" width="8" height="21" rx="3"/><path d="M-9-13h4v6h-4zM5-13h4v6H5z"/></g><path d="M-7-5v5M7-5v5" fill="none" stroke="#a279f5" stroke-width="3" stroke-linecap="round"/></symbol>
 <symbol id="power-speed" viewBox="-16 -16 32 32"><path d="M3-13-10 2h8l-2 11L11-4H3z" fill="currentColor"/></symbol>
 <symbol id="power-machine" viewBox="-18 -18 36 36"><g transform="rotate(-26)" fill="currentColor"><rect x="-12" y="-7" width="6" height="16" rx="3"/><rect x="-3" y="-7" width="6" height="16" rx="3"/><rect x="6" y="-7" width="6" height="16" rx="3"/><path d="M-10 12h2v3h-2zM-1 12h2v3h-2zM8 12h2v3H8z"/></g></symbol>
-<symbol id="power-immortal" viewBox="-16 -16 32 32"><path d="m0-14 4.1 8.3 9.2 1.3-6.7 6.5 1.6 9.2L0 7l-8.2 4.3 1.6-9.2-6.7-6.5 9.2-1.3z" fill="#fff5a1"/></symbol>
+<symbol id="power-immortal" viewBox="-16 -16 32 32"><path d="M0-14 12-9 11 2Q9 10 0 15-9 10-11 2L-12-9Z" fill="#fff5a1" stroke="#aa791d" stroke-width="2"/><path d="M0-8V8" fill="none" stroke="#aa791d" stroke-width="2"/></symbol>
 <symbol id="power-restore" viewBox="-16 -16 32 32"><path d="M0 12C-23-2-9-19 0-7 9-19 23-2 0 12" fill="#e94d5c"/></symbol>
 <symbol id="ui-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></symbol>
 <symbol id="ui-trophy" viewBox="0 0 24 24"><path d="M7 3h10v7a5 5 0 0 1-10 0V3Zm5 12v5m-4 1h8M7 5H3v3a4 4 0 0 0 4 4m10-7h4v3a4 4 0 0 1-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -902,7 +914,7 @@ input,textarea,[contenteditable=true],.game input,.game textarea,.game [contente
 <li>Enemy shells that touch yours destroy each other.</li>
 <li>The arena creator can turn bouncing off.</li>
 </ul></div></article>
-<article id="lessonTokens" class="lesson" hidden><img src="./tutorial/power-ups.webp" alt="Power-up tokens on the field, a laser beam and an Immortal tank" width="1200" height="613" loading="lazy"><div><p class="eyebrow">POWER-UPS</p><h3>Drive over a token.</h3><ul>
+<article id="lessonTokens" class="lesson" hidden><img src="./tutorial/power-ups.webp" alt="Power-up tokens on the field, a laser beam and a tank protected by Shield" width="1200" height="613" loading="lazy"><div><p class="eyebrow">POWER-UPS</p><h3>Drive over a token.</h3><ul>
 <li>A token appears every 12 seconds (two at most) and vanishes after 20.</li>
 <li>Timed powers last <b>10 seconds</b>. The top-left badge counts down.</li>
 <li>A new power replaces your old one; dying ends it.</li>
@@ -913,7 +925,7 @@ input,textarea,[contenteditable=true],.game input,.game textarea,.game [contente
 <span class="power-card" style="--power-color:#a279f5"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-double" x="0" y="0" width="32" height="32"/></svg><span><b>Double cannon</b><small>Every shot fires two shells side by side.</small></span></span>
 <span class="power-card" style="--power-color:#f2b931"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-speed" x="0" y="0" width="32" height="32"/></svg><span><b>Speed</b><small>Drive 60% faster to dodge, chase or grab tokens first.</small></span></span>
 <span class="power-card" style="--power-color:#3fb5cc"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-machine" x="0" y="0" width="32" height="32"/></svg><span><b>Machine gun</b><small>Rapid fire: a shell every 0.12 seconds.</small></span></span>
-<span class="power-card" style="--power-color:#e8b933"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-immortal" x="0" y="0" width="32" height="32"/></svg><span><b>Immortal</b><small>No damage for 10 seconds. You can still drive and fire.</small></span></span>
+<span class="power-card" style="--power-color:#e8b933"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-immortal" x="0" y="0" width="32" height="32"/></svg><span><b>Shield</b><small>No damage for 10 seconds. You can still drive and fire.</small></span></span>
 <span class="power-card" style="--power-color:#ffe0e4"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#power-restore" x="0" y="0" width="32" height="32"/></svg><span><b>Restore</b><small>Refills your health to 10 at once. Keeps any power you have.</small></span></span>
 </div></div></article>
 </div>

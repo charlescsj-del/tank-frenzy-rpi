@@ -1,10 +1,10 @@
 (function(root) {
   const data = {
-    version:'3.1.1',maxHealth:10,laserDamage:4,laserRadius:6,barrelLength:40,doubleBarrelOffset:6,turretHeight:28,
+    version:'3.1.2',maxHealth:10,laserDamage:4,laserRadius:6,barrelLength:40,doubleBarrelOffset:6,turretHeight:28,
     width: 1600, height: 1040, maxPlayers: 4, targetScore: 10, fireCooldown: .42, shellSpeed: 410,
     maxShells:144,maxShellsPerPlayer:36,powerDuration:10,pickupInterval:12,pickupLifetime:20,pickupRadius:60,
     powers:['laser','double','speed','machine','immortal','restore'],
-    powerLabels:{laser:'LASER',double:'DOUBLE CANNON',speed:'SPEED',machine:'MACHINE GUN',immortal:'IMMORTAL',restore:'RESTORE'},
+    powerLabels:{laser:'LASER',double:'DOUBLE CANNON',speed:'SPEED',machine:'MACHINE GUN',immortal:'SHIELD',restore:'RESTORE'},
     palette: [
       {name:'Ember',body:'#ef934c',bullet:'#ff782e'},
       {name:'Glacier',body:'#59b9df',bullet:'#39bfff'},

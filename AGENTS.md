@@ -71,7 +71,7 @@ Phases: friend `waiting` → `countdown` (3 s) → `playing` → `results` (20 s
 
 ## Tests
 
-`npm test` runs `node --test tests/*.test.cjs` (177 tests, about 10 seconds). CI also builds amd64/aarch64 containers and checks admin, hero and multiplayer UI. `tools/multiplayer-ui-check.cjs` exercises real HTTP/WebSocket grouping, Ready, results, shared reactions, ranks, privacy, QR invitations and direct invite joining at desktop, phone and landscape sizes. Playwright is a CI-only dependency. Browser check artifacts go under `artifacts/`; local tools may set `CHROMIUM_EXECUTABLE_PATH` and `ARTIFACT_DIR`.
+`npm test` runs `node --test tests/*.test.cjs` (178 tests, about 10 seconds). CI also builds amd64/aarch64 containers and checks admin, hero and multiplayer UI. `tools/multiplayer-ui-check.cjs` exercises real HTTP/WebSocket grouping, Ready, results, shared reactions, ranks, privacy, QR invitations and direct invite joining at desktop, phone and landscape sizes. Playwright is a CI-only dependency. Browser check artifacts go under `artifacts/`; local tools may set `CHROMIUM_EXECUTABLE_PATH` and `ARTIFACT_DIR`.
 
 Harness quirks:
 - `client.js` and `server.cjs` are loaded into `vm` sandboxes with hand-made fake DOM elements (children, `append`, `prepend`, `replaceChildren`, `classList`, events, `setAttribute`). They have no `querySelector`, `closest` or `dataset`; if new client code uses a browser API, add it to the fake (or guard the call), or the sandbox throws.

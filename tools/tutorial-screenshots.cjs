@@ -90,13 +90,13 @@ window.focusOn=(x,y,zoom)=>{const p=project(x,y);scale=zoom;offsetX=cssW/2-p.x*s
       label('Bounce!',b.x,b.y-30,'#b75226');const w=project(750,700,52);label('Cover blocks a straight shot',w.x,w.y+34,'#365c4c');const t=project(975,560);label('Hit!',t.x+52,t.y-2,'#b75226');};`);
   await toWebp(desk,await desk.locator('#game').screenshot(),'bouncing.webp');
 
-  // 4. Power-ups: tokens, a laser beam and an Immortal tank.
+  // 4. Power-ups: tokens, a laser beam and an Shield tank.
   await stage(desk,state({players:[player({id:'me',slot:0,name:'You',x:520,y:560,a:0,aim:0,power:'laser',powerRemaining:6.4}),player({id:'b',slot:1,name:'Blue',x:1050,y:590,a:Math.PI,aim:Math.PI,power:'immortal',powerRemaining:7}),player({id:'c',slot:2,name:'Moss',x:780,y:860,a:0,aim:-1,power:'speed',powerRemaining:5})],
     pickups:[{id:1,x:460,y:830,type:'double'},{id:2,x:1000,y:330,type:'machine'},{id:3,x:660,y:300,type:'restore'}]}),`
     window._aimGuide??=drawAimGuide;drawAimGuide=()=>{};
     beams=[{player:'me',tankLife:1,slot:0,originX:520,originY:560,endX:1024,endY:586,muzzleDistance:40,life:.18}];
     focusOn(760,590,1.35);
-    window.annotate=()=>{const L=project(760,572,28),I=project(1050,590),T=project(460,830);label('Laser',L.x,L.y-26,'#c2345d');label('Immortal: no damage',I.x,I.y+48,'#a0761a');label('Power-up token',T.x+90,T.y+6,'#5a3fb0');};`);
+    window.annotate=()=>{const L=project(760,572,28),I=project(1050,590),T=project(460,830);label('Laser',L.x,L.y-26,'#c2345d');label('Shield: no damage',I.x,I.y+48,'#a0761a');label('Power-up token',T.x+90,T.y+6,'#5a3fb0');};`);
   await toWebp(desk,await desk.locator('#game').screenshot(),'power-ups.webp');
 
   // Getting hit: flame edges, damage numbers and sparks around your tank.

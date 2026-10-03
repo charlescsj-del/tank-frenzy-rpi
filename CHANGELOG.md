@@ -2,6 +2,13 @@
 
 Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. Dates use the earliest release or import commit available in this repository, shown in the Asia/Kuala_Lumpur time zone. For v1.1.0–v1.3.2, the original game release commits are unavailable here, so 2026-09-23 is the archive import date, not a claimed release date. The v1.5.0 notes first appear in the 2026-09-24 import of v1.6.0. The 19.x builds were originally distributed under those numbers; their entries below are relabeled as consecutive 1.19.x versions for a consistent history. Git history retains the original package numbers.
 
+## v3.1.2 [2026-10-03]
+
+- Rename Immortal to Shield in the HUD and tutorial; use shield artwork for pickups, the HUD and orbiting protection emblems. Protection still lasts ten seconds; preserve the internal power ID for compatibility.
+- Restore a prominent Quick Play Ready counter with final 3–2–1 sound cues, retaining immediate start when all humans are ready. Keep the friend-room countdown above the arena canvas.
+- Pin the touch arena to the viewport and use dark green root, mobile page and browser-theme backgrounds to eliminate the remaining pale portrait home-indicator strip. Keep controls within safe areas.
+- Replace the tank-hit cue with a short original armour clank, bass thump and damped metallic tail. Use a versioned 8 KB MP3, subtle pitch variation, the existing voice limit and the old sound as a loading/error fallback.
+
 ## v3.1.1 [2026-10-03]
 
 - Replace the home-screen How to Play label with a compact circular question-mark button, retaining its accessible name and tutorial behavior.

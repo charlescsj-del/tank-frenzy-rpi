@@ -130,7 +130,7 @@ test('power HUD uses matching icons and time, replaces powers, and clears on dea
   c.run('hudPlayer.hp=0;updateHud(hudState)');assert.equal(badge.hidden,true);
   c.run("hudPlayer.hp=5;hudPlayer.power='speed';hudPlayer.powerRemaining=5;updateHud(hudState)");assert.equal(glyph.attributes.href,'#power-speed');assert.equal(badge.hidden,false);
   c.run('hudPlayer.powerRemaining=0;updateHud(hudState)');assert.equal(badge.hidden,true);
-  c.run("hudPlayer.power='immortal';hudPlayer.powerRemaining=10;updateHud(hudState)");assert.equal(glyph.attributes.href,'#power-immortal');assert.match(badge.attributes['aria-label'],/IMMORTAL/);
+  c.run("hudPlayer.power='immortal';hudPlayer.powerRemaining=10;updateHud(hudState)");assert.equal(glyph.attributes.href,'#power-immortal');assert.match(badge.attributes['aria-label'],/SHIELD/);
 });
 
 test('ten health fits five pips with half pips for single hits',()=>{
@@ -265,6 +265,17 @@ test('winner fills the arena, rematch vote is one-shot, and expiry does not rest
   const sent=c.sent.length;c.elements.get('rematch').events.click();assert.equal(c.sent.length,sent);
   c.run("latest.phase='countdown';latest.winner=null;latest.countdownIn=3;updateRoomPhase(latest)");
   assert.equal(c.elements.get('results').hidden,true);
+});
+
+test('Quick Play shows a large Ready count and sounds the final three ticks once, with no extra start delay',()=>{
+  const c=client();c.run(`var cues=[];playCue=kind=>cues.push(kind);joined=true;myId='me';latest={map:{id:32},phase:'ready',readyIn:5,readyIds:[],settings:{mode:'ffa'},players:[{id:'me',slot:0,name:'Scout',connected:true,hp:10}]};updateRoomPhase(latest);updateMatchSounds(latest)`);
+  assert.equal(c.elements.get('matchmakingTime').textContent,'5');assert.equal(c.elements.get('matchmaking').classList.contains('is-ready'),true);assert.equal(c.run('cues.length'),0);
+  c.run('latest.readyIn=2.9;updateRoomPhase(latest);updateMatchSounds(latest);updateMatchSounds(latest)');
+  assert.equal(c.elements.get('matchmakingTime').textContent,'3');assert.equal(c.run('cues.join()'),'countdown3');
+  c.run('latest.readyIn=1.9;updateMatchSounds(latest);latest.readyIn=.9;updateMatchSounds(latest)');
+  assert.equal(c.run('cues.join()'),'countdown3,countdown2,countdown1');
+  c.run("latest.phase='playing';updateRoomPhase(latest);updateMatchSounds(latest);updateMatchSounds(latest)");
+  assert.equal(c.elements.get('matchmaking').hidden,true);assert.equal(c.elements.get('countdown').hidden,true);assert.equal(c.run('cues.join()'),'countdown3,countdown2,countdown1,start');
 });
 
 test('countdown sounds once per number, start is distinct, and music/effects switches operate independently',()=>{

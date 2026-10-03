@@ -21,6 +21,10 @@ The user chose four original MP3s from the playable effects audition. The bytes 
 
 These mono 44.1 kHz / 128 kbps files total 45,731 bytes. The original asset continues to supply double cannon, menu, laser, intercept, hit, win and loss. `sound-bank.js` downloads each distinct file once and falls back to its previous cue if an approved file fails to load. The game still limits simultaneous sample voices to 12; no additional sound messages are sent to the game server. Any changed MP3 requires a new filename because assets use immutable caching.
 
+## Armour impact (v3.1.2)
+
+`effects-hit-v2.mp3` replaces the tank-hit cue with a 0.42-second metal clank and low thump. It is original deterministic synthesis, with no third-party samples; regenerate it using `python3 tools/generate-hit-sound.py` (requires ffmpeg). The mono 44.1 kHz / 128 kbps MP3 is 8,025 bytes. It layers a falling bass impact, damped inharmonic metal resonances and a brief filtered-noise contact. The pre-encode peak is -2.2 dBFS; playback keeps the previous hit gain, rate limit and priority, with small pitch variation. The original pack's hit remains a fallback. Docker includes the audio directory and the server explicitly allows the versioned URL.
+
 ## Countdown and match start (v1.7.0)
 
 `countdown-v1.mp3` is a new mono 44.1 kHz / 128 kbps recording of three rising mechanical ticks. Their clip offsets are 0, 0.30 and 0.60 seconds, with 0.26 seconds each. The server countdown is still authoritative; the browser plays one tick when each displayed number first arrives and never repeats it on subsequent snapshots. `battle-start-v1.mp3` is a separate bass impact with a short brass call, played when the phase actually changes to active play. Both use the existing effects switch, voice cap and local sample playback. The previous start cue remains as a fallback if its replacement cannot load.
