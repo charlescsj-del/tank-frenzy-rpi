@@ -4,6 +4,8 @@ Status: approved effects shipped in v1.2.0, three approved MP3 music recordings 
 
 ## Shipped implementation
 
+v3.1.4 uses original designed cannon and armour-impact samples (`effects-fire-v4.mp3`, `effects-hit-v4.mp3`), not field recordings. Cannon layers a pressure crack, bass blast and diffuse recoil tail; damage uses compact armour contact and mechanical debris without sustained ringing. Machine-gun fire retains its shorter previous cue. Movement reuses two generated two-second loops: diesel-like exhaust and rolling tracks, with smoothed playback speed following tank speed. Stops, mute, countdown and hidden pages silence movement immediately. Existing sample limits, distance mixing and fallback behavior remain intact. Generate samples and a movement audition with `node tools/generate-combat-sounds.cjs` (ffmpeg required only for generation).
+
 v3.1.3 replaces the v2 hit with a 0.36-second dry, heavy impact without ringing metal resonances. The lineup counter is silent; three ticks play only after entering the battlefield, before movement and firing unlock. All-ready skips the lineup wait but retains this three-second field countdown.
 
 In v3.1.2, tank damage uses a new 0.42-second armour impact: a low thump under a short metallic clank, with a damped tail and subtle pitch variation. The original synthesized MP3 adds about 8 KB and preserves the existing hit volume, rate limiting, mute and voice cap. Quick Play's Ready counter also plays the final three countdown ticks; all humans pressing Ready still starts immediately.

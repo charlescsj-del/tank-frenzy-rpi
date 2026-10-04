@@ -20,20 +20,20 @@ test('sound bank decodes approved recordings once, uses their ranges, and never 
   const {ac,starts,sources}=context(),requests=[];let resolve;
   const bank=new SoundBank(ac,asset=>{requests.push(asset);return asset===SoundBank.asset?new Promise(r=>resolve=r):success(asset);});
   assert.equal(bank.play('explosion'),false);await Promise.resolve();
-  resolve(await success(SoundBank.asset));assert.equal(await bank.ready,true);assert.equal(requests.length,8);assert.equal(new Set(requests).size,8);assert.equal(starts.length,0);
+  resolve(await success(SoundBank.asset));assert.equal(await bank.ready,true);assert.equal(requests.length,9);assert.equal(new Set(requests).size,9);assert.equal(starts.length,0);
   assert.equal(bank.play('explosion'),true);assert.deepEqual(starts[0],[0,SoundBank.clips.explosion.start,SoundBank.clips.explosion.duration]);
   assert.equal(sources[0].buffer.asset,SoundBank.approvedAssets.explosion);
   bank.play('shot');bank.play('machine-fire');
   assert.equal(sources[1].buffer.asset,SoundBank.approvedAssets.shot);
-  assert.equal(sources[2].buffer.asset,SoundBank.approvedAssets.shot);
-  assert.equal(bank.play('missing'),false);assert.equal(requests.length,8);
+  assert.equal(sources[2].buffer.asset,SoundBank.approvedAssets['machine-fire']);
+  assert.equal(bank.play('missing'),false);assert.equal(requests.length,9);
   for(const [name,offset] of [['countdown3',0],['countdown2',.3],['countdown1',.6]]){
     bank.play(name);assert.equal(starts.at(-1)[1],offset);
     assert.equal(sources.at(-1).buffer.asset,SoundBank.approvedAssets.countdown3);
   }
   bank.play('start');assert.equal(sources.at(-1).buffer.asset,SoundBank.approvedAssets.start);
   assert.notEqual(SoundBank.approvedAssets.start,SoundBank.approvedAssets.countdown3);
-  bank.play('hit');assert.equal(sources.at(-1).buffer.asset,SoundBank.approvedAssets.hit);assert.equal(starts.at(-1)[2],.36);
+  bank.play('hit');assert.equal(sources.at(-1).buffer.asset,SoundBank.approvedAssets.hit);assert.equal(starts.at(-1)[2],.46);
 });
 
 test('failed downloads and decoding leave graceful fallback available',async()=>{

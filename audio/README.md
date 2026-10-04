@@ -1,5 +1,9 @@
 # Approved cartoon sound pack
 
+## Current combat refinement (v3.1.4)
+
+`effects-fire-v4.mp3` (0.68 s) supplies normal/double cannon fire; `effects-hit-v4.mp3` (0.46 s) supplies tank damage. These are original synthesized sound designs, not real tank recordings. Generate both with `node tools/generate-combat-sounds.cjs`; the same script generates `tools/previews/movement-v4.mp3` from the exact browser loop recipe. Movement runs locally with two reusable buffers and no downloaded loop. Machine-gun fire retains Cannon A's short slice. Previous immutable asset URLs remain available for cached clients.
+
 `cartoon-v1.mp3` contains the original synthesized effects from the user's approved sound audition. It is a mono 44.1 kHz / 128 kbps MP3, 174,333 bytes. No third-party recordings or external audio service are used.
 
 The source samples were generated with oscillators, filtered noise, short melodic phrases and layered percussion. The pack preserves the approved waveforms, removes only the audition's outer silence, and adds short silent gaps between clips. Clip offsets and durations are stored in `sound-bank.js`.

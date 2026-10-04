@@ -203,7 +203,7 @@ function render(state){
   for(const room of state.rooms){
     const {node,head,canvas,table}=card(room.code);
     const score=room.settings.mode==='teams'?' · Orange '+room.teamScores[0]+' – '+room.teamScores[1]+' Blue':'';
-    head.replaceChildren(el('strong',{textContent:room.code}),el('span',{className:'badge',textContent:room.settings.mode==='teams'?'2 vs 2':'Free-for-all'}),
+    head.replaceChildren(el('strong',{textContent:room.code}),el('span',{className:'badge',textContent:room.settings.mode==='teams'?'2 vs 2':'Deathmatch'}),
       el('span',{className:'badge '+room.phase,textContent:(phaseNames[room.phase]||room.phase)+(room.winner?': '+room.winner.name+' won':'')+score}),el('span',{className:'badge',textContent:time(room.time)}));
     table.replaceChildren(...[...room.players].sort((a,b)=>b.kills-a.kills).map(p=>{
       const hp=el('span',{className:'hp'},el('i',{style:'width:'+p.hp*10+'%'}));

@@ -60,6 +60,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
   for(const name of ['countdown','battle-start'])files[`/audio/${name}-v1.mp3`]=[`audio/${name}-v1.mp3`,'audio/mpeg'];
   files['/audio/effects-hit-v2.mp3']=['audio/effects-hit-v2.mp3','audio/mpeg'];
   files['/audio/effects-hit-v3.mp3']=['audio/effects-hit-v3.mp3','audio/mpeg'];
+  for(const name of ['fire','hit'])files['/audio/effects-'+name+'-v4.mp3']=['audio/effects-'+name+'-v4.mp3','audio/mpeg'];
   files['/manifest.webmanifest']=['manifest.webmanifest','application/manifest+json'];
   for(const name of ['icon-192','icon-512','apple-touch-icon'])files[`/icons/${name}.png`]=[`icons/${name}.png`,'image/png'];
   for(const name of ['win','pc-controls','mobile-controls','find-tank','getting-hit','bouncing','power-ups'])files[`/tutorial/${name}.webp`]=[`tutorial/${name}.webp`,'image/webp'];

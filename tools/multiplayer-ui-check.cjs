@@ -23,6 +23,7 @@ fs.mkdirSync(output,{recursive:true});
       assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'no horizontal page overflow');
     }
     await Promise.all([pc.goto(url),phone.goto(url)]);
+    for(const p of [pc,phone]){assert.match(await p.locator('#ffaMode').textContent(),/DEATHMATCH/);assert.equal(await p.locator('#leaderboardPodium').count(),0);}
     for(const [p,name]of [[pc,'CopperCaptain'],[phone,'MangoScout']]){
       assert.equal(await p.locator('#lobbyName').isVisible(),false,'name stays off the home screen');
       await p.locator('#profileButton').click();await fits(p,'.profile-card');await p.locator('#lobbyName').fill(name);await screenshot(p,p===phone?'profile-phone':'profile-desktop');await p.locator('#saveProfile').click();

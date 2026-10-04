@@ -6,12 +6,12 @@
   // their exact v1 waveforms. Machine fire shares the new normal cannon.
   const APPROVED_ASSETS=Object.freeze({start:'./audio/battle-start-v1.mp3',
     countdown3:'./audio/countdown-v1.mp3',countdown2:'./audio/countdown-v1.mp3',countdown1:'./audio/countdown-v1.mp3',
-    shot:'./audio/effects-fire-a-v1.mp3',hit:'./audio/effects-hit-v3.mp3',
+    shot:'./audio/effects-fire-v4.mp3',double:'./audio/effects-fire-v4.mp3',hit:'./audio/effects-hit-v4.mp3',
     'machine-fire':'./audio/effects-fire-a-v1.mp3',ricochet:'./audio/effects-ricochet-c-v1.mp3',
     restore:'./audio/effects-pickup-a-v1.mp3',explosion:'./audio/effects-explosion-c-v1.mp3'});
   const APPROVED_CLIPS={start:{start:0,duration:1.06},
     countdown3:{start:0,duration:.26},countdown2:{start:.30,duration:.26},countdown1:{start:.60,duration:.26},
-    shot:{start:0,duration:.29},hit:{start:0,duration:.36},'machine-fire':{start:0,duration:.11},
+    shot:{start:0,duration:.68},double:{start:0,duration:.68},hit:{start:0,duration:.46},'machine-fire':{start:0,duration:.11},
     ricochet:{start:0,duration:.36},restore:{start:0,duration:.67},explosion:{start:0,duration:1.26}};
   class TankSoundBank{
     constructor(context,fetcher=fetch){

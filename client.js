@@ -566,8 +566,7 @@ async function loadLeaderboard(){
   try{
     const response=await fetch(appUrl('leaderboard?period='+leaderboardPeriod+'&country='+leaderboardCountry+'&player='+encodeURIComponent(profileId)));if(!response.ok)throw Error();
     const data=await response.json();if(request!==leaderboardRequest)return;
-    $('leaderboardPodium').replaceChildren();$('starterRivals').hidden=Boolean(data.players.length);
-    data.players.slice(0,3).forEach((p,i)=>{const card=document.createElement('div');card.className='podium-player';const name=document.createElement('strong'),score=document.createElement('small'),rank=document.createElement('span');rank.className='podium-place';rank.textContent='#'+(i+1);name.textContent=p.name;name.title=p.name;score.textContent=p.wins+' wins · '+p.kills+' kills';card.append(rank,tankPortrait(p.slot??i),name,score);$('leaderboardPodium').append(card);});
+    $('starterRivals').hidden=Boolean(data.players.length);
     const ownName=document.createElement('strong'),ownRank=document.createElement('span'),ownCopy=document.createElement('div');
     ownName.textContent=($('callsign').value||data.you?.name||'Your tank')+' · YOU';
     ownRank.textContent=data.you?'#'+data.you.rank+' · '+data.you.wins+' wins · '+data.you.kills+' kills':'Finish a battle to rank in this view. Solo battles count too.';
@@ -899,15 +898,29 @@ function updateMovementSound(speed){
   if(!joined||!sound||!audioReady||document.hidden||latest?.winner||latest?.phase==='waiting'||latest?.phase==='countdown'||performance.now()-lastSnapshot>500||speed<5){stopMovementSound();return;}
   const ac=getAudio();if(!ac)return;
   if(!engine){
-    const motor=ac.createOscillator(),tracks=ac.createOscillator(),filter=ac.createBiquadFilter(),gain=ac.createGain();
-    motor.type='sawtooth';tracks.type='triangle';filter.type='lowpass';filter.frequency.value=220;
+    const motor=ac.createBufferSource(),tracks=ac.createBufferSource(),filter=ac.createBiquadFilter(),gain=ac.createGain();
+    for(const [source,isTrack]of [[motor,false],[tracks,true]]){const samples=movementWave(ac.sampleRate,isTrack);source.buffer=ac.createBuffer(1,samples.length,ac.sampleRate);source.buffer.getChannelData(0).set(samples);source.loop=true;}
+    filter.type='lowpass';filter.frequency.value=1800;
     gain.gain.value=0;motor.connect(filter);tracks.connect(filter);filter.connect(gain);gain.connect(soundBank?.combat||ac.destination);
     motor.start();tracks.start();engine={motor,tracks,gain};
   }
   const throttle=Math.min(1,speed/170),now=ac.currentTime;
-  engine.motor.frequency.setTargetAtTime(48+throttle*30,now,.08);
-  engine.tracks.frequency.setTargetAtTime(23+throttle*15,now,.08);
-  engine.gain.gain.setTargetAtTime(.012+throttle*.014,now,.05);
+  engine.motor.playbackRate.setTargetAtTime(.72+throttle*.38,now,.12);
+  engine.tracks.playbackRate.setTargetAtTime(.35+throttle*1.05,now,.10);
+  engine.gain.gain.setTargetAtTime(.045+throttle*.04,now,.08);
+}
+
+// Two cached, original loops: a diesel-like exhaust and rolling track links.
+function movementWave(rate,tracks=false){
+  const samples=new Float32Array(Math.round(rate*2));let seed=tracks?73:41,low=0;
+  for(let i=0;i<samples.length;i++){
+    const t=i/rate;seed=(1664525*seed+1013904223)>>>0;const noise=seed/2147483648-1;low+=.08*(noise-low);
+    if(tracks){const phase=(t*16)%1,contact=Math.exp(-phase*26);samples[i]=.32*contact*(noise*.65+Math.sin(2*Math.PI*760*t)*.35)+.06*low;}
+    else{const pulse=.65+.35*Math.pow(.5+.5*Math.sin(2*Math.PI*28*t),3);samples[i]=pulse*(.32*Math.sin(2*Math.PI*56*t)+.16*Math.sin(2*Math.PI*112*t)+.09*Math.sin(2*Math.PI*168*t))+.32*low;}
+  }
+  // Match the seam without a click or allocating more nodes during play.
+  const seam=Math.min(256,Math.floor(rate*.006));for(let i=0;i<seam;i++){const mix=i/(seam-1),at=samples.length-seam+i;samples[at]=samples[at]*(1-mix)+samples[0]*mix;}
+  return samples;
 }
 
 function audioUnavailable(){sound=false;music=false;stopMovementSound();stopCueSounds();musicPlayer?.stop();updateAudioButtons();}
