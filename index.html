@@ -782,7 +782,7 @@ body:has(.game.room-form-open),body:has(.game.waiting-room){background:#193f35;c
 .game.room-form-open .arena-header,.game.waiting-room .arena-header{display:none!important}
 .game.room-form-open .overlay,.game.waiting-room .waiting-panel{background:linear-gradient(#173f35dc,#173f35ed),url('./hero-quarry.webp') center/cover;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
 .game.room-form-open .dialog,.game.waiting-room .waiting-panel .dialog{background:#fff9ea;color:#365743;border:1px solid #d7dfc5;border-radius:24px;box-shadow:0 16px 48px #0b241955;padding:24px;max-height:100%;overflow:auto}
-.game.waiting-room .waiting-panel{inset:0}.game.waiting-room #waitingTitle{font-size:clamp(20px,3vw,28px);overflow-wrap:anywhere}
+.game.waiting-room .waiting-panel{position:absolute;inset:0;min-height:0;display:grid;grid-template-rows:minmax(0,1fr);place-items:center;overflow:hidden}.game.waiting-room .waiting-panel .dialog{min-height:0}.game.waiting-room #waitingTitle{font-size:clamp(20px,3vw,28px);overflow-wrap:anywhere}
 .game.room-form-open .tool,.game.waiting-room .tool{background:#eef2e5;border:1px solid #cbd7ba;border-radius:12px;box-shadow:none;min-height:44px;font-size:13px}
 .game.room-form-open input,.game.room-form-open select,.game.waiting-room input,.game.waiting-room select{border:1px solid #c1cfaf;border-radius:10px;background:#fffef7;color:#365743;min-height:40px}
 .game.room-form-open .primary,.game.waiting-room .primary{background:linear-gradient(#ffba43,#f79335);color:#493b22;border:0;border-radius:14px;box-shadow:0 4px 0 #b66b2d;min-height:48px}
