@@ -46,7 +46,7 @@ class Room {
     while(this.players.size<F.maxPlayers)this.add('',{bot:true});
     this.phase='ready';this.readyUntil=this.time+this.readySeconds;this.readyIds=new Set();
   }
-  beginQuickBattle(){this.botSkill=this.chooseBotSkill?.(this.humans())||this.botSkill;this.resetRound();this.beginCountdown(0);this.beginPlaying();}
+  beginQuickBattle(){this.botSkill=this.chooseBotSkill?.(this.humans())||this.botSkill;this.resetRound();this.beginCountdown();}
   beginPlaying(){this.phase='playing';for(const p of this.players.values()){p.input=neutral();p.pendingShot=false;p.lastInput=this.time;}this.emit('start',{});}
   roomCommand(p,msg){
     if(this.phase!=='waiting'||!p?.connected||p.id!==this.ownerId||this.players.get(p.id)!==p)return false;

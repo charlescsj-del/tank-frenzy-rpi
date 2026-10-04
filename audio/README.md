@@ -21,9 +21,15 @@ The user chose four original MP3s from the playable effects audition. The bytes 
 
 These mono 44.1 kHz / 128 kbps files total 45,731 bytes. The original asset continues to supply double cannon, menu, laser, intercept, hit, win and loss. `sound-bank.js` downloads each distinct file once and falls back to its previous cue if an approved file fails to load. The game still limits simultaneous sample voices to 12; no additional sound messages are sent to the game server. Any changed MP3 requires a new filename because assets use immutable caching.
 
-## Armour impact (v3.1.2)
+## Heavy impact (v3.1.3)
 
-`effects-hit-v2.mp3` replaces the tank-hit cue with a 0.42-second metal clank and low thump. It is original deterministic synthesis, with no third-party samples; regenerate it using `python3 tools/generate-hit-sound.py` (requires ffmpeg). The mono 44.1 kHz / 128 kbps MP3 is 8,025 bytes. It layers a falling bass impact, damped inharmonic metal resonances and a brief filtered-noise contact. The pre-encode peak is -2.2 dBFS; playback keeps the previous hit gain, rate limit and priority, with small pitch variation. The original pack's hit remains a fallback. Docker includes the audio directory and the server explicitly allows the versioned URL.
+`effects-hit-v3.mp3` is the current tank-hit cue: a 0.36-second dry impact with a low thump, brief midrange punch and filtered-noise crunch. It removes v2's ringing metal resonances. The original mono 44.1 kHz / 128 kbps recording is 6,770 bytes; generate it with `python3 tools/generate-hit-sound.py` and ffmpeg. Playback retains the previous gain, slight pitch variation and 12-voice cap. The old pack supplies the fallback; v2's immutable URL remains available to older cached clients.
+
+The player-lineup timer has no countdown effects. After the lineup ends, the battlefield's three-second countdown plays the existing ticks once each, then the start cue. All-ready skips only the lineup timer.
+
+## Armour impact (v3.1.2, superseded)
+
+`effects-hit-v2.mp3` was the v3.1.2 tank-hit cue, a 0.42-second metal clank and low thump. Its original deterministic synthesis recipe is preserved in that release's `tools/generate-hit-sound.py`, with no third-party samples. The mono 44.1 kHz / 128 kbps MP3 is 8,025 bytes. It layers a falling bass impact, damped inharmonic metal resonances and a brief filtered-noise contact. Its pre-encode peak is -2.2 dBFS. The file stays available for older cached clients; new clients use v3.
 
 ## Countdown and match start (v1.7.0)
 

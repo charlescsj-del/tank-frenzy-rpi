@@ -300,10 +300,10 @@ function renderMatchmaking(data){
   $('matchmaking').classList.toggle('is-ready',!searching);
   $('matchmaking').classList.toggle('is-teams',data.settings?.mode==='teams');
   const humanCount=data.players.filter(p=>!p.bot&&p.connected).length;
-  $('matchmakingNote').textContent=searching?humanCount+'/4 players found · AI fills any open seats.':'Everyone ready? The battle starts immediately.';
+  $('matchmakingNote').textContent=searching?humanCount+'/4 players found · AI fills any open seats.':'Everyone ready? Enter the field for a 3-second countdown.';
   const seconds=Math.max(1,Math.ceil(searching?data.searchIn:data.readyIn));
   $('matchmakingTime').textContent=searching?'Finding a match · '+seconds+'s':String(seconds);
-  $('matchmakingTime').setAttribute('aria-label',searching?'Finding a match':`Battle starts in ${seconds} seconds`);
+  $('matchmakingTime').setAttribute('aria-label',searching?'Finding a match':`Entering the field in ${seconds} seconds`);
   const ready=(data.readyIds||[]).includes(myId);$('readyButton').hidden=searching;$('readyButton').disabled=ready;$('readyButton').textContent=ready?'READY ✓':'READY';
   const signature=JSON.stringify([data.phase,data.players.map(p=>[p.id,p.name,p.slot,p.bot,p.team]),data.readyIds]);
   if($('matchmakingPlayers').signature===signature)return;$('matchmakingPlayers').signature=signature;$('matchmakingPlayers').replaceChildren();
@@ -791,9 +791,9 @@ let engine=null;
 // Snapshot transitions trigger a cue once, even though the server repeats state.
 function updateMatchSounds(data){
   const map=data.map?.id??mapId;
-  if(data.phase==='countdown'||data.phase==='ready'){
+  if(data.phase==='countdown'){
     resultAudioKey=null;
-    const number=Math.max(1,Math.ceil(data.phase==='ready'?data.readyIn:data.countdownIn));
+    const number=Math.max(1,Math.ceil(data.countdownIn));
     if(number>3)return;
     const key=`${map}:${data.phase}:${number}`;
     if(countdownAudioKey!==key){countdownAudioKey=key;playCue('countdown'+number);}

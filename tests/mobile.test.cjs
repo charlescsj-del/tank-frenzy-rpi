@@ -267,13 +267,16 @@ test('winner fills the arena, rematch vote is one-shot, and expiry does not rest
   assert.equal(c.elements.get('results').hidden,true);
 });
 
-test('Quick Play shows a large Ready count and sounds the final three ticks once, with no extra start delay',()=>{
+test('Quick Play lineup is silent; countdown ticks play only after entering the field',()=>{
   const c=client();c.run(`var cues=[];playCue=kind=>cues.push(kind);joined=true;myId='me';latest={map:{id:32},phase:'ready',readyIn:5,readyIds:[],settings:{mode:'ffa'},players:[{id:'me',slot:0,name:'Scout',connected:true,hp:10}]};updateRoomPhase(latest);updateMatchSounds(latest)`);
   assert.equal(c.elements.get('matchmakingTime').textContent,'5');assert.equal(c.elements.get('matchmaking').classList.contains('is-ready'),true);assert.equal(c.run('cues.length'),0);
   c.run('latest.readyIn=2.9;updateRoomPhase(latest);updateMatchSounds(latest);updateMatchSounds(latest)');
-  assert.equal(c.elements.get('matchmakingTime').textContent,'3');assert.equal(c.run('cues.join()'),'countdown3');
+  assert.equal(c.elements.get('matchmakingTime').textContent,'3');assert.equal(c.run('cues.length'),0);
   c.run('latest.readyIn=1.9;updateMatchSounds(latest);latest.readyIn=.9;updateMatchSounds(latest)');
-  assert.equal(c.run('cues.join()'),'countdown3,countdown2,countdown1');
+  assert.equal(c.run('cues.length'),0);
+  c.run("latest.phase='countdown';latest.countdownIn=3;updateRoomPhase(latest);updateMatchSounds(latest);updateMatchSounds(latest)");
+  assert.equal(c.elements.get('matchmaking').hidden,true);assert.equal(c.elements.get('countdown').hidden,false);assert.equal(c.elements.get('countdownNumber').textContent,'3');
+  c.run('latest.countdownIn=2;updateMatchSounds(latest);latest.countdownIn=1;updateMatchSounds(latest)');
   c.run("latest.phase='playing';updateRoomPhase(latest);updateMatchSounds(latest);updateMatchSounds(latest)");
   assert.equal(c.elements.get('matchmaking').hidden,true);assert.equal(c.elements.get('countdown').hidden,true);assert.equal(c.run('cues.join()'),'countdown3,countdown2,countdown1,start');
 });

@@ -57,7 +57,7 @@ Server → client: `welcome {id,token,profile:{secret,id},slot,room,seq}`, `stat
 
 Snapshots (`Room.snapshot({withMap})` → `encodeState`): one `JSON.stringify` per room per broadcast, numbers rounded to tenths (angles `a`/`aim` to hundredths). Shells carry only `id,x,y,slot`. `map` is included only when it changed or once a second (`tick%60===0`); every snapshot has `mapId`, and `welcome` is followed by a full snapshot with the map. Client code must use `latest.mapId ?? latest.map?.id` and keep the last received map. Snapshots go out at 30 Hz (the 60 Hz interval sends on even ticks); simulation runs at 120 Hz. `events` (hit, destroyed, shot, bounce, pickup, laser, …) are sent once, then cleared.
 
-Phases: friend `waiting` → `countdown` (3 s) → `playing` → `results` (20 s majority rematch). Expiry or `lobby` returns the group to `waiting`; only all-offline results enter `postgame`. Quick Play adds `searching` (up to 12 s, same-mode FIFO grouping) → `ready` (bots fill to four, 5 s shared timer) → `playing`; all human Ready votes skip that timer. Cancel removes the membership; disconnected pregame humans are removed promptly and never produce bot-only rounds.
+Phases: friend `waiting` → `countdown` (3 s) → `playing` → `results` (20 s majority rematch). Expiry or `lobby` returns the group to `waiting`; only all-offline results enter `postgame`. Quick Play adds `searching` (up to 12 s, same-mode FIFO grouping) → `ready` (bots fill to four, 5 s shared timer) → `countdown` (3 s on the field) → `playing`; all human Ready votes skip only the lineup timer. Cancel removes the membership; disconnected pregame humans are removed promptly and never produce bot-only rounds.
 
 ## Game rules that code depends on
 

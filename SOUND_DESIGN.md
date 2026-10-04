@@ -4,6 +4,8 @@ Status: approved effects shipped in v1.2.0, three approved MP3 music recordings 
 
 ## Shipped implementation
 
+v3.1.3 replaces the v2 hit with a 0.36-second dry, heavy impact without ringing metal resonances. The lineup counter is silent; three ticks play only after entering the battlefield, before movement and firing unlock. All-ready skips the lineup wait but retains this three-second field countdown.
+
 In v3.1.2, tank damage uses a new 0.42-second armour impact: a low thump under a short metallic clank, with a damped tail and subtle pitch variation. The original synthesized MP3 adds about 8 KB and preserves the existing hit volume, rate limiting, mute and voice cap. Quick Play's Ready counter also plays the final three countdown ticks; all humans pressing Ready still starts immediately.
 
 The game retains `audio/cartoon-v1.mp3` for the older unaffected cues and uses four small MP3s from the user's latest audition: Cannon A for normal and machine-gun shots, Ricochet C for bouncing shells, Power-up A for every pickup, and Destruction C for tank explosions. Double cannon still uses its paired-pop recording. The originals remain in the old pack as fallback if a selected download fails. See `audio/README.md` for the exact filenames and mapping.

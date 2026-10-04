@@ -48,7 +48,7 @@ test('Quick Play groups same-mode arrivals, fills bots at the deadline, and excl
   const room=s.game.rooms.get(welcome(a).room);room.step(8);assert.equal(room.phase,'searching','keep searching beyond the old eight-second window');room.step(3.9);assert.equal(room.phase,'searching');assert.equal(room.players.size,2);
   room.step(.11);assert.equal(room.phase,'ready');assert.equal(room.players.size,4);assert.equal(room.humans().length,2);assert.equal(room.botSkill,'easy');
   const late=quick();assert.notEqual(welcome(late).room,room.code);
-  a.emit('message',JSON.stringify({type:'ready'}));assert.equal(room.phase,'ready');b.emit('message',JSON.stringify({type:'ready'}));assert.equal(room.phase,'playing');
+  a.emit('message',JSON.stringify({type:'ready'}));assert.equal(room.phase,'ready');b.emit('message',JSON.stringify({type:'ready'}));assert.equal(room.phase,'countdown');room.step(3);assert.equal(room.phase,'playing');
   const other=s.game.rooms.get(welcome(late).room);late.emit('message',JSON.stringify({type:'leave'}));assert.equal(other.players.size,0);
 });
 
@@ -57,7 +57,7 @@ test('full human groups reveal immediately; reconnect preserves the profile and 
   room.step(.01);assert.equal(room.phase,'ready');assert.equal(room.humans().length,4);
   const duplicate=s.connect();duplicate.emit('message',JSON.stringify({type:'quick',profile:welcome.profile.secret}));assert.match(duplicate.messages.at(-1).message,/already in an arena/);
   sockets[0].close();const again=s.join(welcome.room,'join','Rename',welcome.token);assert.equal(again.messages.find(m=>m.type==='welcome').profile.id,welcome.profile.id);
-  room.step(5);assert.equal(room.phase,'playing');
+  room.step(5);assert.equal(room.phase,'countdown');room.step(3);assert.equal(room.phase,'playing');
 });
 
 test('expired reconnect credentials never create an unintended empty arena',()=>{

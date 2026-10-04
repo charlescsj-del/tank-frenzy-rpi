@@ -36,6 +36,8 @@ fs.mkdirSync(output,{recursive:true});
     await fits(pc,'.matchmaking-card');await fits(phone,'.matchmaking-card');
     await screenshot(pc,'matchmaking-desktop');await screenshot(phone,'matchmaking-phone');
     await Promise.all([pc.locator('#readyButton').click(),phone.locator('#readyButton').click()]);
+    await Promise.all([pc.waitForFunction(()=>latest?.phase==='countdown'),phone.waitForFunction(()=>latest?.phase==='countdown')]);
+    for(const p of [pc,phone]){assert.equal(await p.locator('#matchmaking').isVisible(),false);assert(await p.locator('#countdown').isVisible());await fits(p,'#countdownNumber');assert.match(await p.locator('#countdownNumber').textContent(),/^[123]$/);await screenshot(p,p===phone?'field-countdown-phone':'field-countdown-desktop');}
     await Promise.all([pc.waitForFunction(()=>latest?.phase==='playing'),phone.waitForFunction(()=>latest?.phase==='playing')]);
     for(const p of [pc,phone]){
       assert(await p.evaluate(()=>{updateCamera();const me=tanks.find(t=>t.id===myId),point=project(me.x,me.y);return Math.abs(point.x*scale+offsetX-cssW/2)<1&&Math.abs(point.y*scale+offsetY-cssH/2)<1;}),'own tank stays centred at its corner spawn');

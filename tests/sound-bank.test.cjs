@@ -33,7 +33,7 @@ test('sound bank decodes approved recordings once, uses their ranges, and never 
   }
   bank.play('start');assert.equal(sources.at(-1).buffer.asset,SoundBank.approvedAssets.start);
   assert.notEqual(SoundBank.approvedAssets.start,SoundBank.approvedAssets.countdown3);
-  bank.play('hit');assert.equal(sources.at(-1).buffer.asset,SoundBank.approvedAssets.hit);assert.equal(starts.at(-1)[2],.42);
+  bank.play('hit');assert.equal(sources.at(-1).buffer.asset,SoundBank.approvedAssets.hit);assert.equal(starts.at(-1)[2],.36);
 });
 
 test('failed downloads and decoding leave graceful fallback available',async()=>{
