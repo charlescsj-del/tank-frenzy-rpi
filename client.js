@@ -258,7 +258,7 @@ function quitSpectator(){
   $('resultsTimer').hidden=false;$('resultsTimer').textContent='Watching ended. You can close this tab.';
   if(!spectatorFinished)networkMessage('Watching ended.','You can close this tab.');
 }
-function leave(){
+function leave({keepFullscreen=false}={}){
   if(spectating){quitSpectator();return;}
   closeLeaveDialog();
   if(spectating){spectating=false;document.body.classList.remove('spectating');$('leave').setAttribute('aria-label','Leave arena');$('leave').title='Leave arena';}
@@ -268,7 +268,7 @@ function leave(){
   latest=null;tanks=[];shells=[];tracks=[];pickups=[];beams=[];pickupFlashes=[];floaters=[];rings=[];hurt=0;$('killFeed').replaceChildren();$('streakBanner').hidden=true;resultsSignature='';$('leave').hidden=true;$('respawn').textContent='';$('latency').textContent='OFFLINE';$('roster').replaceChildren();
   touchAim=null;updateTouchControls();
   roundAudioMap=null;resultAudioKey=null;countdownAudioKey=null;activePower=null;roomPhase=null;waitingSignature='';stopCueSounds();syncMusic();
-  roomCode='';$('roomCode').textContent='—';$('roomCount').textContent='0 / 4 PLAYERS';$('powerStatus').hidden=true;history.replaceState(null,'',location.pathname);leaveFullscreen();showLobby();status('READY TO CONNECT');
+  roomCode='';$('roomCode').textContent='—';$('roomCount').textContent='0 / 4 PLAYERS';$('powerStatus').hidden=true;history.replaceState(null,'',location.pathname);if(!keepFullscreen)leaveFullscreen();showLobby();status('READY TO CONNECT');
 }
 function applySnapshot(data){
   if(spectating&&spectatorFinished)return;
@@ -411,8 +411,10 @@ function updateRoomPhase(data){
       }
     }
     $('rematch').disabled=postgame||voted||!joined;
+    $('rematch').hidden=postgame||spectating;$('results').classList.toggle('rematch-closed',postgame);
+    $('resultsLobby').classList.toggle('primary',postgame);$('resultsLobby').classList.toggle('tool',!postgame);
     $('rematch').textContent=postgame?'ROUND FINISHED':voted?'READY ✓':'PLAY AGAIN';
-    $('resultsTimer').textContent=postgame?'Return to the lobby for another battle.':'Back to lobby in '+Math.ceil(data.rematchIn)+'s';
+    $('resultsTimer').textContent=postgame?'Rematch closed. Find a new match whenever you’re ready.':'Rematch available for '+Math.ceil(data.rematchIn)+'s';
   }
   $('reactionToggle').hidden=!results||spectating;$('reactionStrip').hidden=spectating||!results||$('reactionStrip').hidden;$('resultsLobby').hidden=!(results||postgame)||spectating;renderRankChange();
   if(spectating&&(results||postgame)){
@@ -454,7 +456,10 @@ $('rematch').addEventListener('click',()=>{if(joined&&latest?.phase==='results'&
 // The round is over, so leaving from the result card needs no extra confirmation.
 $('resultsLeave').addEventListener('click',leave);
 $('readyButton').addEventListener('click',()=>send({type:'ready'}));$('waitingReady').addEventListener('click',()=>send({type:'ready'}));$('cancelMatchmaking').addEventListener('click',leave);
-$('resultsLobby').addEventListener('click',()=>send({type:'lobby'}));
+$('resultsLobby').addEventListener('click',()=>{
+  if(spectating||!['results','postgame'].includes(latest?.phase))return;
+  const mode=latest.settings?.mode||selectedGameMode;leave({keepFullscreen:true});selectGameMode(mode);quickPlay();
+});
 $('saveLobbyRules').addEventListener('click',()=>{
   const settings={mode:$('lobbyMode').value,targetScore:Number($('lobbyTarget').value),bouncing:$('lobbyBounce').checked,powers:$('lobbyPowers').checked};
   send({type:'room',action:'rules',settings,private:$('lobbyPrivate').checked});selectGameMode(settings.mode);try{localStorage.setItem('tank-frenzy-rules',JSON.stringify(settings));}catch{}

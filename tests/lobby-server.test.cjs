@@ -170,15 +170,15 @@ test('rematch messages are accepted only from joined players during a live vote'
   a.emit('message',JSON.stringify({type:'rematch'}));assert.deepEqual(room.snapshot().rematchVotes,[]);
 });
 
-test('ended rooms return to the lobby and allow friends to join after the vote closes',()=>{
+test('ended rooms retain results and reject new joins after the vote closes',()=>{
   const s=server(),a=s.join('FINISH','create','Alice'),room=s.game.rooms.get('FINISH');
   a.emit('message',JSON.stringify({type:'start'}));room.step(3);
   const b=s.join('FINISH','join','Bob'),[alice,bob]=[...room.players.values()];
   bob.shieldUntil=0;alice.kills=9;room.damage(bob,alice.id,10);room.step(20);
-  assert.equal(s.list().body.rooms[0].available,2);
-  const c=s.join('FINISH','join','Charlie');assert(c.messages.some(m=>m.type==='welcome'));
-  assert.equal(room.players.size,3);assert.equal(room.phase,'waiting');
-  b.emit('message',JSON.stringify({type:'rematch'}));assert.equal(room.phase,'waiting');
+  assert.equal(s.list().body.rooms[0].available,0);
+  const c=s.join('FINISH','join','Charlie');assert(c.messages.some(m=>m.type==='error'));assert(!c.messages.some(m=>m.type==='welcome'));
+  assert.equal(room.players.size,2);assert.equal(room.phase,'postgame');assert.equal(room.winner.id,alice.id);
+  b.emit('message',JSON.stringify({type:'rematch'}));assert.equal(room.phase,'postgame');assert.equal(alice.kills,10);
 });
 
 test('tutorial screenshots are served as cached WebP images',async()=>{

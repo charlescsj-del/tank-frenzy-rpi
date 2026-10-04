@@ -2,6 +2,12 @@
 
 Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. Dates use the earliest release or import commit available in this repository, shown in the Asia/Kuala_Lumpur time zone. For v1.1.0–v1.3.2, the original game release commits are unavailable here, so 2026-09-23 is the archive import date, not a claimed release date. The v1.5.0 notes first appear in the 2026-09-24 import of v1.6.0. The 19.x builds were originally distributed under those numbers; their entries below are relabeled as consecutive 1.19.x versions for a consistent history. Git history retains the original package numbers.
 
+## v3.2.1 [2026-10-05]
+
+- Keep normal players on the completed match scoreboard when the rematch countdown expires, preserving the winner, scores and Match Details instead of opening the waiting room.
+- Replace the results Lobby action with Find new match. One tap leaves the old group and starts Quick Play in the same mode, preserving fullscreen/expanded view. When rematch voting closes, Find new match becomes the main action beside Leave.
+- Preserve admin spectators' final scoreboard and Quit-only behavior. Verify solo-vs-bot expiry in both modes and the full desktop/phone requeue flow.
+
 ## v3.2.0 [2026-10-04]
 
 - Add authenticated admin Match History: latest 200 completed rounds, 20 per page, expandable human/bot results, winner, duration, mode, team, kills, deaths, damage, departures and disconnect counts. Filter by player, mode and Malaysia date. Persist details in the existing results file; show available fields for older records.

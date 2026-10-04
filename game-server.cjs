@@ -235,7 +235,7 @@ class Room {
       if(this.time>=this.countdownUntil)this.beginPlaying();
       return;
     }
-    if(this.phase==='results'){this.checkRematch();if(this.phase==='results'&&this.time>=this.rematchUntil){const p=this.humans().find(t=>t.connected);if(p)this.lobby(p);else{this.phase='postgame';this.rematchVotes.clear();}}return;}
+    if(this.phase==='results'){if(this.time>=this.rematchUntil){this.phase='postgame';this.rematchVotes.clear();}else this.checkRematch();return;}
     if(this.phase==='postgame')return;
     this.pickups=this.pickups.filter(p=>p.expiresAt>this.time);
     if(this.settings.powers&&this.time>=this.nextPickup){this.spawnPickup();this.nextPickup=this.time+F.pickupInterval;}

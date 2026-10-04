@@ -84,11 +84,19 @@ test('a win freezes play and requires every connected player to vote for a remat
   input(r,a);const nextX=a.x;r.step(2.9);assert.equal(a.x,nextX);assert.equal(r.phase,'countdown');r.step(.11);assert.equal(r.phase,'playing');
 });
 
-test('an expired rematch returns everyone to a usable lobby without auto-starting',()=>{
+test('an expired rematch preserves the final scoreboard without resetting the round',()=>{
   const {r,a}=running(),b=r.add('B');b.shieldUntil=0;a.kills=9;r.damage(b,a.id,10);
-  assert.equal(r.voteRematch(a),true);r.step(20);assert.equal(r.phase,'waiting');assert.equal(r.winner,null);
+  const map=r.map.id,winner=r.winner;assert.equal(r.voteRematch(a),true);r.step(20);assert.equal(r.phase,'postgame');assert.equal(r.winner,winner);assert.equal(a.kills,10);assert.equal(r.map.id,map);
   assert.equal(r.snapshot().rematchIn,0);assert.deepEqual(r.snapshot().rematchVotes,[]);
-  assert.equal(r.voteRematch(b),false);r.step(200);assert.equal(r.phase,'waiting');assert.equal(r.start(a),true);
+  assert.equal(r.voteRematch(b),false);r.step(200);assert.equal(r.phase,'postgame');assert.equal(r.start(a),false);assert.equal(r.snapshot().winner,winner);
+});
+
+test('solo Quick Play expiry keeps the winner and bot scores in both modes',()=>{
+  for(const mode of ['ffa','teams']){
+    const r=new Room('SOLO',{mode}),a=r.add('A');r.configureQuick();r.step(12);r.ready(a);r.step(.01);r.step(3);const bot=[...r.players.values()].find(p=>p.bot&&(mode==='ffa'||p.team!==a.team));
+    a.kills=9;if(mode==='teams')r.teamScores[a.team]=9;bot.shieldUntil=0;r.damage(bot,a.id,10);const before=JSON.stringify(r.snapshot().players.map(p=>[p.id,p.kills,p.deaths,p.damageDealt]));
+    r.step(21);assert.equal(r.phase,'postgame');assert(r.winner);assert.equal(JSON.stringify(r.snapshot().players.map(p=>[p.id,p.kills,p.deaths,p.damageDealt])),before);assert.equal(r.voteRematch(a),false);
+  }
 });
 
 test('rematch authorization excludes disconnected players but admits late joins and reconnects',()=>{

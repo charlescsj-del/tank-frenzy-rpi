@@ -262,6 +262,7 @@ test('winner fills the arena, rematch vote is one-shot, and expiry does not rest
   assert.equal(c.elements.get('rematch').textContent,'READY ✓');
   c.run("latest.phase='postgame';latest.rematchIn=0;updateRoomPhase(latest)");
   assert.equal(c.elements.get('rematch').textContent,'ROUND FINISHED');
+  assert.equal(c.elements.get('rematch').hidden,true);assert.equal(c.elements.get('results').hidden,false);assert.equal(c.elements.get('waitingRoom').hidden,true);assert.equal(c.elements.get('resultsLobby').hidden,false);assert.match(c.elements.get('resultsTimer').textContent,/Find a new match/);
   const sent=c.sent.length;c.elements.get('rematch').events.click();assert.equal(c.sent.length,sent);
   c.run("latest.phase='countdown';latest.winner=null;latest.countdownIn=3;updateRoomPhase(latest)");
   assert.equal(c.elements.get('results').hidden,true);

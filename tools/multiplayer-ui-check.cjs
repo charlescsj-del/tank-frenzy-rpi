@@ -49,7 +49,7 @@ fs.mkdirSync(output,{recursive:true});
       assert.equal(await p.locator('#game').evaluate(el=>getComputedStyle(el).userSelect),'none');
       await screenshot(p,p===phone?'camera-phone':'camera-desktop');
     }
-    const room=game.rooms.get(await pc.evaluate(()=>roomCode)),human=room.humans()[0],bot=[...room.players.values()].find(p=>p.bot);
+    let room=game.rooms.get(await pc.evaluate(()=>roomCode));const human=room.humans()[0],bot=[...room.players.values()].find(p=>p.bot);
     human.kills=9;bot.shieldUntil=0;room.damage(bot,human.id,10);room.rematchUntil=room.time+120;
     await Promise.all([pc.waitForFunction(()=>!document.getElementById('rankChange').hidden),phone.waitForFunction(()=>!document.getElementById('rankChange').hidden)]);
     await phone.locator('#reactionToggle').click();await phone.locator('#reactionOptions button').first().click();
@@ -73,8 +73,16 @@ fs.mkdirSync(output,{recursive:true});
     await phone.setViewportSize({width:390,height:844});
     await phone.locator('#reactionToggle').click();await screenshot(phone,'reactions-phone');await phone.locator('#muteReactions').click();assert.equal(await phone.locator('.reaction-bubble').count(),0);
     await phone.locator('#reactionToggle').click();await phone.locator('#resultStatsToggle').click();const completed=await phone.locator('#resultDamageRows').textContent();
-    room.step(121);await Promise.all([pc.waitForFunction(()=>latest?.phase==='waiting'),phone.waitForFunction(()=>latest?.phase==='waiting')]);
+    room.step(121);await Promise.all([pc.waitForFunction(()=>latest?.phase==='postgame'),phone.waitForFunction(()=>latest?.phase==='postgame')]);
     assert(await phone.locator('#matchDetails').isVisible(),'details remain available after the result timer expires');assert.equal(await phone.locator('#resultDamageRows').textContent(),completed);await phone.locator('#closeMatchDetails').click();
+    for(const p of [pc,phone]){assert(await p.locator('#results').isVisible());assert.equal(await p.locator('#waitingRoom').isVisible(),false);assert.equal(await p.locator('#rematch').isVisible(),false);assert.equal(await p.locator('#resultsLobby').textContent(),'Find new match');await fits(p,'#resultsLobby');await screenshot(p,p===phone?'expired-results-phone':'expired-results-desktop');}
+    const previousRoom=room.code,previousMode=room.settings.mode;
+    await pc.locator('#resultsLobby').click();await phone.locator('#resultsLobby').click();
+    await Promise.all([pc.waitForFunction(old=>joined&&roomCode!==old,previousRoom),phone.waitForFunction(old=>joined&&roomCode!==old,previousRoom)]);
+    assert.equal(await pc.evaluate(()=>roomCode),await phone.evaluate(()=>roomCode),'one tap groups both players into a fresh match');assert.equal(await phone.evaluate(()=>latest.settings.mode),previousMode);assert.equal(await phone.evaluate(()=>expanded),true,'Find new match preserves expanded view');
+    await phone.evaluate(()=>leave());await pc.evaluate(()=>leave());
+    await pc.locator('#createRoom').click();await pc.waitForFunction(()=>latest?.phase==='waiting');room=game.rooms.get(await pc.evaluate(()=>roomCode));
+    await phone.evaluate(code=>joinRoomNow(code),room.code);await phone.waitForFunction(()=>latest?.phase==='waiting');
     await pc.locator('#lobbyRules summary').click();await pc.locator('#lobbyMode').selectOption('teams');await pc.locator('#lobbyTarget').fill('25');await pc.locator('#lobbyPrivate').check();await pc.locator('#saveLobbyRules').click();
     await phone.waitForFunction(()=>latest.settings.mode==='teams'&&latest.settings.targetScore===25&&latest.private);
     assert.equal((await fetch(url+'/rooms').then(r=>r.json())).rooms.length,0);
