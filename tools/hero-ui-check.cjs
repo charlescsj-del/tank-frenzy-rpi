@@ -60,8 +60,10 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
   await page.evaluate(()=>document.body.classList.remove('hero-suspended'));assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'running');
   await page.locator('#createRoom').click();assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'paused','animation pauses outside lobby');
   await page.waitForFunction(()=>joined);await page.evaluate(()=>showLobby());
+  await page.waitForFunction(()=>!document.fullscreenElement&&!document.webkitFullscreenElement&&!expanded);
   assert.equal(await page.evaluate(()=>document.body.classList.contains('in-room')),false);assert.equal(await page.locator('#leave').isVisible(),false);
-  const returnedArt=await page.locator('.intro').boundingBox(),returnedPanel=await page.locator('#arena').boundingBox();assert(Math.abs(returnedArt.y-returnedPanel.y)<2,'return from an arena restores desktop columns');
+  await page.screenshot({path:out+'/lobby-return-desktop.png',fullPage:true});
+  const returned=await page.evaluate(()=>({art:document.querySelector('.intro').getBoundingClientRect().toJSON(),panel:document.getElementById('arena').getBoundingClientRect().toJSON()}));assert(Math.abs(returned.art.y-returned.panel.y)<2,'return from an arena restores desktop columns: '+JSON.stringify(returned));
   await page.evaluate(()=>{document.body.classList.add('hero-suspended');});assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'paused');
   await page.evaluate(()=>document.body.classList.remove('hero-suspended'));
   await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationName),'none');
