@@ -39,12 +39,13 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
   }
   assert.equal(await shell.locator('use[href="#heroProjectile"]').count(),1,'shell uses the pointed shaded projectile');
   // Freeze a firing moment for repeatable responsive screenshots.
-  for(const [width,height] of [[1440,900],[390,844],[320,640],[768,1024],[844,390]]){
+  for(const [width,height] of [[1920,1080],[1440,900],[1366,768],[1280,720],[1024,600],[390,844],[320,640],[768,1024],[844,390]]){
    await page.setViewportSize({width,height});
    await page.evaluate(()=>document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=720)));
    assert(await flash.evaluate(el=>Number(getComputedStyle(el).opacity)>.3),'muzzle flash appears during the shot');
    assert(await ring.evaluate(el=>Number(getComputedStyle(el).opacity)>.1),'expanding muzzle ring appears during the shot');
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal page overflow');
+   if(width>=1001){const art=await page.locator('.intro').boundingBox(),panel=await page.locator('#arena').boundingBox();assert(Math.abs(art.y-panel.y)<2&&Math.abs(art.height-panel.height)<2,'desktop artwork and play panel align');assert(art.width>art.height,'desktop artwork stays landscape');}
    for(const id of ['quickPlay','createRoom','joinCodeButton']){
     const b=await page.locator('#'+id).boundingBox();assert(b&&b.x>=0&&b.y>=0&&b.x+b.width<=width+1&&b.y+b.height<=height+1,id+' is visible without scrolling at '+width+'x'+height);
    }
@@ -58,7 +59,9 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
   await page.screenshot({path:out+'/lobby-purple-behind-blue.png',fullPage:true});
   await page.evaluate(()=>document.body.classList.remove('hero-suspended'));assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'running');
   await page.locator('#createRoom').click();assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'paused','animation pauses outside lobby');
-  await page.waitForFunction(()=>joined);await page.evaluate(()=>leave());
+  await page.waitForFunction(()=>joined);await page.evaluate(()=>showLobby());
+  assert.equal(await page.evaluate(()=>document.body.classList.contains('in-room')),false);assert.equal(await page.locator('#leave').isVisible(),false);
+  const returnedArt=await page.locator('.intro').boundingBox(),returnedPanel=await page.locator('#arena').boundingBox();assert(Math.abs(returnedArt.y-returnedPanel.y)<2,'return from an arena restores desktop columns');
   await page.evaluate(()=>{document.body.classList.add('hero-suspended');});assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'paused');
   await page.evaluate(()=>document.body.classList.remove('hero-suspended'));
   await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationName),'none');

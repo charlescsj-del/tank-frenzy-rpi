@@ -4,7 +4,7 @@ This `dev` branch is the test installation. Add `https://github.com/charlescsj-d
 
 Install Tank Frenzy as a Home Assistant app (formerly called an add-on). The Pi hosts the multiplayer game; players use Safari, Edge, Chrome, or another modern browser on their phones, tablets, or computers. Rendering and sound run on each player's device.
 
-**Tank Frenzy v3.1.4** names the individual mode Deathmatch, enlarges the mobile logo and simplifies the leaderboard. Heavier cannon blasts and armour impacts join speed-responsive diesel-like movement and track clatter. The lineup stays silent, followed by the battlefield's three-second audible countdown.
+**Tank Frenzy v3.2.0** adds private admin Match History, optional in-match ping and a balanced desktop home layout. Watch live stays on the final scoreboard with a single Quit action that closes the viewing tab.
 
 On phones, the create form and waiting-room controls fit in one viewport; the map keeps its full-screen layout through countdown and results.
 
@@ -60,6 +60,6 @@ docker run --rm -p 8765:8765 tank-frenzy-rpi
 
 Run the build on the intended architecture (or use Docker Buildx with `--platform linux/arm64`). The repository includes CI for tests and ARM64/AMD64 container builds. A physical Pi/Home Assistant installation and mobile play must still be checked on the target device; automated tests do not establish Pi performance under load.
 
-App package version: **3.1.4**. Game version: **3.1.4**. The dev Home Assistant app keeps its own slug; releases bump the numeric version in several files at once. See the release checklist in [AGENTS.md](AGENTS.md).
+App package version: **3.2.0**. Game version: **3.2.0**. The dev Home Assistant app keeps its own slug; releases bump the numeric version in several files at once. See the release checklist in [AGENTS.md](AGENTS.md).
 
 The How to Play screenshots in `tutorial/` are rendered by the game itself. After a visual change, run `npm start` and then `npx -y -p playwright node tools/tutorial-screenshots.cjs` to regenerate them (set `ONLY=win.webp` for one image).

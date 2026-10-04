@@ -1,10 +1,14 @@
 # Tank Frenzy
 
+**Connection display:** In the arena menu, enable **Show ping** to see network round-trip milliseconds beneath the menu button during play. It is off by default and saved on this device. Green is under 100 ms, amber under 200 ms, red 200 ms or more; unavailable/stale values show a dash. Existing two-second replies supply the once-per-second display, without extra messages. This is not FPS or total input delay.
+
+**Admin results:** Match History loads on opening and shows the latest 200 completed rounds, paginated and filterable by player, mode and Malaysia date. Expand a match for human/bot results, teams, kills, deaths, damage, winner and connection/departure status. Details are saved with the leaderboard; older records may lack bot/team/connection data. Removing a name or resetting the leaderboard removes the associated history. Existing 62-day rolling retention still applies. Watch live freezes its final scoreboard even if players return to their lobby or start another round; Quit closes the viewing tab, or asks you to close it if the browser blocks that action.
+
 A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarry, rounded menus and bold lettering. Choose Deathmatch or 2 vs 2 and invite your friends.
 
 On a phone, creating an arena and adding bots fit within the viewport. The map remains edge to edge during the countdown and on the result screen.
 
-Current release: **v3.1.4**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
+Current release: **v3.2.0**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
 
 The private admin page uses **system CPU and memory gauges**, with the game's share overlaid in orange from the zero end of each arc. CPU converts the game's one-core reading to a fraction of all cores; memory compares resident game memory with total RAM. Game percentages appear inside the gauges, with resident MiB in the memory gauge. Pi load shows 1-, 5- and 15-minute averages, values per CPU core and a 60-second history collected while the page is open. Core-count reference markers make load easier to interpret. Resource readings refresh once a second and are marked stale when disconnected; room views still refresh twice a second. See [DOCS.md](DOCS.md) for measurement details.
 

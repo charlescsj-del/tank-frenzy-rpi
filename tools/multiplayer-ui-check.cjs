@@ -41,6 +41,10 @@ fs.mkdirSync(output,{recursive:true});
     for(const p of [pc,phone]){assert.equal(await p.locator('#matchmaking').isVisible(),false);assert(await p.locator('#countdown').isVisible());await fits(p,'#countdownNumber');assert.match(await p.locator('#countdownNumber').textContent(),/^[123]$/);await screenshot(p,p===phone?'field-countdown-phone':'field-countdown-desktop');}
     await Promise.all([pc.waitForFunction(()=>latest?.phase==='playing'),phone.waitForFunction(()=>latest?.phase==='playing')]);
     for(const p of [pc,phone]){
+      assert.equal(await p.locator('#pingIndicator').isVisible(),false);await p.locator('#arenaMenu').click();await p.locator('#pingToggle').click();await p.locator('#arenaMenu').click();
+      await p.waitForFunction(()=>/^\d+ ms$/.test(document.getElementById('pingIndicator').textContent));await fits(p,'#pingIndicator');assert.equal(await p.evaluate(()=>localStorage.getItem('tank-frenzy-ping')),'on');
+    }
+    for(const p of [pc,phone]){
       assert(await p.evaluate(()=>{updateCamera();const me=tanks.find(t=>t.id===myId),point=project(me.x,me.y);return Math.abs(point.x*scale+offsetX-cssW/2)<1&&Math.abs(point.y*scale+offsetY-cssH/2)<1;}),'own tank stays centred at its corner spawn');
       assert.equal(await p.locator('#game').evaluate(el=>getComputedStyle(el).userSelect),'none');
       await screenshot(p,p===phone?'camera-phone':'camera-desktop');

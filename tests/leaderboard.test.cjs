@@ -5,6 +5,22 @@ const path=require('node:path');
 const {Leaderboard}=require('../leaderboard.cjs');
 const {Room}=require('../game-server.cjs');
 
+test('admin history preserves human and bot results, departure and disconnect details across restart',()=>{
+  const dir=fs.mkdtempSync(path.join(__dirname,'tank-history-')),file=path.join(dir,'scores.json');
+  try{
+    const b=new Leaderboard(file,()=>Date.parse('2026-10-04T16:01:00Z')),r=new Room('HISTORY'),a=r.add('Ann'),other=r.add('Bo');r.botCommand(a,{action:'add'});a.profileId='private-profile';r.start(a);r.step(3);r.disconnect(other);other.connected=true;r.remove(other);a.kills=10;r.time=63;r.winner={id:a.id,name:a.name};b.record(r);b.record(r);b.save();
+    const reloaded=new Leaderboard(file),h=reloaded.history({from:'2026-10-05',to:'2026-10-05',name:'ann',mode:'ffa'});
+    assert.equal(h.total,1);assert.equal(h.matches[0].duration,60);assert.equal(h.matches[0].players.filter(p=>p.bot).length,1);assert.equal(h.matches[0].players.find(p=>p.name==='Bo').status,'Left early');assert.equal(h.matches[0].players.find(p=>p.name==='Bo').disconnections,1);assert(!JSON.stringify(h).includes('private-profile'));assert.equal(reloaded.history({to:'2026-10-04'}).total,0);assert.equal(reloaded.history({mode:'teams'}).total,0);
+    reloaded.remove('Ann');assert(!JSON.stringify(reloaded.history()).includes('Ann'));reloaded.reset();assert.equal(reloaded.history().total,0);
+  }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('admin history caps details and paginates without changing ranking history; legacy remains readable',()=>{
+  const b=new Leaderboard(),now=Date.now();for(let i=0;i<205;i++)b.matches.push({t:now,mode:'ffa',players:[{name:'P'+i,kills:1,deaths:0,won:false}],details:{room:'R',players:[{name:'P'+i,kills:1,deaths:0}]}});
+  b.prune(now);assert.equal(b.matches.length,205);assert.equal(b.matches.filter(m=>m.details).length,200);assert.equal(b.history().total,200);assert.equal(b.history().matches.length,20);assert.equal(b.history({page:999}).page,10);
+  b.matches=[{t:now,mode:'ffa',players:[{name:'Old',won:true,kills:1,deaths:0}]}];assert.equal(b.history().matches[0].legacy,true);assert.equal(b.history().matches[0].players[0].status,'Unknown');
+});
+
 function finished(mode,winnerName){
   const r=new Room('LB',{mode}),a=r.add('Ann'),b=r.add('bo'),c=r.add('Cy');r.botCommand(a,{action:'add'});
   a.kills=10;a.deaths=2;a.damageDealt=73;b.kills=4;b.deaths=6;b.damageDealt=42;c.kills=1;c.deaths=5;c.damageDealt=11;

@@ -64,7 +64,11 @@ class Leaderboard {
       Object.assign(entry,{name,country,...(p.profileId?{profileId:p.profileId,slot:p.slot}:{}),matches:entry.matches+(p.left?0:1),wins:entry.wins+(won?1:0),kills:entry.kills+p.kills,deaths:entry.deaths+p.deaths,damageDealt:entry.damageDealt+damageDealt,lastPlayed:now});
       this.entries.set(key,entry);players.push({name,country,...(p.profileId?{profileId:p.profileId,slot:p.slot}:{}),completed:!p.left,won,kills:p.kills,deaths:p.deaths,damageDealt});
     }
-    if(players.length)this.matches.push({t:now,round,mode:room.settings.mode,settings:room.settings,botSkill:room.botSkill,humans:participants.filter(p=>!p.bot).length,duration:Math.max(0,room.time-(room.roundStarted||0)),players});
+    if(players.length){
+      const all=[...new Map([...participants,...room.players.values()].map(p=>[p.id,p])).values()];
+      const details={room:room.code,players:all.map(p=>({name:p.name,bot:!!p.bot,slot:p.slot,team:p.team??null,kills:p.kills,deaths:p.deaths,damageDealt:p.damageDealt||0,won:!p.left&&(room.settings.mode==='teams'?p.team===winner.team:p.id===winner.id),status:p.left?'Left early':p.connected===false?'Disconnected':'Finished',disconnections:p.disconnections||0}))};
+      this.matches.push({t:now,round,mode:room.settings.mode,settings:room.settings,botSkill:room.botSkill,humans:participants.filter(p=>!p.bot).length,duration:Math.max(0,room.time-(room.roundStarted||0)),players,details});
+    }
     this.prune(now);this.scheduleSave();
     const afterRows=this.top({period:'week',count:Infinity});
     return new Map(participants.filter(p=>p.profileId&&!p.bot).map(p=>{
@@ -74,6 +78,7 @@ class Leaderboard {
   }
   prune(now){
     this.matches=this.matches.filter(m=>m.t>=now-historyDays*day).slice(-matchLimit);
+    for(const m of this.matches.slice(0,-200))delete m.details;
     // Over 200 names, drop those with the fewest matches first (oldest first among equals), so a
     // burst of throwaway names pushes out other throwaway names, not established players.
     if(this.entries.size>nameLimit)for(const [key] of [...this.entries].sort((a,b)=>a[1].matches-b[1].matches||a[1].lastPlayed-b[1].lastPlayed).slice(0,this.entries.size-nameLimit))this.entries.delete(key);
@@ -84,10 +89,17 @@ class Leaderboard {
     const targets=[...this.entries].filter(([id,p])=>id===key||seen(p));
     if(!key||!targets.length&&!this.matches.some(m=>m.players.some(seen)))return false;
     for(const [id]of targets)this.entries.delete(id);
-    this.matches=this.matches.map(m=>({...m,players:m.players.filter(p=>!seen(p))})).filter(m=>m.players.length);
+    this.matches=this.matches.map(m=>({...m,players:m.players.filter(p=>!seen(p)),...(m.details?{details:{...m.details,players:m.details.players.filter(p=>!seen(p))}}:{})})).filter(m=>m.players.length);
     this.scheduleSave();return true;
   }
   reset(){this.entries.clear();this.matches=[];this.scheduleSave();}
+  history({name='',mode='',from='',to='',page=1}={}){
+    const query=String(name).trim().toLowerCase().slice(0,64),date=value=>/^\d{4}-\d{2}-\d{2}$/.test(value)?Date.parse(value+'T00:00:00+08:00'):NaN;
+    const start=date(from),end=date(to),size=20;
+    const rows=this.matches.slice(-200).reverse().filter(m=>(!mode||m.mode===mode)&&(!Number.isFinite(start)||m.t>=start)&&(!Number.isFinite(end)||m.t<end+day)&&(!query||(m.details?.players||m.players).some(p=>p.name.toLowerCase().includes(query))));
+    const pages=Math.max(1,Math.ceil(rows.length/size)),current=Math.min(pages,Math.max(1,Math.floor(Number(page))||1));
+    return {total:rows.length,page:current,pages,persistent:!!this.file,matches:rows.slice((current-1)*size,current*size).map(m=>({t:m.t,mode:m.mode,duration:m.duration??null,room:m.details?.room||'',legacy:!m.details,players:(m.details?.players||m.players).map(p=>({name:p.name,bot:!!p.bot,team:p.team??null,kills:p.kills,deaths:p.deaths,damageDealt:p.damageDealt??null,won:!!p.won,status:p.status||(p.completed===false?'Left early':'Unknown'),disconnections:p.disconnections??null}))}))};
+  }
   rows(period){
     if(period==='all')return [...this.entries.values()];
     const since=periodStart(period,this.now()),totals=new Map();

@@ -23,6 +23,19 @@ let roundAudioMap=null,resultAudioKey=null,countdownAudioKey=null,activePower=nu
 let music=true,musicPlayer,waitingSignature='',resultsSignature='',roomPhase=null,nextHeartbeat=0;
 let quickRequested=false,profileSecret='',profileId='',lastResult=null,rankSignature='',muteReactions=false;
 let profileOpen=false,resultDetailsOpen=false,lastTankSlot=0;
+let showPing=false,pingMs=null,pingAt=0,spectatorFinished=false;
+try{showPing=localStorage.getItem('tank-frenzy-ping')==='on';}catch{}
+function updatePing(){
+  const visible=showPing&&joined&&!spectating&&latest?.phase==='playing';
+  $('pingIndicator').hidden=!visible;$('arena').classList.toggle('show-ping',visible);
+  $('pingToggle').setAttribute('aria-pressed',String(showPing));$('pingToggle').textContent='Show ping: '+(showPing?'On':'Off');
+  if(!visible)return;
+  const fresh=pingMs!==null&&performance.now()-pingAt<5000;
+  $('pingIndicator').textContent=fresh?pingMs+' ms':'— ms';
+  $('pingIndicator').setAttribute('data-quality',!fresh?'unknown':pingMs<100?'good':pingMs<200?'fair':'poor');
+}
+$('pingToggle').addEventListener('click',()=>{showPing=!showPing;try{localStorage.setItem('tank-frenzy-ping',showPing?'on':'off');}catch{}updatePing();});
+setInterval(updatePing,1000);updatePing();
 try{lastTankSlot=Math.max(0,Math.min(3,Number(localStorage.getItem('tank-frenzy-slot'))||0));}catch{}
 try{const profile=JSON.parse(localStorage.getItem('tank-frenzy-profile')||'null');profileSecret=profile?.secret||'';profileId=profile?.id||'';muteReactions=localStorage.getItem('tank-frenzy-reactions')==='off';selectedGameMode=localStorage.getItem('tank-frenzy-mode')==='teams'?'teams':'ffa';}catch{}
 try{sound=localStorage.getItem('tank-frenzy-sfx')!=='off';music=localStorage.getItem('tank-frenzy-music')!=='off';}catch{/* Storage can be unavailable in private browsing. */}
@@ -117,6 +130,8 @@ async function refreshRooms(){
   }
 }
 function showLobby(){
+  if(joined||connecting){leave();return;}
+  document.body.classList.remove('in-room');document.body.classList.remove('mobile-playing');$('arena').classList.remove('mobile-active');$('leave').hidden=true;
   networkMessage('Ready to roll?','Pick an arena to see who is playing, or create your own.');
   lobbyVisible=true;joinMode=null;lobbyRooms=[];$('roomBrowser').hidden=false;
   document.body.classList.toggle('in-lobby',true);$('arena').classList.toggle('lobby-open',true);
@@ -197,7 +212,7 @@ function connect(){
       history.replaceState(null,'','?room='+encodeURIComponent(roomCode));sendInput();
     }else if(data.type==='state'){applySnapshot(data);}
     else if(data.type==='result'){lastResult=data;renderRankChange();}
-    else if(data.type==='pong'){$('latency').textContent=Math.round(performance.now()-data.sent)+' MS';}
+    else if(data.type==='pong'){const value=performance.now()-data.sent;if(Number.isFinite(value)&&value>=0){pingMs=Math.round(value);pingAt=performance.now();$('latency').textContent=pingMs+' MS';updatePing();}}
     else if(data.type==='error'){
       const requeue=data.code==='session_expired'&&latest?.quick&&['searching','ready'].includes(latest.phase);
       intentional=true;joined=false;connecting=false;try{sessionStorage.removeItem(sessionKey);}catch{}
@@ -218,6 +233,7 @@ function connect(){
 // Hidden spectator, opened from the admin page with a short-lived pass. The server never
 // adds spectators to rooms, snapshots or player counts, so players cannot see them.
 function spectate(code,pass){
+  spectatorFinished=false;
   spectating=true;roomCode=code;intentional=false;joined=false;myId=null;clearTimeout(retryTimer);
   $('roomCode').textContent=code;networkMessage('Watching '+code+'…','Connecting as a hidden spectator.');
   const wsUrl=new URL(appUrl('ws'));wsUrl.protocol=wsUrl.protocol==='https:'?'wss:':'ws:';
@@ -227,7 +243,7 @@ function spectate(code,pass){
     if(socket!==ws)return;
     let data;try{data=JSON.parse(event.data);}catch{return;}
     if(data.type==='spectating'){retry=0;$('overlay').classList.add('hidden');document.body.classList.add('spectating');$('leave').hidden=false;$('leave').setAttribute('aria-label','Stop watching');$('leave').title='Stop watching';updateTouchControls();}
-    else if(data.type==='state')applySnapshot(data);
+    else if(data.type==='state'){applySnapshot(data);if(spectatorFinished){intentional=true;ws.close();}}
     else if(data.type==='error'){intentional=true;spectating=false;document.body.classList.remove('spectating');$('leave').setAttribute('aria-label','Leave arena');$('leave').title='Leave arena';networkMessage(data.title||'Cannot watch this arena.',data.message);$('browseRooms').hidden=false;}
   });
   ws.addEventListener('close',()=>{
@@ -236,7 +252,14 @@ function spectate(code,pass){
     else{spectating=false;document.body.classList.remove('spectating');networkMessage('Connection lost.','Open a new watch link from the admin page.');$('browseRooms').hidden=false;}
   });
 }
+function quitSpectator(){
+  intentional=true;clearTimeout(retryTimer);socket?.close();socket=null;stopMovementSound();stopCueSounds();musicPlayer?.stop();
+  window.close?.();
+  $('resultsTimer').hidden=false;$('resultsTimer').textContent='Watching ended. You can close this tab.';
+  if(!spectatorFinished)networkMessage('Watching ended.','You can close this tab.');
+}
 function leave(){
+  if(spectating){quitSpectator();return;}
   closeLeaveDialog();
   if(spectating){spectating=false;document.body.classList.remove('spectating');$('leave').setAttribute('aria-label','Leave arena');$('leave').title='Leave arena';}
   intentional=true;clearTimeout(retryTimer);release();send({type:'leave'});socket?.close();socket=null;joined=false;connecting=false;myId=null;token=null;retry=0;
@@ -248,6 +271,7 @@ function leave(){
   roomCode='';$('roomCode').textContent='—';$('roomCount').textContent='0 / 4 PLAYERS';$('powerStatus').hidden=true;history.replaceState(null,'',location.pathname);leaveFullscreen();showLobby();status('READY TO CONNECT');
 }
 function applySnapshot(data){
+  if(spectating&&spectatorFinished)return;
   latest=data;lastSnapshot=performance.now();
   updateMatchSounds(data);
   pickups=data.pickups||[];
@@ -348,6 +372,7 @@ function updateRoomPhase(data){
   if(waiting&&resultDetailsOpen)$('matchDetailsNote').textContent='Round finished. Your group is back in the lobby; these are the previous battle statistics.';
   if(countdown){const number=String(Math.max(1,Math.ceil(data.countdownIn)));if($('countdownNumber').textContent!==number)$('countdownNumber').textContent=number;}
   if(results||postgame){
+    if(spectating)spectatorFinished=true;
     const won=data.settings?.mode==='teams'?data.players.find(p=>p.id===myId)?.team===data.winner.team:myId===data.winner.id;
     $('results').classList.toggle('is-blue',data.winner.team===1);
     $('resultsTitle').textContent=data.winner.name+' wins!';
@@ -389,7 +414,13 @@ function updateRoomPhase(data){
     $('rematch').textContent=postgame?'ROUND FINISHED':voted?'READY ✓':'PLAY AGAIN';
     $('resultsTimer').textContent=postgame?'Return to the lobby for another battle.':'Back to lobby in '+Math.ceil(data.rematchIn)+'s';
   }
-  $('reactionToggle').hidden=!results||spectating;$('reactionStrip').hidden=!results||$('reactionStrip').hidden;$('resultsLobby').hidden=!(results||postgame)||spectating;renderRankChange();
+  $('reactionToggle').hidden=!results||spectating;$('reactionStrip').hidden=spectating||!results||$('reactionStrip').hidden;$('resultsLobby').hidden=!(results||postgame)||spectating;renderRankChange();
+  if(spectating&&(results||postgame)){
+    setArenaMenu(false);$('resultsBoard').classList.add('expanded-stats');
+    for(const id of ['rematch','resultsVotes','resultsTimer','resultStatsToggle','muteReactions','arenaMenu','rankChange'])$(id).hidden=true;
+    $('resultsLeave').textContent='Quit';$('resultsOutcome').textContent='MATCH COMPLETE';
+    $('results').classList.add('spectator-results');
+  }
   if(waiting){
     const signature=JSON.stringify([data.ownerId,data.readyIds,data.settings,data.private,data.players.map(p=>[p.id,p.name,p.connected,p.team,p.bot])]);
     if(signature!==waitingSignature){

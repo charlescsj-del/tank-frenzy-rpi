@@ -45,6 +45,8 @@ button.danger{border-color:#c46a4a;background:#ffe5da;color:#9b3b1d}
 @media(max-width:1000px){.resources{grid-template-columns:1fr 1fr}.load-resource{grid-column:1/-1}.load-averages{margin:8px 0}.trend svg{height:70px}}
 @media(max-width:540px){header{padding:12px}h1{font-size:20px}.stats{padding:12px;grid-template-columns:repeat(2,minmax(0,1fr))}.monitor{padding:4px 12px 16px}.resources{gap:10px}.resource{padding:12px 10px}.resource-top{flex-wrap:wrap;gap:4px}.resource h3{font-size:13px}.resource .game-usage{font-size:11px}.gauge .reading{font-size:32px}.freshness{font-size:10px}.monitor h2{font-size:16px}main{padding:0 12px 20px}}
 @media(prefers-reduced-motion:reduce){.gauge .fill,.gauge .game-fill,.load-bar i{transition:none}}
+.history-panel{margin:24px 0;padding:18px;background:#fff;border:1px solid #cbd5d1;border-radius:16px}.history-panel>summary{font-size:22px;font-weight:bold;cursor:pointer}.history-panel form{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin:18px 0}.history-panel label{display:grid;gap:5px;font-size:12px;min-width:0}.history-panel input,.history-panel select{font:inherit;padding:10px;min-width:0;max-width:100%;border:1px solid #bdccc5;border-radius:7px}.history-match{padding:12px 0;border-top:1px solid #d7dfdb}.history-match summary{cursor:pointer;font-weight:bold;line-height:1.6}.history-table{overflow-x:auto}.history-match table{min-width:480px}.history-match td{overflow-wrap:anywhere}.history-panel .actions{align-items:center;margin-top:12px}
+@media(max-width:600px){.history-panel{padding:12px}.history-panel label{flex:1 1 130px}.history-panel input{width:100%}}
 </style>
 </head>
 <body>
@@ -76,6 +78,10 @@ button.danger{border-color:#c46a4a;background:#ffe5da;color:#9b3b1d}
 <div class="board-heading"><h2 id="boardTitle">Leaderboard</h2><button type="button" id="boardRefresh">↻ Refresh</button><button type="button" class="danger" id="boardReset">Reset leaderboard</button></div>
 <div class="board-card"><table><tbody id="boardRows"></tbody></table><p class="note" id="boardNote">Loading…</p></div>
 </section>
+<details id="matchHistory" class="history-panel"><summary>Match History</summary>
+<form id="historyFilters"><label>Player <input id="historyName" maxlength="64" placeholder="Search name"></label><label>Mode <select id="historyMode"><option value="">All modes</option><option value="ffa">Deathmatch</option><option value="teams">2 vs 2</option></select></label><label>From <input id="historyFrom" type="date"></label><label>To <input id="historyTo" type="date"></label><button type="submit">Apply / Refresh</button></form>
+<p id="historyNote" class="note" role="status">Open to load the latest 200 completed matches.</p><div id="historyRows"></div><div class="actions"><button id="historyPrev" type="button">Previous</button><span id="historyPage"></span><button id="historyNext" type="button">Next</button></div>
+</details>
 <script>
 'use strict';
 // The admin page can live at any private address; the game itself is one level up.
@@ -242,7 +248,7 @@ async function loadBoard(){
       const stats=p.wins+(p.wins===1?' win':' wins')+' · '+p.matches+(p.matches===1?' match':' matches')+' · '+p.kills+(p.kills===1?' kill':' kills');
       return el('tr',{},el('td',{},el('b',{textContent:p.name+(p.country?' '+flag(p.country):'')}),el('small',{textContent:stats})),el('td',{className:'num'},remove));
     }));
-    $('boardNote').textContent=players.length?players.length+' names, all time. Only matches with at least two people count.':'No finished matches yet. Only matches with at least two people count.';
+    $('boardNote').textContent=players.length?players.length+' names, all time. All completed human matches count, including solo vs AI.':'No finished matches yet. All completed human matches count, including solo vs AI.';
   }catch{$('boardNote').textContent='Cannot load the leaderboard. Try Refresh.';}
 }
 $('boardRefresh').addEventListener('click',loadBoard);
@@ -251,6 +257,26 @@ $('boardReset').addEventListener('click',async()=>{
   await fetch(adminRoot+'/leaderboard/reset',{method:'POST',headers:{'X-Tank-Admin':'1'}});loadBoard();
 });
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
+let historyPage=1,historyRequest=0;
+const matchDate=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kuala_Lumpur',dateStyle:'medium',timeStyle:'short'});
+async function loadMatchHistory(page=1){
+  const request=++historyRequest;$('historyNote').textContent='Loading match history…';
+  const params=new URLSearchParams({name:$('historyName').value,mode:$('historyMode').value,from:$('historyFrom').value,to:$('historyTo').value,page});
+  try{
+    const response=await fetch(adminRoot+'/history?'+params,{cache:'no-store'});if(!response.ok)throw Error();const data=await response.json();if(request!==historyRequest)return;
+    historyPage=data.page;$('historyRows').replaceChildren(...data.matches.map(m=>{
+      const winners=m.players.filter(p=>p.won).map(p=>p.name).join(', ')||'Not recorded';
+      const title=matchDate.format(new Date(m.t))+' · '+(m.mode==='teams'?'2 vs 2':'Deathmatch')+' · '+(m.duration===null?'Duration unavailable':time(Math.round(m.duration)));
+      const table=el('table',{},el('thead',{},el('tr',{},...['Player','Kills','Deaths','Damage','Status'].map(t=>el('th',{textContent:t})))),el('tbody',{},...m.players.map(p=>el('tr',{},el('td',{textContent:p.name+(p.bot?' · AI':'')+(p.team===null?'':p.team===0?' · Orange':' · Blue')+(p.won?' · Winner':'' )}),...['kills','deaths','damageDealt'].map(k=>el('td',{textContent:p[k]??'—'})),el('td',{textContent:p.status+(p.disconnections?' · '+p.disconnections+' disconnect(s)':'')})))));
+      return el('details',{className:'history-match'},el('summary',{textContent:title}),el('p',{textContent:'Winner: '+winners+(m.room?' · Arena '+m.room:'')}),el('div',{className:'history-table'},table),...(m.legacy?[el('p',{className:'note',textContent:'Older record: bot, team and connection details may be unavailable.'})]:[]));
+    }));
+    $('historyNote').textContent=data.total+' matching records from the latest 200 completed matches. Malaysia time (UTC+8). '+(data.persistent?'Saved across restarts.':'Memory only on this server.');
+    $('historyPage').textContent=data.page+' / '+data.pages;$('historyPrev').disabled=data.page<=1;$('historyNext').disabled=data.page>=data.pages;
+  }catch{if(request===historyRequest)$('historyNote').textContent='Cannot load history. Use Apply / Refresh to retry.';}
+}
+$('matchHistory').addEventListener('toggle',()=>{if($('matchHistory').open)loadMatchHistory();});
+$('historyFilters').addEventListener('submit',e=>{e.preventDefault();loadMatchHistory();});
+$('historyPrev').addEventListener('click',()=>loadMatchHistory(historyPage-1));$('historyNext').addEventListener('click',()=>loadMatchHistory(historyPage+1));
 refresh();loadBoard();
 </script>
 </body>

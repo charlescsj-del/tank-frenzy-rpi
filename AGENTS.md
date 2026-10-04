@@ -67,11 +67,11 @@ Phases: friend `waiting` → `countdown` (3 s) → `playing` → `results` (20 s
 
 ## Home Assistant options
 
-`public_url` (invite links), `notify_service` (`notify.xxx`, empty = off), `admin_password` (≥ 8 chars), `admin_path` (3–64 of `[A-Za-z0-9_-]`, must not reuse a game path such as `audio`, `icons`, `tutorial`, `rooms`, `ws`, `health`, `leaderboard`, `network-info`). An invalid value throws in `readOptions`, so the app fails to start and the reason is in its log. `public_url` must be http(s) with no credentials, query or fragment. `homeassistant_api: true` is only for notifications. `/data/leaderboard.json` is the only persistent state; rooms and matches are in memory.
+`public_url` (invite links), `notify_service` (`notify.xxx`, empty = off), `admin_password` (≥ 8 chars), `admin_path` (3–64 of `[A-Za-z0-9_-]`, must not reuse a game path such as `audio`, `icons`, `tutorial`, `rooms`, `ws`, `health`, `leaderboard`, `network-info`). An invalid value throws in `readOptions`, so the app fails to start and the reason is in its log. `public_url` must be http(s) with no credentials, query or fragment. `homeassistant_api: true` is only for notifications. `/data/leaderboard.json` is the only persistent state; active rooms are in memory; completed match summaries and the latest 200 detailed results are stored in that file.
 
 ## Tests
 
-`npm test` runs `node --test tests/*.test.cjs` (178 tests, about 10 seconds). CI also builds amd64/aarch64 containers and checks admin, hero and multiplayer UI. `tools/multiplayer-ui-check.cjs` exercises real HTTP/WebSocket grouping, Ready, results, shared reactions, ranks, privacy, QR invitations and direct invite joining at desktop, phone and landscape sizes. Playwright is a CI-only dependency. Browser check artifacts go under `artifacts/`; local tools may set `CHROMIUM_EXECUTABLE_PATH` and `ARTIFACT_DIR`.
+`npm test` runs `node --test tests/*.test.cjs` (182 tests, about 10 seconds). CI also builds amd64/aarch64 containers and checks admin, hero and multiplayer UI. `tools/multiplayer-ui-check.cjs` exercises real HTTP/WebSocket grouping, Ready, results, shared reactions, ranks, privacy, QR invitations and direct invite joining at desktop, phone and landscape sizes. Playwright is a CI-only dependency. Browser check artifacts go under `artifacts/`; local tools may set `CHROMIUM_EXECUTABLE_PATH` and `ARTIFACT_DIR`.
 
 Harness quirks:
 - `client.js` and `server.cjs` are loaded into `vm` sandboxes with hand-made fake DOM elements (children, `append`, `prepend`, `replaceChildren`, `classList`, events, `setAttribute`). They have no `querySelector`, `closest` or `dataset`; if new client code uses a browser API, add it to the fake (or guard the call), or the sandbox throws.

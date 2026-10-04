@@ -125,7 +125,7 @@ class Room {
   beginCountdown(seconds=3){
     this.phase='countdown';this.ownerId=null;this.countdownUntil=this.time+seconds;this.roundId=randomUUID();this.matchPlayers=new Map(this.humans().map(p=>[p.id,p]));this.roundStarted=this.countdownUntil;
     this.shells=[];this.pickups=[];this.nextPickup=this.countdownUntil+6;
-    for(const p of this.players.values())this.spawn(p);
+    for(const p of this.players.values()){p.disconnections=0;this.spawn(p);}
   }
   spawn(p){
     p.power=null;p.powerUntil=0;
@@ -142,7 +142,7 @@ class Room {
     if(m.fire&&!p.input.fire&&p.hp>0)p.pendingShot=true;
     p.input={x:clamp(m.x,-1,1),y:clamp(m.y,-1,1),aimX:clamp(m.aimX,-200,F.width+200),aimY:clamp(m.aimY,-200,F.height+200),fire:m.fire};
   }
-  disconnect(p){p.connected=false;p.disconnectedAt=this.time;p.input=neutral();p.pendingShot=false;this.refreshOwner();}
+  disconnect(p){if(p.connected&&this.phase==='playing')p.disconnections=(p.disconnections||0)+1;p.connected=false;p.disconnectedAt=this.time;p.input=neutral();p.pendingShot=false;this.refreshOwner();}
   blocked(x,y,p){return x<26||x>F.width-26||y<26||y>F.height-26||this.map.walls.some(w=>hitRect(x,y,26,w))||[...this.players.values()].some(t=>t!==p&&t.connected&&t.hp>0&&Math.hypot(x-t.x,y-t.y)<50);}
   friendly(a,b){return this.settings.mode==='teams'&&a.team!=null&&a.team===b.team;}
   invulnerable(p){return p.shieldUntil>this.time||(this.settings.powers&&p.power==='immortal'&&p.powerUntil>this.time);}

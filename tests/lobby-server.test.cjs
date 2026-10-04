@@ -290,6 +290,14 @@ test('pages send security headers; only the Home Assistant sidebar may frame the
   assert.doesNotMatch(admin.headers['Content-Security-Policy'],/unsafe-eval|script-src[^;]*unsafe-inline/);
 });
 
+test('match history is admin-only and filtered without exposing credentials',async()=>{
+  const s=server({adminPassword:'tank-secret'}),auth={authorization:'Basic '+Buffer.from('x:tank-secret').toString('base64')};
+  s.game.leaderboard.matches.push({t:Date.now(),mode:'ffa',players:[{name:'Ann',profileId:'secret-id',kills:2,deaths:1}]});
+  assert.equal((await s.read('/admin/history')).status,401);assert.equal((await s.read('/history')).status,404);
+  const response=await s.read('/admin/history?name=Ann&mode=ffa',{headers:auth}),data=JSON.parse(response.body);assert.equal(data.total,1);assert(!response.body.includes('secret-id'));assert.equal(response.headers['Cache-Control'],'no-store');
+  assert.equal(JSON.parse((await s.read('/admin/history?name=Nobody',{headers:auth})).body).total,0);
+});
+
 test('the admin can list, remove and reset leaderboard names',async()=>{
   const s=server({adminPassword:'tank-secret'}),auth={authorization:'Basic '+Buffer.from('x:tank-secret').toString('base64')},post={...auth,'x-tank-admin':'1'};
   const {Room}=require('../game-server.cjs'),r=new Room('LB'),a=r.add('Ann');r.add('Bo');r.add('Cy');r.winner={id:a.id,name:'Ann'};s.game.leaderboard.record(r);

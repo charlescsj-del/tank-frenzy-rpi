@@ -703,6 +703,16 @@ test('a watch link opens the match as a hidden spectator with a Stop watching bu
   assert.equal(c.elements.get('leave').attributes['aria-label'],'Stop watching');assert.equal(c.elements.get('thumbControls').hidden,true,'no controls for spectators');
   c.run("status('LIVE BATTLE')");assert.match(c.elements.get('status').textContent,/^👁 WATCHING \(HIDDEN\) · LIVE BATTLE/);
   const before=c.sent.length;c.run('sendInput()');assert.equal(c.sent.length,before,'spectators never send input');
-  c.run('socket.close=()=>{}');c.elements.get('leave').events.click();
-  assert.equal(c.run('spectating'),false);assert.equal(c.elements.get('leave').attributes['aria-label'],'Leave arena');assert(c.sandbox.document.body.classList.contains('in-lobby'));
+  c.run("applySnapshot({phase:'results',settings:{mode:'ffa'},winner:{id:'a',name:'Ann'},players:[{id:'a',name:'Ann',slot:0,kills:10,deaths:2,connected:true}],shells:[],events:[]})");
+  assert.equal(c.elements.get('results').hidden,false);assert.equal(c.elements.get('resultsLeave').textContent,'Quit');assert.equal(c.elements.get('rematch').hidden,true);
+  c.run("applySnapshot({phase:'waiting',players:[],events:[]})");assert.equal(c.elements.get('results').hidden,false);assert.equal(c.run('latest.phase'),'results');
+  let closed=false;c.sandbox.window.close=()=>{closed=true;};c.elements.get('resultsLeave').events.click();assert(closed);assert.equal(c.run('socket'),null);assert.match(c.elements.get('resultsTimer').textContent,/close this tab/);
+});
+
+test('ping opt-in reuses latency, saves preference and hides stale values',()=>{
+  const c=client(),saved={};c.sandbox.localStorage={setItem(k,v){saved[k]=v;}};
+  c.run("latest={phase:'playing'};pingMs=42;pingAt=100;updatePing()");assert.equal(c.elements.get('pingIndicator').hidden,true);
+  const before=c.sent.length;c.elements.get('pingToggle').events.click();assert.equal(c.elements.get('pingIndicator').textContent,'42 ms');assert.equal(saved['tank-frenzy-ping'],'on');assert.equal(c.sent.length,before);
+  c.setTime(6000);c.intervals.get(1000)();assert.equal(c.elements.get('pingIndicator').textContent,'— ms');
+  c.run("latest.phase='results';updatePing()");assert.equal(c.elements.get('pingIndicator').hidden,true);
 });

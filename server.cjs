@@ -100,6 +100,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
     const route=url.pathname.slice(adminRoot.length)||'/';
     if(req.method==='GET'&&route==='/'){securityHeaders(res,req,adminScript);res.setHeader('Content-Type','text/html; charset=utf-8');res.end(adminPage);return;}
     if(req.method==='GET'&&route==='/state'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify(adminState()));return;}
+    if(req.method==='GET'&&route==='/history'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify(leaderboard.history(Object.fromEntries(url.searchParams))));return;}
     if(req.method==='GET'&&route==='/leaderboard'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({players:leaderboard.top({period:'all',count:Infinity})}));return;}
     // Remove one name (for example an offensive one) or start the leaderboard over.
     if(req.method==='POST'&&route==='/leaderboard/remove'&&req.headers['x-tank-admin']==='1'){
