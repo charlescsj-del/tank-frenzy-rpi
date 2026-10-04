@@ -2,6 +2,13 @@
 
 Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. Dates use the earliest release or import commit available in this repository, shown in the Asia/Kuala_Lumpur time zone. For v1.1.0–v1.3.2, the original game release commits are unavailable here, so 2026-09-23 is the archive import date, not a claimed release date. The v1.5.0 notes first appear in the 2026-09-24 import of v1.6.0. The 19.x builds were originally distributed under those numbers; their entries below are relabeled as consecutive 1.19.x versions for a consistent history. Git history retains the original package numbers.
 
+## v3.2.2 [2026-10-05]
+
+- Restyled Create/Join arena and friend waiting rooms with the forest-green and cream theme. Hide the arena menu during setup and offer Back inside the waiting card.
+- Battle music starts with the on-field 3–2–1 countdown. Desktop defaults to full-map view; touch devices retain the centred camera.
+- Leaderboards open on All time, show local SVG country flags on every platform, and admin rankings have separate Wins and Kills columns.
+- Muted sound and music icons have a clear 45-degree slash.
+
 ## v3.2.1 [2026-10-05]
 
 - Keep normal players on the completed match scoreboard when the rematch countdown expires, preserving the winner, scores and Match Details instead of opening the waiting room.

@@ -56,11 +56,13 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   assert.equal(await page.locator('#freshness').getAttribute('data-stale'),'false');assert(await page.locator('.room').count()>0);
   game.rooms.delete(room.code);
   room.add('Rookie');
-  const player=room.players.values().next().value;player.kills=3;player.deaths=2;player.damageDealt=27;room.winner={id:player.id,name:player.name};game.leaderboard.record(room);
+  const player=room.players.values().next().value;player.country='MY';player.kills=3;player.deaths=2;player.damageDealt=27;room.winner={id:player.id,name:player.name};game.leaderboard.record(room);
   await page.goto(base+'/');await page.locator('#leaderboardButton').click();
   assert.deepEqual(await page.locator('#leaderboard thead th').allTextContents(),['#','Player','Wins','Matches','Kills','Damage','Deaths','K/D']);
   await page.waitForFunction(()=>document.querySelectorAll('#leaderboardRows tr').length>0);
   assert.deepEqual(await page.locator('#leaderboardRows tr:first-child td').allTextContents(),['1','Commander','1','1','3','27','2','1.5']);
+  await page.locator('#leaderboardRows .country-flag').first().evaluate(image=>image.decode());
+  assert.equal(await page.locator('[data-period=all]').getAttribute('aria-pressed'),'true');
   await page.setViewportSize({width:390,height:844});
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'phone page must not overflow');
   assert(await page.locator('.leaderboard-body').evaluate(el=>el.scrollWidth<=el.clientWidth+1),'compact leaderboard fits the phone');
@@ -68,6 +70,8 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   await page.screenshot({path:out+'/leaderboard-phone.png',fullPage:true});
   await page.setViewportSize({width:1440,height:1000});await page.goto(base+'/private-test');
   await page.waitForFunction(()=>document.querySelectorAll('#boardRows tr').length===3);
+  assert.deepEqual(await page.locator('.board-card th').allTextContents(),['Player','Wins','Kills','Action']);
+  await page.locator('#boardRows .country-flag').first().evaluate(image=>image.decode());
   page.once('dialog',dialog=>dialog.accept());await page.locator('#boardRows tr',{hasText:'Rookie'}).getByRole('button',{name:'Remove'}).click();
   await page.waitForFunction(()=>document.querySelectorAll('#boardRows tr').length===2);assert.match(await page.locator('#boardRows').textContent(),/Commander/);
   assert.equal(game.leaderboard.top().length,2,'Remove deletes the name on the server');
@@ -93,6 +97,7 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   await touch.evaluate(async()=>{if(document.fullscreenElement)await document.exitFullscreen();setExpanded(true);});
   for(const [width,height] of [[390,780],[844,390]]){
     await touch.setViewportSize({width,height});
+    assert.equal(await touch.locator('#arenaMenu').isVisible(),false);assert(await touch.locator('#waitingBack').isVisible());
     const form=await touch.evaluate(()=>({scroll:document.documentElement.scrollHeight,viewport:innerHeight,lobby:$('waitingRoom').querySelector('.dialog').getBoundingClientRect().bottom,start:$('startGame').getBoundingClientRect().bottom}));
     assert(form.scroll<=form.viewport+2&&form.lobby<=form.viewport&&form.start<=form.viewport,'one-tap creation opens a usable lobby at '+width+'×'+height+': '+JSON.stringify(form));
     await touch.screenshot({path:out+'/create-arena-'+width+'.png'});

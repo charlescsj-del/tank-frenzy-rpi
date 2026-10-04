@@ -38,12 +38,14 @@ fs.mkdirSync(output,{recursive:true});
     await screenshot(pc,'matchmaking-desktop');await screenshot(phone,'matchmaking-phone');
     await Promise.all([pc.locator('#readyButton').click(),phone.locator('#readyButton').click()]);
     await Promise.all([pc.waitForFunction(()=>latest?.phase==='countdown'),phone.waitForFunction(()=>latest?.phase==='countdown')]);
-    for(const p of [pc,phone]){assert.equal(await p.locator('#matchmaking').isVisible(),false);assert(await p.locator('#countdown').isVisible());await fits(p,'#countdownNumber');assert.match(await p.locator('#countdownNumber').textContent(),/^[123]$/);await screenshot(p,p===phone?'field-countdown-phone':'field-countdown-desktop');}
+    for(const p of [pc,phone]){assert.equal(await p.locator('#matchmaking').isVisible(),false);assert(await p.locator('#countdown').isVisible());await fits(p,'#countdownNumber');assert.match(await p.locator('#countdownNumber').textContent(),/^[123]$/);assert.equal(await p.evaluate(()=>musicPlayer?.mode),'battle');await screenshot(p,p===phone?'field-countdown-phone':'field-countdown-desktop');}
     await Promise.all([pc.waitForFunction(()=>latest?.phase==='playing'),phone.waitForFunction(()=>latest?.phase==='playing')]);
     for(const p of [pc,phone]){
-      assert.equal(await p.locator('#pingIndicator').isVisible(),false);await p.locator('#arenaMenu').click();await p.locator('#pingToggle').click();await p.locator('#arenaMenu').click();
+      assert.equal(await p.locator('#pingIndicator').isVisible(),false);await p.locator('#arenaMenu').click();await p.locator('#pingToggle').click();
       await p.waitForFunction(()=>/^\d+ ms$/.test(document.getElementById('pingIndicator').textContent));await fits(p,'#pingIndicator');assert.equal(await p.evaluate(()=>localStorage.getItem('tank-frenzy-ping')),'on');
     }
+    assert.equal(await pc.evaluate(()=>mapOverview),true);assert.equal(await phone.evaluate(()=>mapOverview),false);
+    await screenshot(pc,'default-map-desktop');await pc.locator('#arenaMenu').click();await pc.locator('#viewMode').click();
     for(const p of [pc,phone]){
       assert(await p.evaluate(()=>{updateCamera();const me=tanks.find(t=>t.id===myId),point=project(me.x,me.y);return Math.abs(point.x*scale+offsetX-cssW/2)<1&&Math.abs(point.y*scale+offsetY-cssH/2)<1;}),'own tank stays centred at its corner spawn');
       assert.equal(await p.locator('#game').evaluate(el=>getComputedStyle(el).userSelect),'none');
@@ -96,6 +98,7 @@ fs.mkdirSync(output,{recursive:true});
     await friend.evaluate(()=>leave());await friend.close();
     await phone.evaluate(()=>leave());await pc.evaluate(()=>leave());
     await phone.locator('#leaderboardButton').click();await phone.waitForFunction(()=>document.querySelectorAll('#leaderboardRows tr').length>=4);await fits(phone,'.leaderboard-card');await screenshot(phone,'leaderboard-phone');
+    assert.equal(await phone.locator('[data-period=all]').getAttribute('aria-pressed'),'true');
     assert.equal(await phone.locator('#leaderboardYou .tank-portrait').count(),1);assert.match(await phone.locator('#leaderboardYou').textContent(),/MangoScout/);assert(await phone.evaluate(()=>document.getElementById('leaderboardYou').getBoundingClientRect().top<document.getElementById('leaderboardPeriods').getBoundingClientRect().top),'your tank is above the leaderboard filters');
     await phone.keyboard.press('Escape');
     await phone.setViewportSize({width:844,height:390});await phone.locator('#createRoom').click();await phone.waitForFunction(()=>latest?.phase==='waiting');await fits(phone,'.waiting-panel .dialog');await screenshot(phone,'lobby-landscape');

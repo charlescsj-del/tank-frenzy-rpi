@@ -47,6 +47,7 @@ button.danger{border-color:#c46a4a;background:#ffe5da;color:#9b3b1d}
 @media(prefers-reduced-motion:reduce){.gauge .fill,.gauge .game-fill,.load-bar i{transition:none}}
 .history-panel{margin:24px 0;padding:18px;background:#fff;border:1px solid #cbd5d1;border-radius:16px}.history-panel>summary{font-size:22px;font-weight:bold;cursor:pointer}.history-panel form{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin:18px 0}.history-panel label{display:grid;gap:5px;font-size:12px;min-width:0}.history-panel input,.history-panel select{font:inherit;padding:10px;min-width:0;max-width:100%;border:1px solid #bdccc5;border-radius:7px}.history-match{padding:12px 0;border-top:1px solid #d7dfdb}.history-match summary{cursor:pointer;font-weight:bold;line-height:1.6}.history-table{overflow-x:auto}.history-match table{min-width:480px}.history-match td{overflow-wrap:anywhere}.history-panel .actions{align-items:center;margin-top:12px}
 @media(max-width:600px){.history-panel{padding:12px}.history-panel label{flex:1 1 130px}.history-panel input{width:100%}}
+.country-flag{display:inline-block;width:24px;height:18px;object-fit:cover;vertical-align:middle;margin-left:6px;border-radius:2px}.board-card th{text-align:left;padding:10px 4px;color:var(--muted)}.board-card .num{text-align:right}.board-card td{padding:10px 4px}.board-card td:first-child{overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -76,7 +77,7 @@ button.danger{border-color:#c46a4a;background:#ffe5da;color:#9b3b1d}
 <main id="rooms" aria-live="polite"></main>
 <section class="board" aria-labelledby="boardTitle">
 <div class="board-heading"><h2 id="boardTitle">Leaderboard</h2><button type="button" id="boardRefresh">↻ Refresh</button><button type="button" class="danger" id="boardReset">Reset leaderboard</button></div>
-<div class="board-card"><table><tbody id="boardRows"></tbody></table><p class="note" id="boardNote">Loading…</p></div>
+<div class="board-card"><table><thead><tr><th scope="col">Player</th><th scope="col" class="num">Wins</th><th scope="col" class="num">Kills</th><th scope="col">Action</th></tr></thead><tbody id="boardRows"></tbody></table><p class="note" id="boardNote">Loading…</p></div>
 </section>
 <details id="matchHistory" class="history-panel"><summary>Match History</summary>
 <form id="historyFilters"><label>Player <input id="historyName" maxlength="64" placeholder="Search name"></label><label>Mode <select id="historyMode"><option value="">All modes</option><option value="ffa">Deathmatch</option><option value="teams">2 vs 2</option></select></label><label>From <input id="historyFrom" type="date"></label><label>To <input id="historyTo" type="date"></label><button type="submit">Apply / Refresh</button></form>
@@ -87,7 +88,7 @@ button.danger{border-color:#c46a4a;background:#ffe5da;color:#9b3b1d}
 // The admin page can live at any private address; the game itself is one level up.
 const adminRoot=location.pathname.replace(/\/+$/,''),base=adminRoot.slice(0,adminRoot.lastIndexOf('/')+1);
 const $=id=>document.getElementById(id);
-const flag=code=>code?String.fromCodePoint(...[...code].map(c=>127397+c.charCodeAt(0))):'';
+function flag(code){if(!/^[A-Z]{2}$/.test(code||''))return '';let name=code;try{name=new Intl.DisplayNames(['en'],{type:'region'}).of(code);}catch{}const image=el('img',{className:'country-flag',src:base+'flags/'+code.toLowerCase()+'.svg',alt:name,title:name});image.addEventListener('error',()=>{image.hidden=true;});return image;}
 const phaseNames={searching:'Finding opponents',ready:'Meet your rivals',waiting:'Waiting',countdown:'Starting',playing:'Playing',results:'Rematch vote',postgame:'Ended'};
 const time=s=>s>=3600?Math.floor(s/3600)+'h '+Math.floor(s%3600/60)+'m':s>=60?Math.floor(s/60)+'m '+(s%60)+'s':s+'s';
 const cards=new Map();
@@ -213,7 +214,7 @@ function render(state){
       el('span',{className:'badge '+room.phase,textContent:(phaseNames[room.phase]||room.phase)+(room.winner?': '+room.winner.name+' won':'')+score}),el('span',{className:'badge',textContent:time(room.time)}));
     table.replaceChildren(...[...room.players].sort((a,b)=>b.kills-a.kills).map(p=>{
       const hp=el('span',{className:'hp'},el('i',{style:'width:'+p.hp*10+'%'}));
-      return el('tr',{className:p.connected?'':'off'},el('td',{},el('span',{className:'dot',style:'background:'+state.palette[p.slot]}),p.name+(p.country?' '+flag(p.country):'')+(p.connected?'':' (away)')),
+      return el('tr',{className:p.connected?'':'off'},el('td',{},el('span',{className:'dot',style:'background:'+state.palette[p.slot]}),p.name+(p.connected?'':' (away)'),flag(p.country)),
         el('td',{className:'num',textContent:p.kills+' / '+p.deaths}),el('td',{className:'num'},hp));
     }));
     draw(canvas,room,state);
@@ -245,8 +246,7 @@ async function loadBoard(){
         if(!confirm('Remove '+p.name+' from the leaderboard, including recent matches?'))return;
         await fetch(adminRoot+'/leaderboard/remove?name='+encodeURIComponent(p.name),{method:'POST',headers:{'X-Tank-Admin':'1'}});loadBoard();
       });
-      const stats=p.wins+(p.wins===1?' win':' wins')+' · '+p.matches+(p.matches===1?' match':' matches')+' · '+p.kills+(p.kills===1?' kill':' kills');
-      return el('tr',{},el('td',{},el('b',{textContent:p.name+(p.country?' '+flag(p.country):'')}),el('small',{textContent:stats})),el('td',{className:'num'},remove));
+      return el('tr',{},el('td',{},el('b',{textContent:p.name}),flag(p.country)),el('td',{className:'num',textContent:p.wins}),el('td',{className:'num',textContent:p.kills}),el('td',{className:'num'},remove));
     }));
     $('boardNote').textContent=players.length?players.length+' names, all time. All completed human matches count, including solo vs AI.':'No finished matches yet. All completed human matches count, including solo vs AI.';
   }catch{$('boardNote').textContent='Cannot load the leaderboard. Try Refresh.';}

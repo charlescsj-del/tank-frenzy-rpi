@@ -63,6 +63,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
   for(const name of ['fire','hit'])files['/audio/effects-'+name+'-v4.mp3']=['audio/effects-'+name+'-v4.mp3','audio/mpeg'];
   files['/manifest.webmanifest']=['manifest.webmanifest','application/manifest+json'];
   for(const name of ['icon-192','icon-512','apple-touch-icon'])files[`/icons/${name}.png`]=[`icons/${name}.png`,'image/png'];
+  for(const name of fs.readdirSync(path.join(__dirname,'flags')).filter(name=>/^[a-z]{2}\.svg$/.test(name)))files['/flags/'+name]=['flags/'+name,'image/svg+xml'];
   for(const name of ['win','pc-controls','mobile-controls','find-tank','getting-hit','bouncing','power-ups'])files[`/tutorial/${name}.webp`]=[`tutorial/${name}.webp`,'image/webp'];
   // Admin: open through the Home Assistant sidebar (already signed in); on the
   // public game port only with the admin password (HTTP Basic, over HTTPS via Cloudflare).

@@ -1,0 +1,1 @@
+Country flags from https://github.com/lipis/flag-icons, commit 086f7e97d657358203916dbe84f61c2bccaa81eb (4x3 two-letter SVG assets). MIT license in LICENSE. Served locally; no third-party requests. Only flags visible in a ranking are downloaded by the browser.

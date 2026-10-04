@@ -1,6 +1,6 @@
 # Multi-architecture image: Docker selects ARM64 on a 64-bit Raspberry Pi.
 FROM node:22-alpine
-ARG BUILD_VERSION=3.2.1
+ARG BUILD_VERSION=3.2.2
 ARG BUILD_ARCH
 LABEL io.hass.name="Tank Frenzy" \
       io.hass.description="Multiplayer tank battles for Home Assistant" \
@@ -17,6 +17,7 @@ COPY index.html admin.html client.js qr.js sound-bank.js music.js mode-banner.we
 COPY audio/ ./audio/
 COPY tutorial/ ./tutorial/
 COPY icons/ ./icons/
+COPY flags/ ./flags/
 COPY addon.cjs ./
 EXPOSE 8765 8099
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \

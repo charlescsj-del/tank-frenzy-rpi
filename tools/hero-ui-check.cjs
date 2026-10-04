@@ -58,8 +58,15 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
   await page.evaluate(()=>{document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=0));document.querySelectorAll('#heroLayer-purple .hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=6100));});
   await page.screenshot({path:out+'/lobby-purple-behind-blue.png',fullPage:true});
   await page.evaluate(()=>document.body.classList.remove('hero-suspended'));assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'running');
+  for(const size of [{width:1440,height:900},{width:390,height:844},{width:844,height:390}]){
+    await page.setViewportSize(size);await page.evaluate(()=>showRoomForm('', 'join'));
+    assert.equal(await page.locator('#arenaMenu').isVisible(),false);
+    await page.screenshot({path:out+'/join-arena-'+size.width+'.png',fullPage:true});await page.evaluate(()=>showLobby());
+  }
+  await page.setViewportSize({width:1440,height:900});
+  await page.locator('#sound').click();assert.equal(await page.locator('#sound .audio-slash').evaluate(el=>getComputedStyle(el).display),'block');await page.locator('#sound').click();
   await page.locator('#createRoom').click();assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'paused','animation pauses outside lobby');
-  await page.waitForFunction(()=>joined);await page.evaluate(()=>showLobby());
+  await page.waitForFunction(()=>joined);assert.equal(await page.locator('#arenaMenu').isVisible(),false);await page.screenshot({path:out+'/create-arena-desktop.png',fullPage:true});await page.locator('#waitingBack').click();
   await page.waitForFunction(()=>!document.fullscreenElement&&!document.webkitFullscreenElement&&!expanded);
   assert.equal(await page.evaluate(()=>document.body.classList.contains('in-room')),false);assert.equal(await page.locator('#leave').isVisible(),false);
   await page.screenshot({path:out+'/lobby-return-desktop.png',fullPage:true});

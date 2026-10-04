@@ -297,7 +297,7 @@ test('countdown sounds once per number, start is distinct, and music/effects swi
   c.run("joined=true;latest={phase:'playing'}");c.elements.get('music').events.click();assert.equal(c.run('musicEvents.at(-1)'),'battle');
   c.run('document.hidden=true');c.documentEvents.visibilitychange();assert.equal(c.run('musicEvents.at(-1)'),'stop');
   c.run('document.hidden=false');c.documentEvents.visibilitychange();assert.equal(c.run('musicEvents.at(-1)'),'battle');
-  c.run("latest={phase:'countdown',map:{id:77},players:[]};updateRoomPhase(latest)");assert.equal(c.run('musicEvents.at(-2)'),'lobby');assert.equal(c.run('musicEvents.at(-1)'),'preload::77');
+  c.run("latest={phase:'countdown',map:{id:77},players:[]};updateRoomPhase(latest)");assert.equal(c.run('musicEvents.at(-1)'),'battle');
   c.run("musicPlayer.play=(mode,key)=>musicEvents.push(mode+':'+key);roomCode='BATTLE';latest.phase='playing';updateRoomPhase(latest)");
   assert.equal(c.run('musicEvents.at(-1)'),'battle:BATTLE:77');
 });
@@ -424,7 +424,7 @@ test('mobile menu releases controls and closes on action, outside tap, Escape an
 
 test('mobile and PC cameras centre the tank at every corner, including respawn',()=>{
  for(const mobile of [true,false]){
-  const c=client(mobile);
+  const c=client(mobile);assert.equal(c.run('mapOverview'),!mobile);c.run('mapOverview=false');
   for(const [width,height] of [[1440,900],[874,290],[390,620],[667,240],[320,430]]){
     c.run(`cssW=${width};cssH=${height};tanks[0].x=800;tanks[0].y=520;updateCamera()`);
     assert(c.run('48*boardScale*scale')>=33.59,'tank width stays readable in CSS pixels');
@@ -480,7 +480,7 @@ test('close-view arrows identify off-screen allies and enemies and disappear out
   c.run('mapOverview=false;latest.phase="results"');assert.equal(c.run('enemyMarkers().length'),0);
   c.run('latest.phase="playing";tanks[0].hp=0');assert.equal(c.run('enemyMarkers().length'),0);
   c.run('tanks[0].hp=10;spectating=true');assert.equal(c.run('enemyMarkers().length'),0);
-  const desktop=client(false);desktop.run("latest={phase:'playing',settings:{mode:'ffa'}};tanks.push({id:'foe',x:1500,y:500,hp:10});updateCamera()");
+  const desktop=client(false);desktop.run("mapOverview=false;latest={phase:'playing',settings:{mode:'ffa'}};tanks.push({id:'foe',x:1500,y:500,hp:10});updateCamera()");
   assert.equal(desktop.run('enemyMarkers().length'),1,'desktop close view also identifies off-screen opponents');
 });
 
@@ -676,19 +676,21 @@ test('results reactions open a horizontal picker, send fixed IDs and can be mute
 
 test('the leaderboard pop-up lists the top players and closes with Escape',async()=>{
   const c=client(false);c.sandbox.HTMLInputElement=class{};
-  const urls=[];c.sandbox.fetch=async url=>{urls.push(url);return {ok:true,json:async()=>({persistent:true,countries:[{code:'MY',players:2}],players:[{name:'Ann',wins:3,matches:4,kills:30,damageDealt:247,deaths:10},{name:'Bo',wins:1,matches:4,kills:12,damageDealt:61,deaths:0}]})};};
+  const urls=[];c.sandbox.fetch=async url=>{urls.push(url);return {ok:true,json:async()=>({persistent:true,countries:[{code:'MY',players:2}],players:[{name:'Ann',country:'MY',wins:3,matches:4,kills:30,damageDealt:247,deaths:10},{name:'Bo',wins:1,matches:4,kills:12,damageDealt:61,deaths:0}]})};};
   await c.run('openLeaderboard()');
   assert.equal(c.elements.get('leaderboard').hidden,false);
   const rows=c.elements.get('leaderboardRows').children.filter(r=>r.className!=='leaderboard-details').map(r=>r.children.map(cell=>String(cell.textContent)));
   assert.deepEqual(rows,[['1','Ann','3','4','30','247','10','3.0'],['2','Bo','1','4','12','61','0','12.0']]);
+  assert.equal(c.elements.get('leaderboardRows').children[0].children[1].children[0].src,'http://localhost:8765/flags/my.svg');
   assert.match(c.elements.get('leaderboardNote').textContent,/Scores saved/);
-  assert.match(urls.at(-1),/\/leaderboard\?period=week&country=&player=$/);
+  assert.match(urls.at(-1),/\/leaderboard\?period=all&country=&player=$/);
   assert.equal(c.elements.get('leaderboardRegion').children.length,2,'All regions plus each country seen');
   c.elements.get('leaderboardPeriods').events.click({target:{closest:()=>({dataset:{period:'week'}})}});await Promise.resolve();
   assert.match(urls.at(-1),/period=week/);
   c.elements.get('leaderboardRegion').value='MY';c.elements.get('leaderboardRegion').events.change();assert.match(urls.at(-1),/period=week&country=MY/);
   c.windowEvents.keydown({code:'KeyW',preventDefault(){},target:{}});assert.equal(c.run('keys.size'),0);
   c.windowEvents.keydown({code:'Escape',preventDefault(){},target:{}});assert.equal(c.elements.get('leaderboard').hidden,true);
+  await c.run('openLeaderboard()');assert.match(urls.at(-1),/period=all&country=/);
   c.sandbox.fetch=async()=>{throw Error('offline');};await c.run('openLeaderboard()');assert.match(c.elements.get('leaderboardNote').textContent,/Could not load/);
 });
 

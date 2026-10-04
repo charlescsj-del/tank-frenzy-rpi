@@ -9,7 +9,7 @@ const keys=new Set(),moveKeys=new Set(['KeyW','KeyA','KeyS','KeyD']);
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const touchMedia=matchMedia('(pointer: coarse) and (hover: none)');
 const sticks={move:{id:null,x:0,y:0},aim:{id:null,x:0,y:0}};
-let touchAim=null,expanded=false,mapOverview=false;
+let touchAim=null,expanded=false,mapOverview=!touchMedia.matches;
 let cssW=1120,cssH=610,scale=1,offsetX=0,offsetY=0;
 let tanks=[],shells=[],particles=[],tracks=[],pickups=[],beams=[],pickupFlashes=[],floaters=[],rings=[],hurt=0,shake=0,last=0,sound=true,audioReady=false,audioContext,soundBank;
 let socket=null,myId=null,token=null,joined=false,spectating=false,connecting=false,intentional=false,retry=0,retryTimer;
@@ -357,7 +357,7 @@ function renderRankChange(){
   const count=()=>{if(rankSignature!==key)return;const progress=reducedMotion?1:Math.min(1,(performance.now()-started)/800),ease=1-(1-progress)**3;$('rankChangeScore').textContent=['wins','kills','damageDealt'].map((s,i)=>Math.round(from[s]+(to[s]-from[s])*ease)+' '+['wins','kills','damage'][i]).join(' · ');if(progress<1)requestAnimationFrame(count);};count();
   for(const p of lastResult.nearby||[]){
     const row=document.createElement('div');row.className='rank-row'+(p.profileId===profileId?' rank-self':'');
-    const rank=document.createElement('b'),name=document.createElement('span'),wins=document.createElement('strong');rank.textContent='#'+p.rank;name.textContent=p.name;wins.textContent=p.wins+' W · '+p.kills+' K';row.append(rank,tankPortrait(p.slot||0),name,wins);
+    const rank=document.createElement('b'),name=document.createElement('span'),wins=document.createElement('strong');rank.textContent='#'+p.rank;name.textContent=p.name;if(/^[A-Z]{2}$/.test(p.country||''))name.append(countryFlag(p.country));wins.textContent=p.wins+' W · '+p.kills+' K';row.append(rank,tankPortrait(p.slot||0),name,wins);
     row.style.setProperty('--rank-offset',Math.max(-3,Math.min(3,(p.beforeRank??p.rank)-p.rank))*44+'px');if(!reducedMotion)row.classList.add('rank-moving');$('rankChangeRows').append(row);
   }
 }
@@ -399,12 +399,12 @@ function updateRoomPhase(data){
         for(const p of data.players.filter(p=>!teams||p.team===team).sort((a,b)=>b.kills-a.kills||a.deaths-b.deaths)){
         const row=document.createElement('tr');if(p.id===myId)row.className='me';
          const cells=[p.name+(p.bot?' · AI':'')+(p.id===myId?' ★':''),p.kills,p.deaths,p.shots?Math.round(100*Math.min(p.hits,p.shots)/p.shots)+'%':'—'].map(value=>{const cell=document.createElement('td');cell.textContent=value;return cell;});
-         cells[0].prepend?.(tankPortrait(p.slot));if(!muteReactions&&p.reaction){const bubble=document.createElement('span');bubble.className='reaction-bubble';reactionContent(bubble,p.reaction);cells[0].append(bubble);}
+         cells[0].prepend?.(tankPortrait(p.slot));if(/^[A-Z]{2}$/.test(p.country||''))cells[0].append(countryFlag(p.country));if(!muteReactions&&p.reaction){const bubble=document.createElement('span');bubble.className='reaction-bubble';reactionContent(bubble,p.reaction);cells[0].append(bubble);}
         cells[0].style.color=colors[p.slot];row.append(...cells);$('resultsRows').append(row);
         const damageRow=document.createElement('tr');if(p.id===myId)damageRow.className='me';
         const values=[p.name+(p.bot?' · AI':'')+(p.id===myId?' · YOU':''),p.kills,p.deaths,p.shots?Math.round(100*Math.min(p.hits,p.shots)/p.shots)+'%':'—',Number.isFinite(p.damageDealt)?p.damageDealt:'—'];
         for(const [i,value]of values.entries()){
-          const cell=document.createElement('td');cell.textContent=value;cell.setAttribute('data-label',['Player','Kills','Deaths','Hit rate','Damage'][i]);damageRow.append(cell);
+          const cell=document.createElement('td');cell.textContent=value;cell.setAttribute('data-label',['Player','Kills','Deaths','Hit rate','Damage'][i]);if(i===0&&/^[A-Z]{2}$/.test(p.country||''))cell.append(countryFlag(p.country));damageRow.append(cell);
         }
         $('resultDamageRows').append(damageRow);
         }
@@ -455,7 +455,8 @@ $('startGame').addEventListener('click',()=>{if(joined&&latest?.phase==='waiting
 $('rematch').addEventListener('click',()=>{if(joined&&latest?.phase==='results'&&latest.rematchIn>0&&!latest.rematchVotes?.includes(myId)){send({type:'rematch'});$('rematch').disabled=true;}});
 // The round is over, so leaving from the result card needs no extra confirmation.
 $('resultsLeave').addEventListener('click',leave);
-$('readyButton').addEventListener('click',()=>send({type:'ready'}));$('waitingReady').addEventListener('click',()=>send({type:'ready'}));$('cancelMatchmaking').addEventListener('click',leave);
+$('readyButton').addEventListener('click',()=>send({type:'ready'}));$('waitingBack').addEventListener('click',()=>leave());
+$('waitingReady').addEventListener('click',()=>send({type:'ready'}));$('cancelMatchmaking').addEventListener('click',leave);
 $('resultsLobby').addEventListener('click',()=>{
   if(spectating||!['results','postgame'].includes(latest?.phase))return;
   const mode=latest.settings?.mode||selectedGameMode;leave({keepFullscreen:true});selectGameMode(mode);quickPlay();
@@ -592,8 +593,8 @@ function closeTutorial(){
 }
 $('howToPlay').addEventListener('click',openTutorial);
 // Leaderboard kept by the server (saved on the Pi in the Home Assistant app): by period and region.
-let leaderboardPeriod='week',leaderboardCountry='',leaderboardRequest=0;
-const flagOf=code=>/^[A-Z]{2}$/.test(code||'')?String.fromCodePoint(...[...code].map(c=>127397+c.charCodeAt(0))):'';
+let leaderboardPeriod='all',leaderboardCountry='',leaderboardRequest=0;
+function countryFlag(code){const image=document.createElement('img');image.className='country-flag';image.alt=regionName(code);image.title=image.alt;image.src=appUrl('flags/'+code.toLowerCase()+'.svg');image.addEventListener('error',()=>{image.hidden=true;});return image;}
 function regionName(code){try{return new Intl.DisplayNames(['en'],{type:'region'}).of(code);}catch{return code;}}
 async function loadLeaderboard(){
   const request=++leaderboardRequest;
@@ -610,11 +611,11 @@ async function loadLeaderboard(){
     data.players.forEach((p,i)=>{
       const row=document.createElement('tr');
       if(p.profileId&&p.profileId===profileId)row.className='me';
-      for(const value of [i+1,p.name+(p.country?' '+flagOf(p.country):''),p.wins,p.matches,p.kills,p.damageDealt??0,p.deaths,(p.kills/Math.max(1,p.deaths)).toFixed(1)]){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}
+      for(const [column,value] of [i+1,p.name,p.wins,p.matches,p.kills,p.damageDealt??0,p.deaths,(p.kills/Math.max(1,p.deaths)).toFixed(1)].entries()){const cell=document.createElement('td');cell.textContent=value;if(column===1&&/^[A-Z]{2}$/.test(p.country||''))cell.append(countryFlag(p.country));row.append(cell);}
       const more=document.createElement('tr');more.hidden=true;more.className='leaderboard-details';const detail=document.createElement('td');detail.colSpan=8;detail.textContent=p.matches+' matches · '+p.deaths+' deaths · '+(p.damageDealt??0)+' damage · '+(p.kills/Math.max(1,p.deaths)).toFixed(1)+' K/D';more.append(detail);
       row.tabIndex=0;row.setAttribute('aria-expanded','false');row.setAttribute('aria-label',p.name+', '+p.wins+' wins. Show statistics');const toggle=()=>{more.hidden=!more.hidden;row.setAttribute('aria-expanded',String(!more.hidden));};row.addEventListener('click',toggle);row.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});$('leaderboardRows').append(row,more);
     });
-    const regions=[['','All regions'],...(data.countries||[]).map(c=>[c.code,flagOf(c.code)+' '+regionName(c.code)+' ('+c.players+')'])];
+    const regions=[['','All regions'],...(data.countries||[]).map(c=>[c.code,regionName(c.code)+' ('+c.players+')'])];
     $('leaderboardRegion').replaceChildren(...regions.map(([code,label])=>{const option=document.createElement('option');option.value=code;option.textContent=label;return option;}));
     $('leaderboardRegion').value=leaderboardCountry;
     const when={day:'today',week:'this week',month:'this month',all:'yet'}[leaderboardPeriod];
@@ -622,6 +623,7 @@ async function loadLeaderboard(){
   }catch{if(request===leaderboardRequest)$('leaderboardNote').textContent='Could not load the leaderboard. Try again in a moment.';}
 }
 async function openLeaderboard(){
+  leaderboardPeriod='all';leaderboardCountry='';
   release();leaderboardOpen=true;$('leaderboard').hidden=false;document.body.classList.add('tutorial-open');$('closeLeaderboard').focus();
   await loadLeaderboard();
 }
@@ -654,9 +656,9 @@ function syncMusic(){
   if(!music||!audioReady||document.hidden){musicPlayer?.stop();return;}
   const ac=getAudio(true);if(!ac||typeof TankMusic==='undefined')return;
   musicPlayer??=new TankMusic(ac);
+  if(joined&&['waiting','searching','ready'].includes(latest?.phase))for(const track of ['A','C'])musicPlayer.load?.(track)?.catch(()=>{});
   const key=`${roomCode}:${latest?.mapId??latest?.map?.id}`;
-  musicPlayer.play(joined&&['playing','results'].includes(latest?.phase)?'battle':'lobby',key);
-  if(joined&&latest?.phase==='countdown')musicPlayer.prepareBattle(key);
+  musicPlayer.play(joined&&['countdown','playing','results','postgame'].includes(latest?.phase)?'battle':'lobby',key);
 }
 function unlockAudio(){audioReady=true;syncMusic();}
 $('sound').addEventListener('click',()=>{sound=!sound;audioReady=true;updateAudioButtons();rememberAudio();if(sound)playCue('menu');else{stopMovementSound();stopCueSounds();}syncMusic();});
@@ -753,6 +755,7 @@ function updateTouchControls(){
   $('arena').classList.toggle('mobile-active',mobile&&(joined||spectating));
   document.body.classList.toggle('mobile-playing',mobile&&(joined||spectating));
   $('viewMode').hidden=!joined;
+  $('viewMode').setAttribute('aria-label',mapOverview?'Close view':'Full map');$('viewMode').title=mapOverview?'Close view':'Full map';$('viewMode').setAttribute('aria-pressed',String(mapOverview));
   $('thumbControls').hidden=!mobile||!joined||(latest?.phase!=null&&latest.phase!=='playing');
   document.body.classList.toggle('in-room',(joined||spectating)&&!mobile);
   $('introControls').textContent=mobile?'Left thumb to move. Right thumb to aim and fire.':'Move with WASD. Aim with your mouse. Click to fire.';
