@@ -68,6 +68,7 @@ $('resultStatsToggle').addEventListener('click',()=>{
 $('closeMatchDetails').addEventListener('click',closeMatchDetails);
 $('matchDetails').addEventListener('click',e=>{if(e.target===$('matchDetails'))closeMatchDetails();});
 function networkMessage(title,text,form=false){
+  $('arena').classList.toggle('network-open',!form);
   if(form)leaveFullscreen();
   resetResultDamage();
   hideBattleHud();
@@ -135,6 +136,7 @@ function showLobby(){
   networkMessage('Ready to roll?','Pick an arena to see who is playing, or create your own.');
   lobbyVisible=true;joinMode=null;lobbyRooms=[];$('roomBrowser').hidden=false;
   document.body.classList.toggle('in-lobby',true);$('arena').classList.toggle('lobby-open',true);
+  $('arena').classList.remove('network-open');
   renderRooms();$('roomListStatus').textContent='Loading arenas…';refreshRooms();
 }
 $('refreshRooms').addEventListener('click',refreshRooms);
@@ -362,6 +364,7 @@ function renderRankChange(){
   }
 }
 function updateRoomPhase(data){
+  $('arena').classList.remove('network-open');
   const waiting=data.phase==='waiting',countdown=data.phase==='countdown',results=data.phase==='results',postgame=data.phase==='postgame';
   const matching=['searching','ready'].includes(data.phase);$('matchmaking').hidden=!matching;$('arena').classList.toggle('matchmaking-open',matching);if(matching)renderMatchmaking(data);
   $('waitingRoom').hidden=!waiting;$('arena').classList.toggle('waiting-room',waiting);

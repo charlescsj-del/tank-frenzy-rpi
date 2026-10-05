@@ -10,6 +10,14 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
   await page.goto('http://127.0.0.1:'+game.server.address().port);await page.locator('.hero-art').waitFor({state:'visible'});
   await page.waitForFunction(()=>document.querySelector('.hero-tank').getAnimations().length>0);
   assert.equal(await page.locator('#versionBadge').textContent(),'v'+require(root+'/shared.js').version);
+  const cold=await browser.newPage({javaScriptEnabled:false,viewport:{width:1440,height:900}});
+  await cold.goto(page.url());
+  for(const size of [{width:1440,height:900},{width:390,height:844}]){
+    await cold.setViewportSize(size);assert(await cold.locator('.game.lobby-open #roomBrowser').isVisible());assert.equal(await cold.locator('#joinFields').isVisible(),false);
+    assert.equal(await cold.locator('body').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(25, 63, 53)');
+    await cold.screenshot({path:out+'/before-scripts-'+size.width+'.png',fullPage:true});
+  }
+  await cold.close();
   const motion=page.locator('#heroLayer-orange .hero-tank'),flash=page.locator('#heroLayer-orange .hero-burst'),ring=page.locator('#heroLayer-orange .hero-blast-ring');
   assert.equal(await page.locator('#heroBackdrop').getAttribute('href'),'./hero-quarry.webp');
   for(const asset of ['hero-quarry.webp','hero-tanks.webp'])assert(await page.evaluate(async asset=>{const response=await fetch('./'+asset);return response.ok&&response.headers.get('content-type')?.includes('image/webp');},asset),'layer asset loads: '+asset);
@@ -53,6 +61,14 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
    for(const id of ['leaderboardButton','sound','music'])assert.equal(await page.locator('#'+id+' svg use').count(),1,'menu icons use dependable SVGs');
    await page.screenshot({path:out+'/lobby-'+width+'.png',fullPage:true});
    if(width===390){await page.evaluate(()=>document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=0)));await page.screenshot({path:out+'/lobby-idle-390.png',fullPage:true});}
+  }
+  await page.setViewportSize({width:1440,height:900});
+  for(const size of [{width:1440,height:900},{width:390,height:844},{width:844,height:390}]){
+    await page.setViewportSize(size);await page.evaluate(()=>networkMessage('Joining the field…','Connecting to your arena.'));
+    const connecting=await page.locator('#overlay').boundingBox();assert(connecting&&connecting.x===0&&connecting.y===0&&connecting.width===size.width&&connecting.height===size.height,'connecting covers the viewport');
+    assert.equal(await page.locator('#game').isVisible(),false);assert.equal(await page.locator('#arenaMenu').isVisible(),false);
+    assert.equal(await page.locator('#overlay').evaluate(el=>getComputedStyle(el).transitionDuration),'0s');
+    await page.screenshot({path:out+'/connecting-'+size.width+'.png'});await page.evaluate(()=>showLobby());
   }
   await page.setViewportSize({width:1440,height:900});
   await page.evaluate(()=>{document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=0));document.querySelectorAll('#heroLayer-purple .hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=6100));});
