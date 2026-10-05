@@ -60,7 +60,9 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
   await page.evaluate(()=>document.body.classList.remove('hero-suspended'));assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'running');
   for(const size of [{width:1440,height:900},{width:390,height:844},{width:844,height:390}]){
     await page.setViewportSize(size);await page.evaluate(()=>showRoomForm('', 'join'));
-    assert.equal(await page.locator('#arenaMenu').isVisible(),false);
+    assert.equal(await page.locator('#arenaMenu').isVisible(),false);assert.equal(await page.locator('.intro').isVisible(),false);
+    const form=await page.locator('#overlay .dialog').boundingBox();assert(form&&form.x>=0&&form.y>=0&&form.x+form.width<=size.width+1&&form.y+form.height<=size.height+1,'join form fits '+size.width);
+    assert.equal(await page.locator('.page').evaluate(el=>getComputedStyle(el).opacity),'1');
     await page.screenshot({path:out+'/join-arena-'+size.width+'.png',fullPage:true});await page.evaluate(()=>showLobby());
   }
   await page.setViewportSize({width:1440,height:900});

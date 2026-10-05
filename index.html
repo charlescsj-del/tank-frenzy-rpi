@@ -779,7 +779,10 @@ input,textarea,[contenteditable=true],.game input,.game textarea,.game [contente
 /* Friend arenas use the same forest/cream treatment as Quick Play. */
 body:has(.game.room-form-open),body:has(.game.waiting-room){background:#193f35;color:#365743;min-height:100dvh}
 .game.room-form-open,.game.waiting-room{background:#193f35;border:0;box-shadow:none;border-radius:0;padding:0}
-.game.room-form-open .arena-header,.game.waiting-room .arena-header{display:none!important}
+.game.room-form-open .arena-header,.game.waiting-room .arena-header,.game.waiting-room .battlebar{display:none!important}
+.in-room-form .page{display:flex;flex-direction:column;width:100%;max-width:none;height:100dvh;min-height:0;padding:0;gap:0;animation:none}
+.in-room-form .intro,.in-room-form .masthead{display:none}.in-room-form .game{display:flex;flex:1;min-height:0;margin:0}
+.game.room-form-open .stage{display:flex;flex:1;min-height:0}.game.room-form-open .overlay{display:flex;flex:1;align-items:center;justify-content:center;min-height:0;overflow:hidden}
 .game.room-form-open .overlay,.game.waiting-room .waiting-panel{background:linear-gradient(#173f35dc,#173f35ed),url('./hero-quarry.webp') center/cover;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
 .game.room-form-open .dialog,.game.waiting-room .waiting-panel .dialog{background:#fff9ea;color:#365743;border:1px solid #d7dfc5;border-radius:24px;box-shadow:0 16px 48px #0b241955;padding:24px;max-height:100%;overflow:auto}
 .game.waiting-room .waiting-panel{position:absolute;inset:0;min-height:0;display:grid;grid-template-rows:minmax(0,1fr);place-items:center;overflow:hidden}.game.waiting-room .waiting-panel .dialog{min-height:0}.game.waiting-room #waitingTitle{font-size:clamp(20px,3vw,28px);overflow-wrap:anywhere}

@@ -2,6 +2,11 @@
 
 Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. Dates use the earliest release or import commit available in this repository, shown in the Asia/Kuala_Lumpur time zone. For v1.1.0–v1.3.2, the original game release commits are unavailable here, so 2026-09-23 is the archive import date, not a claimed release date. The v1.5.0 notes first appear in the 2026-09-24 import of v1.6.0. The 19.x builds were originally distributed under those numbers; their entries below are relabeled as consecutive 1.19.x versions for a consistent history. Git history retains the original package numbers.
 
+## v3.2.4 [2026-10-05]
+
+- Centre the Join arena card in a full-height layout on desktop as well as touch devices; remove leftover home artwork during setup.
+- Hide the old bottom status strip in friend waiting rooms, completing the edge-to-edge forest background.
+
 ## v3.2.3 [2026-10-05]
 
 - Give player names a full row in phone friend-arena cards, keeping the tank and team-switch control above the text.

@@ -97,7 +97,7 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   await touch.evaluate(async()=>{if(document.fullscreenElement)await document.exitFullscreen();setExpanded(true);});
   for(const [width,height] of [[390,780],[844,390]]){
     await touch.setViewportSize({width,height});
-    assert.equal(await touch.locator('#arenaMenu').isVisible(),false);assert(await touch.locator('#waitingBack').isVisible());
+    assert.equal(await touch.locator('.battlebar').isVisible(),false);assert.equal(await touch.locator('#arenaMenu').isVisible(),false);assert(await touch.locator('#waitingBack').isVisible());
     const form=await touch.evaluate(()=>({scroll:document.documentElement.scrollHeight,viewport:innerHeight,lobby:$('waitingRoom').querySelector('.dialog').getBoundingClientRect().bottom,start:$('startGame').getBoundingClientRect().bottom}));
     assert(form.scroll<=form.viewport+2&&form.lobby<=form.viewport&&form.start<=form.viewport,'one-tap creation opens a usable lobby at '+width+'×'+height+': '+JSON.stringify(form));
     await touch.screenshot({path:out+'/create-arena-'+width+'.png'});
