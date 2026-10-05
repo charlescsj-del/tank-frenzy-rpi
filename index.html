@@ -778,7 +778,7 @@ input,textarea,[contenteditable=true],.game input,.game textarea,.game [contente
 .rematch-closed .results-actions{grid-template-columns:1fr 1fr}.rematch-closed #resultsLobby{font-size:14px}
 /* Friend arenas use the same forest/cream treatment as Quick Play. */
 body:has(.game.room-form-open),body:has(.game.waiting-room){background:#193f35;color:#365743;min-height:100dvh}
-.game.room-form-open,.game.waiting-room{background:#193f35;border:0;box-shadow:none;border-radius:0}
+.game.room-form-open,.game.waiting-room{background:#193f35;border:0;box-shadow:none;border-radius:0;padding:0}
 .game.room-form-open .arena-header,.game.waiting-room .arena-header{display:none!important}
 .game.room-form-open .overlay,.game.waiting-room .waiting-panel{background:linear-gradient(#173f35dc,#173f35ed),url('./hero-quarry.webp') center/cover;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
 .game.room-form-open .dialog,.game.waiting-room .waiting-panel .dialog{background:#fff9ea;color:#365743;border:1px solid #d7dfc5;border-radius:24px;box-shadow:0 16px 48px #0b241955;padding:24px;max-height:100%;overflow:auto}
@@ -788,6 +788,7 @@ body:has(.game.room-form-open),body:has(.game.waiting-room){background:#193f35;c
 .game.room-form-open .primary,.game.waiting-room .primary{background:linear-gradient(#ffba43,#f79335);color:#493b22;border:0;border-radius:14px;box-shadow:0 4px 0 #b66b2d;min-height:48px}
 .game.waiting-room #waitingPlayers{gap:10px}.game.waiting-room #waitingPlayers li{padding:12px}.game.waiting-room .friend-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:14px}.game.waiting-room .lobby-rules{text-align:left;border-top:1px solid #d4ddc3;padding-top:14px;margin-top:18px}.game.waiting-room .lobby-rules summary{font-size:16px}
 .country-flag{display:inline-block;width:24px;height:18px;object-fit:cover;vertical-align:middle;margin-left:6px;border-radius:2px;box-shadow:0 0 0 1px #263e3826}
+@media(max-width:640px){.game.waiting-room #waitingPlayers li{display:grid;grid-template-columns:minmax(0,1fr) 36px;gap:6px;align-content:start}.game.waiting-room #waitingPlayers li>.tank-portrait{grid-column:1;grid-row:1}.game.waiting-room #waitingPlayers li>span:not(.tank-portrait){grid-column:1/-1;grid-row:2;min-width:0}.game.waiting-room #waitingPlayers .team-swap{grid-column:2;grid-row:1;width:36px;min-height:36px}.game.waiting-room #waitingPlayers strong{font-size:13px}.game.waiting-room #waitingPlayers small{font-size:11px}}
 @media(orientation:landscape) and (max-height:500px){.game.room-form-open .dialog,.game.waiting-room .waiting-panel .dialog{padding:12px 18px}.game.waiting-room .waiting-panel .dialog{max-height:100%}.game.waiting-room #waitingPlayers li{padding:6px}.game.waiting-room .friend-actions{margin-top:6px}}
 </style>
 </head>
