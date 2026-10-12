@@ -799,6 +799,8 @@ html,body{background:#193f35}.page{animation:none}.game,.stage{background-color:
 .game.network-open .arena-header,.game.network-open .battlebar{display:none!important}
 .game.network-open .overlay{position:fixed;inset:0;z-index:1050;display:grid;place-items:center;opacity:1;visibility:visible;background:linear-gradient(#173f35dc,#173f35ed),url('./hero-quarry.webp') center/cover;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
 .game.network-open .dialog{width:min(520px,100%);max-height:100%;overflow:auto;background:#fff9ea;color:#365743;border:1px solid #d7dfc5;border-radius:24px;padding:24px;box-shadow:0 16px 48px #0b241955}
+/* Reserve a HUD row for power-ups instead of layering them over the win counter. */
+.game.battle-field #powerStatus{position:relative;top:auto;left:auto;grid-column:1/-1;grid-row:3;justify-self:start;max-width:100%;margin-top:3px}
 </style>
 </head>
 <body class="in-lobby">
@@ -861,6 +863,7 @@ html,body{background:#193f35}.page{animation:none}.game,.stage{background-color:
 <p id="viewNote" role="status"></p>
 <div id="roster" class="scoreboard"><span class="room-empty">Join an arena to claim your tank.</span></div>
 <div id="battleHud" class="battle-hud" aria-label="Live battle scores" hidden><div id="battleProgress" class="battle-progress"></div><div id="battleOpponents" class="battle-opponents"></div></div>
+<div id="powerStatus" role="img" aria-label="Active power-up" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><use id="powerGlyph" href="#power-speed" x="0" y="0" width="32" height="32"/></svg><span id="powerTime" aria-hidden="true"></span><span class="power-track" aria-hidden="true"><span id="powerMeter"></span></span></div>
 </div>
 <div class="stage">
 <section id="matchmaking" class="matchmaking-screen" aria-labelledby="matchmakingTitle" hidden><div class="matchmaking-card"><p class="eyebrow">SMALL TANKS. BIG RIVALRIES.</p><h2 id="matchmakingTitle">Finding opponents</h2><span class="matchmaking-vs" aria-hidden="true">VS</span><div id="matchmakingPlayers" class="matchmaking-players"></div><strong id="matchmakingTime" class="matchmaking-time" role="status"></strong><p id="matchmakingNote"></p><div class="matchmaking-actions"><button id="readyButton" class="primary" type="button" hidden>READY — START SOONER</button><button id="cancelMatchmaking" class="tool" type="button">CANCEL</button></div></div></section>
@@ -877,7 +880,6 @@ html,body{background:#193f35}.page{animation:none}.game,.stage{background-color:
 <canvas id="game" width="1120" height="610" tabindex="0" aria-label="Tank arena. Use W A S D to move, point the mouse to aim, and hold left click to fire."></canvas>
 <div id="respawn" role="status" aria-live="polite"></div>
 <ol id="killFeed" class="kill-feed" aria-label="Recent kills"></ol><div id="streakBanner" class="streak-banner" role="status" aria-live="polite" hidden></div>
-<div id="powerStatus" role="img" aria-label="Active power-up" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><use id="powerGlyph" href="#power-speed" x="0" y="0" width="32" height="32"/></svg><span id="powerTime" aria-hidden="true"></span><span class="power-track" aria-hidden="true"><span id="powerMeter"></span></span></div>
 <div id="thumbControls" class="thumb-controls" hidden>
 <div id="moveZone" class="thumb-control" role="group" aria-label="Move: drag anywhere on the left half"><div id="moveStick" class="thumb-pad" aria-hidden="true"><span></span></div><span class="thumb-label">MOVE</span></div>
 <div id="aimZone" class="thumb-control" role="group" aria-label="Aim and fire: drag anywhere on the right half, release to stop firing"><div id="aimStick" class="thumb-pad" aria-hidden="true"><span></span></div><span class="thumb-label">AIM + FIRE</span></div>

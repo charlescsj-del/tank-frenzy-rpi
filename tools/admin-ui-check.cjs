@@ -151,6 +151,24 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/adm
   assert(await touch.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'landscape battle HUD fits the viewport');
   assert(await touch.evaluate(()=>document.querySelector('.stage').getBoundingClientRect().top<document.querySelector('#arenaHeader').getBoundingClientRect().bottom-20),'landscape map extends behind the HUD');
   await touch.screenshot({path:out+'/team-close-view-landscape.png',fullPage:true});
+  // Powers must reserve space below the scores, including small touch screens.
+  const desktopPower=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});
+  desktopPower.on('pageerror',e=>errors.push(e.message));await desktopPower.goto(base+'/');
+  for(const [powerPage,sizes]of [[desktopPower,[[1440,900],[1024,600]]],[touch,[[390,780],[320,568],[844,390]]]]){
+    for(const [width,height]of sizes){
+      await powerPage.setViewportSize({width,height});
+      for(const mode of ['ffa','teams'])for(const power of ['laser','double','speed','machine','immortal']){
+        await powerPage.evaluate(({state,mode,power})=>{joined=true;myId='me';spectating=false;roomCode='QUARRY';$('overlay').classList.add('hidden');$('arena').classList.remove('lobby-open');document.body.classList.remove('in-lobby');setExpanded(true);state.settings.mode=mode;state.players[0].power=power;state.players[0].powerRemaining=9.2;applySnapshot(state);resize();draw();},{state:combat,mode,power});
+        assert(await powerPage.locator('#powerStatus').isVisible());assert.equal(await powerPage.locator('#powerTime').textContent(),'10s');
+        assert.equal(await powerPage.locator('#powerGlyph').getAttribute('href'),'#power-'+power);
+        const geometry=await powerPage.evaluate(()=>{const power=$('powerStatus').getBoundingClientRect();const ids=['battleProgress','battleOpponents','roster','arenaMenu'];return {inside:power.left>=0&&power.top>=0&&power.right<=innerWidth&&power.bottom<=innerHeight,overlap:ids.filter(id=>{const r=$(id).getBoundingClientRect();return power.left<r.right&&power.right>r.left&&power.top<r.bottom&&power.bottom>r.top;}),below:power.top>=$('battleOpponents').getBoundingClientRect().bottom+3,meter:$('powerMeter').parentElement.getBoundingClientRect().bottom<=power.bottom};});
+        assert(geometry.inside&&geometry.below&&geometry.meter&&!geometry.overlap.length,'power remains clear at '+width+'×'+height+' '+mode+' '+power+': '+JSON.stringify(geometry));
+      }
+      await powerPage.screenshot({path:out+'/power-hud-'+width+'.png'});
+      await powerPage.evaluate(()=>{latest.players.find(p=>p.id===myId).powerRemaining=0;updateHud(latest);});assert.equal(await powerPage.locator('#powerStatus').isVisible(),false);
+    }
+  }
+  await desktopPower.close();
   await touch.evaluate(state=>{state.phase='results';state.winner={id:'me',team:0,name:'Orange team'};state.teamScores=[10,6];state.rematchIn=15;state.rematchNeeded=3;applySnapshot(state);draw();},{...combat});
   assert.equal(await touch.locator('#battleHud').isVisible(),false,'opponent health disappears after the match');
   const resultsFrame=await touch.evaluate(()=>({arena:$('arena').getBoundingClientRect(),stage:document.querySelector('.stage').getBoundingClientRect(),header:$('arenaHeader').getBoundingClientRect(),viewport:innerHeight,scroll:document.documentElement.scrollHeight}));
