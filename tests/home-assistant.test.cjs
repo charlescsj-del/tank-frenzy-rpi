@@ -50,6 +50,10 @@ test('ingress serves prefix-safe assets and shares live multiplayer rooms with L
   assert.equal((await fetch(base+'/addon.cjs')).status,404);
   assert.equal((await fetch(base+'/config.yaml')).status,404);
   // HA's public Origin differs from the internal Host on this authenticated listener.
+  const progressResponse=await fetch(ingress+'/progress',{method:'POST',headers:{Origin:'https://ha.example','X-Tank-Player':'1','Content-Type':'application/json'},body:JSON.stringify({action:'load'})});
+  assert.equal(progressResponse.status,200,'trusted ingress accepts the public HA origin for progress');
+  const progress=await progressResponse.json();assert.equal(progress.progress.coins,0);assert.match(progress.profile.secret,/^[a-f0-9]{48}$/);
+  assert.equal((await fetch(base+'/progress',{method:'POST',headers:{Origin:'https://ha.example','X-Tank-Player':'1','Content-Type':'application/json'},body:JSON.stringify({action:'load'})})).status,403,'untrusted direct requests cannot use the ingress exemption');
   const owner=await connect(ingress,{origin:'https://ha.example'});
   const welcome=once(owner,'message');owner.send(JSON.stringify({type:'join',room:'PITEST',mode:'create',name:'Owner'}));
   assert.equal(JSON.parse((await welcome)[0]).type,'welcome');

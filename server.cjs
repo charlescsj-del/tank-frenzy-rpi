@@ -189,7 +189,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
     res.setHeader('Content-Type','application/json');
     const fail=(status,message)=>{res.writeHead(status);res.end(JSON.stringify({error:message}));};
     if(req.method!=='POST'||req.headers['x-tank-player']!=='1'){fail(405,'Use the player menu.');return;}
-    if(req.headers.origin){try{if(new URL(req.headers.origin).host!==req.headers.host){fail(403,'Invalid origin.');return;}}catch{fail(403,'Invalid origin.');return;}}
+    if(!req[ingressRequest]&&req.headers.origin){try{if(new URL(req.headers.origin).host!==req.headers.host){fail(403,'Invalid origin.');return;}}catch{fail(403,'Invalid origin.');return;}}
     const visitor=visitorOf(req),now=Date.now(),bucket=playerRequests.get(visitor);
     if(!bucket||now-bucket.since>60000){for(const [key,b]of playerRequests)if(now-b.since>60000)playerRequests.delete(key);if(playerRequests.size>=4096&&!bucket){fail(429,'Please try again shortly.');return;}playerRequests.set(visitor,{since:now,count:1});}
     else if(++bucket.count>120){fail(429,'Please wait a moment before trying again.');return;}
