@@ -137,7 +137,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
     }
     if(url.pathname==='/rooms'){
       const available=[...rooms.values()].filter(room=>room.players.size>0&&!room.private&&!room.quick).map(room=>({
-        code:room.code,capacity:maxPlayers,available:room.phase==='postgame'?0:maxPlayers-room.humans().length,settings:room.settings,phase:room.phase,
+        code:room.code,capacity:maxPlayers,available:room.phase==='postgame'?0:maxPlayers-room.players.size,settings:room.settings,phase:room.phase,
         players:[...room.players.values()].map(({name,slot,connected,team,bot})=>({name,slot,connected,team,bot}))
       })).sort((a,b)=>a.code.localeCompare(b.code));
       res.setHeader('Content-Type','application/json');res.end(JSON.stringify({rooms:available}));return;
@@ -237,9 +237,9 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
             if(msg.type==='quick')room.configureQuick(quickSearchSeconds,quickReadySeconds);rooms.set(code,room);
           }
           const room=rooms.get(code);const name=typeof msg.name==='string'?msg.name.replace(/[\x00-\x1f<>]/g,'').trim().slice(0,16):'';
-          if(room.quick&&msg.type!=='quick'){send(ws,{type:'error',message:'This Quick Play group is already assigned. Use Quick Play to find a new match.'});ws.close();return;}
+          if(room.quick&&msg.type!=='quick'&&(!['countdown','playing'].includes(room.phase)||room.players.size>=maxPlayers)){send(ws,{type:'error',message:'This Quick Play group has no open human seat. AI seats cannot be replaced. Use Quick Play to find a new match.'});ws.close();return;}
           if(room.phase==='postgame'){send(ws,{type:'error',message:'This match has ended and its rematch window closed. Choose another arena or create a new one.'});ws.close();return;}
-          const player=room.add(name);if(!player){send(ws,{type:'error',message:'Arena full (4 players). Choose another arena code.'});ws.close();return;}
+          const player=room.add(name);if(!player){send(ws,{type:'error',message:'Arena full (4 players). AI seats cannot be replaced. Join when a human leaves or choose another arena.'});ws.close();return;}
           player.profileId=profile.id;player.country=country;session={room,player,profile,token:randomBytes(24).toString('hex'),ws};sessions.set(session.token,session);
           if(created)try{onRoomCreated?.({code,name:player.name,mode:room.settings.mode,url:publicUrl?publicUrl+'/?room='+encodeURIComponent(code):''});}catch{/* Notifications never block play. */}
         }

@@ -64,6 +64,37 @@ test('expired reconnect credentials never create an unintended empty arena',()=>
   const s=server(),ws=s.join('EXPIRED',undefined,'Guest','bad-token');assert.equal(ws.messages.at(-1).code,'session_expired');assert.equal(s.game.rooms.size,0);
 });
 
+test('AI-filled friend rooms advertise full and retain bots through join/quit attempts',()=>{
+  const s=server(),host=s.join('LOCKED','create','Host'),guest=s.join('LOCKED','join','Guest'),room=s.game.rooms.get('LOCKED');
+  for(let i=0;i<2;i++)host.emit('message',JSON.stringify({type:'bot',action:'add'}));
+  const bots=[...room.players.values()].filter(p=>p.bot).map(p=>p.id);
+  assert.equal(s.list().body.rooms[0].available,0);assert.match(s.join('LOCKED','join').messages[0].message,/AI seats cannot be replaced/);
+  host.emit('message',JSON.stringify({type:'start'}));room.step(3);guest.close();
+  assert.equal(s.list().body.rooms[0].available,0);assert.match(s.join('LOCKED','join').messages[0].message,/full/);
+  const welcome=guest.messages.find(m=>m.type==='welcome'),back=s.join('LOCKED','join','Guest',welcome.token);
+  assert.equal(back.messages.find(m=>m.type==='welcome').id,welcome.id);
+  back.emit('message',JSON.stringify({type:'leave'}));assert.equal(s.list().body.rooms[0].available,1);
+  const replacement=s.join('LOCKED','join','Replacement');assert(replacement.messages.some(m=>m.type==='welcome'));
+  replacement.emit('message',JSON.stringify({type:'leave'}));assert.equal(s.list().body.rooms[0].available,1);assert(bots.every(id=>room.players.has(id)));assert.equal(room.players.size,3);
+});
+
+test('Quick Play invitations only fill a human vacancy after the lineup is locked',()=>{
+  for(const mode of ['ffa','teams']){
+    const s=server(),quick=()=>{const ws=s.connect();ws.emit('message',JSON.stringify({type:'quick',settings:{mode}}));return ws;};
+    const host=quick(),guest=quick(),welcome=guest.messages.find(m=>m.type==='welcome'),room=s.game.rooms.get(welcome.room);
+    room.step(12);const bots=[...room.players.values()].filter(p=>p.bot).map(p=>p.id);assert.equal(bots.length,2);
+    assert.match(s.join(room.code,'join').messages[0].message,/no open human seat/);
+    host.emit('message',JSON.stringify({type:'ready'}));guest.emit('message',JSON.stringify({type:'ready'}));room.step(3);
+    assert.match(s.join(room.code,'join').messages[0].message,/AI seats cannot be replaced/);
+    guest.close();assert.match(s.join(room.code,'join').messages[0].message,/no open human seat/);
+    const back=s.join(room.code,'join','Guest',welcome.token);assert(back.messages.some(m=>m.type==='welcome'));
+    back.emit('message',JSON.stringify({type:'leave'}));
+    const next=s.join(room.code,'join','Next');assert(next.messages.some(m=>m.type==='welcome'));assert.equal(room.players.size,4);
+    next.emit('message',JSON.stringify({type:'leave'}));assert.equal(room.players.size,3);assert(bots.every(id=>room.players.has(id)));
+    const queued=quick();assert.notEqual(queued.messages.find(m=>m.type==='welcome').room,room.code,'Quick Play still groups fresh arrivals, not mid-round replacements');
+  }
+});
+
 test('friends-only rooms accept invitations but stay out of the directory; only hosts edit rules',()=>{
   const s=server(),host=s.join('FRIENDS','create','Host'),guest=s.join('FRIENDS','join','Guest'),room=s.game.rooms.get('FRIENDS');
   guest.emit('message',JSON.stringify({type:'room',action:'rules',settings:{mode:'teams'},private:true}));assert.equal(room.settings.mode,'ffa');

@@ -70,8 +70,7 @@ class Room {
   }
   humans(){return [...this.players.values()].filter(p=>!p.bot);}
   add(name,{bot=false}={}){
-    // A human joining a full room takes the most recently added bot's place.
-    if(this.players.size>=F.maxPlayers&&!bot){const seat=[...this.players.values()].reverse().find(p=>p.bot);if(seat)this.players.delete(seat.id);}
+    // AI and reconnecting humans own their seats just like connected humans.
     if(this.players.size>=F.maxPlayers)return null;
     const slot=Array.from({length:F.maxPlayers},(_,i)=>i).find(i=>![...this.players.values()].some(p=>p.slot===i));
     const used=new Set([...this.players.values()].map(t=>t.name));const botName=Bots.botNames.find(n=>!used.has(n))||'Nova';

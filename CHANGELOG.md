@@ -2,6 +2,13 @@
 
 Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. Dates use the earliest release or import commit available in this repository, shown in the Asia/Kuala_Lumpur time zone. For v1.1.0–v1.3.2, the original game release commits are unavailable here, so 2026-09-23 is the archive import date, not a claimed release date. The v1.5.0 notes first appear in the 2026-09-24 import of v1.6.0. The 19.x builds were originally distributed under those numbers; their entries below are relabeled as consecutive 1.19.x versions for a consistent history. Git history retains the original package numbers.
 
+## v3.2.7 [2026-10-17]
+
+- New arrivals can no longer remove AI from a full arena. AI and reconnecting humans both count as occupied seats in the arena directory.
+- A human explicitly quitting opens their seat; temporary disconnects retain the existing reconnect grace period.
+- Direct Quick Play invitations may fill a human vacancy during countdown or play, without touching AI. The Quick Play queue continues to group fresh arrivals separately.
+- Regression coverage protects AI identities, full-room rejection, reconnect reservations and repeated human join/quit cycles in both game modes.
+
 ## v3.2.6 [2026-10-12]
 
 - Give the active power-up icon, timer and duration bar a dedicated HUD row below the score indicators so the win counter cannot cover them.

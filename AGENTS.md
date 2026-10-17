@@ -61,7 +61,7 @@ Phases: friend `waiting` → `countdown` (3 s) → `playing` → `results` (20 s
 
 ## Game rules that code depends on
 
-- The owner is a connected human in waiting/results/postgame; play clears ownership and returning to the lobby restores it. Bots cannot own, vote or keep rooms alive. Friend joins can replace bots. Host rule/team/bot edits clear readiness.
+- The owner is a connected human in waiting/results/postgame; play clears ownership and returning to the lobby restores it. Bots cannot own, vote or keep rooms alive. New joins never replace bots. Available seats count all tanks, including AI and reserved reconnecting humans. Quick Play invitations can fill a departed human seat during countdown/playing; the Quick Play queue still only groups searching rooms. Host rule/team/bot edits clear readiness.
 - Leaderboard: save synchronously through `room.onFinish` before a rematch can reset state, once per round UUID. Rank every completed round with at least one human. Preserve departed players via `matchPlayers`, retaining earned statistics without a win/completion when their round finishes. New profiles key by SHA-256 of a 24-byte guest secret, independent of display name; legacy entries key by case-folded name and remain separate. Schema-1 loads create an untouched `.legacy-v1.json` backup. Periods use UTC+8 with Monday weeks. Difficulty uses the strongest recent human plus group average, discounts easy AI rounds, starts beginners Easy and caps mixed beginner groups at Normal. Country is exclusively `CF-IPCountry`, excluding `XX` and `T1`.
 - Hidden spectators live in the server's `spectators` Map, never in `room.players`, so they never appear in counts, `/rooms` or snapshots. Watch passes are random hex, single room, 10-minute expiry; the client strips `?spectate=…&pass=…` from the address bar with `history.replaceState`.
 
@@ -71,7 +71,7 @@ Phases: friend `waiting` → `countdown` (3 s) → `playing` → `results` (20 s
 
 ## Tests
 
-`npm test` runs `node --test tests/*.test.cjs` (183 tests, about 10 seconds). CI also builds amd64/aarch64 containers and checks admin, hero and multiplayer UI. `tools/multiplayer-ui-check.cjs` exercises real HTTP/WebSocket grouping, Ready, results, shared reactions, ranks, privacy, QR invitations and direct invite joining at desktop, phone and landscape sizes. Playwright is a CI-only dependency. Browser check artifacts go under `artifacts/`; local tools may set `CHROMIUM_EXECUTABLE_PATH` and `ARTIFACT_DIR`.
+`npm test` runs `node --test tests/*.test.cjs` (186 tests, about 10 seconds). CI also builds amd64/aarch64 containers and checks admin, hero and multiplayer UI. `tools/multiplayer-ui-check.cjs` exercises real HTTP/WebSocket grouping, Ready, results, shared reactions, ranks, privacy, QR invitations and direct invite joining at desktop, phone and landscape sizes. Playwright is a CI-only dependency. Browser check artifacts go under `artifacts/`; local tools may set `CHROMIUM_EXECUTABLE_PATH` and `ARTIFACT_DIR`.
 
 Harness quirks:
 - `client.js` and `server.cjs` are loaded into `vm` sandboxes with hand-made fake DOM elements (children, `append`, `prepend`, `replaceChildren`, `classList`, events, `setAttribute`). They have no `querySelector`, `closest` or `dataset`; if new client code uses a browser API, add it to the fake (or guard the call), or the sandbox throws.
