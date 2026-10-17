@@ -8,7 +8,7 @@ const skills={
   normal:{think:.12,aimError:.09,fireCone:.18,reaction:.4,lead:.5,range:850},
   hard:{think:.07,aimError:.035,fireCone:.1,reaction:.18,lead:1,range:1000}
 };
-const botNames=['Rusty','Bolt','Dozer','Sprocket','Tread','Gizmo','Rivet','Piston'];
+const botNames=['CopperFox','MangoDash','BlueComet','DustRider','PixelPanda','SunnyAce','NovaDrift','MintRocket'];
 const angleGap=(a,b)=>Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)));
 
 // A shell-sized line from one tank to another that no wall interrupts.

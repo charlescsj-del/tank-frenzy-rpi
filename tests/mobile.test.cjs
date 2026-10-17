@@ -17,7 +17,7 @@ function client(mobile=true,url='http://localhost:8765'){
   const sandbox={URL,FIELD:require('../shared.js'),performance:{now:()=>clock},location:{href:url,origin:'http://localhost:8765'},
     document:{hidden:false,body:element(),createElement:element,getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},addEventListener(n,f){documentEvents[n]=f;}},
     window:{addEventListener(n,f){windowEvents[n]=f;}},matchMedia:q=>q.includes('pointer')?media:{matches:false},
-    ResizeObserver:class{observe(){}},devicePixelRatio:1,setInterval(fn,ms){intervals.set(ms,fn);},requestAnimationFrame(){},fetch:()=>new Promise(()=>{}),WebSocket:{OPEN:1},sent};
+    ResizeObserver:class{observe(){}},devicePixelRatio:1,setInterval(fn,ms){intervals.set(ms,fn);},setTimeout:()=>0,clearTimeout(){},history:{replaceState(){}},requestAnimationFrame(){},fetch:()=>new Promise(()=>{}),WebSocket:class{static OPEN=1;addEventListener(){}close(){}},sent};
   vm.createContext(sandbox);vm.runInContext(fs.readFileSync('client.js','utf8'),sandbox);
   const run=code=>vm.runInContext(code,sandbox);
   run("joined=true;myId='me';tanks=[{id:'me',x:100,y:100,aim:0}];socket={readyState:1,bufferedAmount:0,send:data=>sent.push(JSON.parse(data))};updateTouchControls();");
@@ -115,7 +115,7 @@ test('mode choice filters rooms and new room options default to enabled',()=>{
   const c=client();c.run('lobbyRooms=[{code:"SOLO",settings:{mode:"ffa"},players:[],capacity:4,available:4},{code:"TEAM",settings:{mode:"teams"},players:[],capacity:4,available:4}]');
   c.elements.get('teamMode').events.click();assert.equal(c.elements.get('roomList').children.length,1);
   assert.match(c.elements.get('roomList').children[0].children[0].children[0].textContent,/TEAM/);
-  c.elements.get('createRoom').events.click();assert.equal(c.elements.get('gameMode').value,'teams');
+  c.run('joined=false');c.elements.get('createRoom').events.click();assert.equal(c.elements.get('gameMode').value,'teams');
   assert.equal(c.elements.get('bounceOption').checked,true);assert.equal(c.elements.get('powersOption').checked,true);
 });
 
@@ -130,7 +130,7 @@ test('power HUD uses matching icons and time, replaces powers, and clears on dea
   c.run('hudPlayer.hp=0;updateHud(hudState)');assert.equal(badge.hidden,true);
   c.run("hudPlayer.hp=5;hudPlayer.power='speed';hudPlayer.powerRemaining=5;updateHud(hudState)");assert.equal(glyph.attributes.href,'#power-speed');assert.equal(badge.hidden,false);
   c.run('hudPlayer.powerRemaining=0;updateHud(hudState)');assert.equal(badge.hidden,true);
-  c.run("hudPlayer.power='immortal';hudPlayer.powerRemaining=10;updateHud(hudState)");assert.equal(glyph.attributes.href,'#power-immortal');assert.match(badge.attributes['aria-label'],/IMMORTAL/);
+  c.run("hudPlayer.power='immortal';hudPlayer.powerRemaining=10;updateHud(hudState)");assert.equal(glyph.attributes.href,'#power-immortal');assert.match(badge.attributes['aria-label'],/SHIELD/);
 });
 
 test('ten health fits five pips with half pips for single hits',()=>{
@@ -251,7 +251,7 @@ test('winner fills the arena, rematch vote is one-shot, and expiry does not rest
   assert.equal(c.elements.get('results').hidden,false);
   assert.equal(c.elements.get('resultsTitle').textContent,'Friend wins!');
   assert.equal(c.elements.get('resultsOutcome').textContent,'GOOD BATTLE!');
-  assert.equal(c.elements.get('resultsVotes').textContent,'0 / 2 votes needed for a rematch');
+  assert.equal(c.elements.get('resultsVotes').textContent,'0 / 2 ready to play again');
   assert.match(c.elements.get('resultsTimer').textContent,/20s/);
   assert.equal(c.elements.get('respawn').textContent,'');
   assert.equal(c.elements.get('thumbControls').hidden,true);
@@ -261,10 +261,25 @@ test('winner fills the arena, rematch vote is one-shot, and expiry does not rest
   c.run("latest.rematchVotes=['me'];updateRoomPhase(latest)");
   assert.equal(c.elements.get('rematch').textContent,'READY ✓');
   c.run("latest.phase='postgame';latest.rematchIn=0;updateRoomPhase(latest)");
-  assert.equal(c.elements.get('rematch').textContent,'REMATCH CLOSED');
+  assert.equal(c.elements.get('rematch').textContent,'ROUND FINISHED');
+  assert.equal(c.elements.get('rematch').hidden,true);assert.equal(c.elements.get('results').hidden,false);assert.equal(c.elements.get('waitingRoom').hidden,true);assert.equal(c.elements.get('resultsLobby').hidden,false);assert.match(c.elements.get('resultsTimer').textContent,/Find a new match/);
   const sent=c.sent.length;c.elements.get('rematch').events.click();assert.equal(c.sent.length,sent);
   c.run("latest.phase='countdown';latest.winner=null;latest.countdownIn=3;updateRoomPhase(latest)");
   assert.equal(c.elements.get('results').hidden,true);
+});
+
+test('Quick Play lineup is silent; countdown ticks play only after entering the field',()=>{
+  const c=client();c.run(`var cues=[];playCue=kind=>cues.push(kind);joined=true;myId='me';latest={map:{id:32},phase:'ready',readyIn:5,readyIds:[],settings:{mode:'ffa'},players:[{id:'me',slot:0,name:'Scout',connected:true,hp:10}]};updateRoomPhase(latest);updateMatchSounds(latest)`);
+  assert.equal(c.elements.get('matchmakingTime').textContent,'5');assert.equal(c.elements.get('matchmaking').classList.contains('is-ready'),true);assert.equal(c.run('cues.length'),0);
+  c.run('latest.readyIn=2.9;updateRoomPhase(latest);updateMatchSounds(latest);updateMatchSounds(latest)');
+  assert.equal(c.elements.get('matchmakingTime').textContent,'3');assert.equal(c.run('cues.length'),0);
+  c.run('latest.readyIn=1.9;updateMatchSounds(latest);latest.readyIn=.9;updateMatchSounds(latest)');
+  assert.equal(c.run('cues.length'),0);
+  c.run("latest.phase='countdown';latest.countdownIn=3;updateRoomPhase(latest);updateMatchSounds(latest);updateMatchSounds(latest)");
+  assert.equal(c.elements.get('matchmaking').hidden,true);assert.equal(c.elements.get('countdown').hidden,false);assert.equal(c.elements.get('countdownNumber').textContent,'3');
+  c.run('latest.countdownIn=2;updateMatchSounds(latest);latest.countdownIn=1;updateMatchSounds(latest)');
+  c.run("latest.phase='playing';updateRoomPhase(latest);updateMatchSounds(latest);updateMatchSounds(latest)");
+  assert.equal(c.elements.get('matchmaking').hidden,true);assert.equal(c.elements.get('countdown').hidden,true);assert.equal(c.run('cues.join()'),'countdown3,countdown2,countdown1,start');
 });
 
 test('countdown sounds once per number, start is distinct, and music/effects switches operate independently',()=>{
@@ -282,16 +297,16 @@ test('countdown sounds once per number, start is distinct, and music/effects swi
   c.run("joined=true;latest={phase:'playing'}");c.elements.get('music').events.click();assert.equal(c.run('musicEvents.at(-1)'),'battle');
   c.run('document.hidden=true');c.documentEvents.visibilitychange();assert.equal(c.run('musicEvents.at(-1)'),'stop');
   c.run('document.hidden=false');c.documentEvents.visibilitychange();assert.equal(c.run('musicEvents.at(-1)'),'battle');
-  c.run("latest={phase:'countdown',map:{id:77},players:[]};updateRoomPhase(latest)");assert.equal(c.run('musicEvents.at(-2)'),'lobby');assert.equal(c.run('musicEvents.at(-1)'),'preload::77');
+  c.run("latest={phase:'countdown',map:{id:77},players:[]};updateRoomPhase(latest)");assert.equal(c.run('musicEvents.at(-1)'),'battle');
   c.run("musicPlayer.play=(mode,key)=>musicEvents.push(mode+':'+key);roomCode='BATTLE';latest.phase='playing';updateRoomPhase(latest)");
   assert.equal(c.run('musicEvents.at(-1)'),'battle:BATTLE:77');
 });
 
-test('plain URLs open the room browser while room links keep the prefilled join form',()=>{
+test('plain URLs open the room browser while invitation links join automatically',()=>{
   const plain=client();assert.equal(plain.elements.get('roomBrowser').hidden,false);assert.equal(plain.elements.get('joinFields').hidden,true);
   const linked=client(false,'http://localhost:8765/?room=quarry');
   assert.equal(linked.elements.get('roomBrowser').hidden,true);assert.equal(linked.elements.get('roomInput').value,'QUARRY');
-  assert.equal(linked.elements.get('joinFields').hidden,false);
+  assert.equal(linked.elements.get('joinFields').hidden,true);assert.equal(linked.run('connecting'),true);
 });
 
 function lobbyClient(){
@@ -301,23 +316,42 @@ function lobbyClient(){
   return {c,sockets,rooms};
 }
 
-test('rooms list players inline with a one-tap Join; the saved name is shared; create opens the editable form',async()=>{
+test('rooms list players inline with one-tap Join and Create, sharing the saved name',async()=>{
   const {c,sockets,rooms}=lobbyClient();
   rooms([{code:'ALPHA',capacity:4,available:2,phase:'waiting',players:[{name:'Alice',connected:true},{name:'Bob',connected:false}]}]);
   await c.run('refreshRooms()');
   const [info,join]=c.elements.get('roomList').children[0].children;
   assert.equal(info.children[1].textContent,'Alice, Bob · reconnecting');assert.equal(join.textContent,'JOIN');
-  c.elements.get('lobbyName').value='Zed';c.elements.get('lobbyName').events.input();assert.equal(c.elements.get('callsign').value,'Zed');
+  c.elements.get('profileButton').events.click();c.elements.get('lobbyName').value='Zed';c.elements.get('profileForm').events.submit({preventDefault(){}});assert.equal(c.elements.get('callsign').value,'Zed');
   join.events.click();
   assert.equal(c.run('joinMode'),'join');assert.equal(c.elements.get('roomInput').value,'ALPHA');assert.equal(sockets.length,1,'joins straight away');
   c.run('connecting=false');c.elements.get('createRoom').events.click();
   assert.equal(c.run('joinMode'),'create');assert.equal(c.elements.get('roomInput').readOnly,false);assert.match(c.elements.get('roomInput').value,/^ARENA-/);
   assert.equal(c.elements.get('callsign').value,'Zed');
-  assert(c.sandbox.document.body.classList.contains('in-room-form'));assert(c.elements.get('arena').classList.contains('room-form-open'));
+  assert.equal(sockets.length,2,'Create connects immediately');assert.equal(c.sandbox.document.body.classList.contains('in-room-form'),false);
   c.elements.get('browseRooms').events.click();
   assert.equal(c.sandbox.document.body.classList.contains('in-room-form'),false);
   assert.equal(c.elements.get('arena').classList.contains('room-form-open'),false);
   assert.equal(c.elements.get('roomBrowser').hidden,false);
+});
+
+test('profile editor saves a name without changing identity and Back cancels the draft',()=>{
+  const c=client();c.run("rememberName('Mango');profileId='same-profile'");
+  c.elements.get('profileButton').events.click();assert.equal(c.elements.get('profileDialog').hidden,false);
+  c.elements.get('lobbyName').value='Draft';c.elements.get('closeProfile').events.click();assert.equal(c.elements.get('callsign').value,'Mango');
+  c.elements.get('profileButton').events.click();c.elements.get('lobbyName').value='   ';c.elements.get('profileForm').events.submit({preventDefault(){}});assert.equal(c.elements.get('profileDialog').hidden,false);
+  c.elements.get('lobbyName').value='  Blue Scout  ';c.elements.get('profileForm').events.submit({preventDefault(){}});
+  assert.equal(c.elements.get('callsign').value,'Blue Scout');assert.equal(c.run('profileId'),'same-profile');assert.equal(c.elements.get('profileDialog').hidden,true);
+});
+
+test('game gestures clear selection and block text dragging while inputs remain editable',()=>{
+  const c=client();let cleared=0,blocked=0;c.sandbox.document.getSelection=()=>({removeAllRanges(){cleared++;}});
+  c.run("latest={phase:'playing'}");c.elements.get('moveStick').events.pointerdown(c.event(1,82,50));assert.equal(cleared,1);
+  for(const type of ['selectstart','dragstart']){
+    c.documentEvents[type]({target:{closest:()=>null},preventDefault(){blocked++;}});
+    c.documentEvents[type]({target:{closest:()=>({})},preventDefault(){throw Error('must allow input editing');}});
+  }
+  assert.equal(blocked,2);c.elements.get('moveStick').events.pointerup(c.event(1));assert.equal(c.sent.at(-1).x,0);
 });
 
 test('creator sends the selected win target while quick play starts at ten',()=>{
@@ -345,20 +379,17 @@ test('full and ended rooms cannot be joined; empty lists and request failures ex
   const [full,done]=c.elements.get('roomList').children.map(row=>row.children[1]);
   assert.deepEqual([full.textContent,full.disabled,done.textContent,done.disabled],['FULL',true,'ENDED',true]);
   rooms([]);await c.run('refreshRooms()');
-  assert.equal(c.elements.get('roomList').children.length,0);assert.match(c.elements.get('roomListStatus').textContent,/Quick Play creates one/);
+  assert.equal(c.elements.get('roomList').children.length,0);assert.equal(c.elements.get('publicArenas').hidden,true);
   c.sandbox.fetch=async()=>{throw Error('offline');};await c.run('refreshRooms()');
-  assert.match(c.elements.get('roomListStatus').textContent,/Tap Refresh/);
+  assert.match(c.elements.get('roomListStatus').textContent,/Tap refresh/);assert.equal(c.elements.get('publicArenas').hidden,false);
 });
 
-test('Quick Play joins the best open room in the chosen mode, or creates one',async()=>{
+test('Quick Play requests matchmaking directly without selecting an existing arena',async()=>{
   const {c,sockets,rooms}=lobbyClient();
   rooms([{code:'BUSY',phase:'playing',available:1,capacity:4,settings:{mode:'ffa'},players:[]},{code:'WAIT',phase:'waiting',available:3,capacity:4,settings:{mode:'ffa'},players:[]},
     {code:'VOTE',phase:'results',available:2,capacity:4,settings:{mode:'ffa'},players:[]},{code:'TEAM',phase:'waiting',available:3,capacity:4,settings:{mode:'teams'},players:[]}]);
-  await c.run('quickPlay()');assert.equal(c.run('joinMode'),'join');assert.equal(c.elements.get('roomInput').value,'WAIT');
-  c.run('connecting=false');rooms([{code:'BUSY',phase:'playing',available:1,capacity:4,settings:{mode:'ffa'},players:[]}]);
-  await c.run('quickPlay()');assert.equal(c.elements.get('roomInput').value,'BUSY');
-  c.run('connecting=false');rooms([]);await c.run('quickPlay()');
-  assert.equal(c.run('joinMode'),'create');assert.match(c.elements.get('roomInput').value,/^ARENA-/);assert.equal(sockets.length,3);
+  await c.run('quickPlay()');assert.equal(c.run('joinMode'),'quick');assert.equal(c.elements.get('roomInput').value,'');assert.equal(c.run('quickRequested'),true);
+  await c.run('quickPlay()');assert.equal(sockets.length,1,'double tap cannot create another connection');
 });
 
 test('mobile play uses a compact viewport and restores the page on leaving or switching input',()=>{
@@ -391,9 +422,10 @@ test('mobile menu releases controls and closes on action, outside tap, Escape an
   assert.equal(arena.classList.contains('menu-open'),false);
 });
 
-test('mobile camera enlarges tanks, follows them, and keeps every corner visible',()=>{
-  const c=client();
-  for(const [width,height] of [[874,290],[390,620],[667,240],[320,430]]){
+test('mobile and PC cameras centre the tank at every corner, including respawn',()=>{
+ for(const mobile of [true,false]){
+  const c=client(mobile);assert.equal(c.run('mapOverview'),!mobile);c.run('mapOverview=false');
+  for(const [width,height] of [[1440,900],[874,290],[390,620],[667,240],[320,430]]){
     c.run(`cssW=${width};cssH=${height};tanks[0].x=800;tanks[0].y=520;updateCamera()`);
     assert(c.run('48*boardScale*scale')>=33.59,'tank width stays readable in CSS pixels');
     assert.equal(c.run('project(tanks[0].x,tanks[0].y).x*scale+offsetX'),width/2);
@@ -404,10 +436,11 @@ test('mobile camera enlarges tanks, follows them, and keeps every corner visible
       c.run(`tanks[0].x=${x};tanks[0].y=${y};updateCamera()`);
       const screenX=c.run('project(tanks[0].x,tanks[0].y).x*scale+offsetX');
       const screenY=c.run('project(tanks[0].x,tanks[0].y).y*scale+offsetY');
-      assert(screenX>=17.99&&screenX<=width-17.99);
-      assert(screenY>=17.99&&screenY<=height-17.99,'the camera uses map area at every edge while keeping the tank visible');
+      assert(Math.abs(screenX-width/2)<.001);
+      assert(Math.abs(screenY-height/2)<.001,'the tank stays centred even at the map edge');
     }
   }
+ }
 });
 
 test('overview fits the whole board and toggles back without changing touch aim',()=>{
@@ -447,8 +480,8 @@ test('close-view arrows identify off-screen allies and enemies and disappear out
   c.run('mapOverview=false;latest.phase="results"');assert.equal(c.run('enemyMarkers().length'),0);
   c.run('latest.phase="playing";tanks[0].hp=0');assert.equal(c.run('enemyMarkers().length'),0);
   c.run('tanks[0].hp=10;spectating=true');assert.equal(c.run('enemyMarkers().length'),0);
-  const desktop=client(false);desktop.run("latest={phase:'playing',settings:{mode:'ffa'}};tanks.push({id:'foe',x:1500,y:500,hp:10});updateCamera()");
-  assert.equal(desktop.run('enemyMarkers().length'),0);
+  const desktop=client(false);desktop.run("mapOverview=false;latest={phase:'playing',settings:{mode:'ffa'}};tanks.push({id:'foe',x:1500,y:500,hp:10});updateCamera()");
+  assert.equal(desktop.run('enemyMarkers().length'),1,'desktop close view also identifies off-screen opponents');
 });
 
 test('two-player and free-for-all off-screen opponents each receive a marker',()=>{
@@ -457,11 +490,15 @@ test('two-player and free-for-all off-screen opponents each receive a marker',()
   c.run('tanks[1].x=820');assert.equal(c.run('enemyMarkers().length'),0);
 });
 
-test('desktop camera and mouse unprojection remain unchanged',()=>{
+test('desktop following camera keeps the mouse aim under the cursor while moving',()=>{
   const c=client(false);c.run('cssW=1120;cssH=610;updateCamera()');
-  assert.equal(c.run('scale'),1);assert.equal(c.run('offsetX'),0);assert.equal(c.run('offsetY'),0);
   c.run('aimAt({pointerType:"mouse",clientX:560,clientY:319})');
-  assert.equal(c.run('pointer.x'),800);assert.equal(c.run('pointer.y'),527.7);
+  for(const [x,y]of [[26,26],[800,520],[1574,1014]]){
+    c.run(`tanks[0].x=${x};tanks[0].y=${y};updateCamera()`);
+    assert(Math.abs(c.run('project(pointer.x,pointer.y,22).x*scale+offsetX')-560)<.001);
+    assert(Math.abs(c.run('project(pointer.x,pointer.y,22).y*scale+offsetY')-319)<.001);
+  }
+  c.run('joined=false;updateCamera()');assert.equal(c.run('scale'),1);assert.equal(c.run('offsetX'),0);assert.equal(c.run('offsetY'),0,'spectator presentation remains unchanged');
 });
 
 test('fullscreen enters/exits and unavailable or rejected requests use a reversible expanded view',async()=>{
@@ -562,7 +599,7 @@ test('kills appear in a short feed, streaks get a banner, and the result card sh
   c.run(`latest={phase:'results',winner:{id:'me',name:'Me'},rematchIn:15,rematchVotes:['b'],rematchNeeded:2,settings:{mode:'ffa'},players:${JSON.stringify(players)}};updateRoomPhase(latest)`);
   const rows=c.elements.get('resultsRows').children;
   assert.deepEqual(rows.map(r=>r.children.map(cell=>cell.textContent)),[['Me ★','3','1','45%'],['Bo','1','3','25%']].map(r=>r.map((v,i)=>i?Number.isNaN(+v)?v:+v:v)));
-  assert.equal(c.elements.get('resultsVotes').textContent,'1 / 2 votes needed for a rematch');
+  assert.equal(c.elements.get('resultsVotes').textContent,'1 / 2 ready to play again');
 });
 
 test('the match-end damage list opens on tap and closes for the next round',()=>{
@@ -574,10 +611,21 @@ test('the match-end damage list opens on tap and closes for the next round',()=>
   const toggle=c.elements.get('resultStatsToggle'),details=c.elements.get('resultDamage');
   assert.equal(details.hidden,true);assert.equal(toggle.attributes['aria-expanded'],'false');
   toggle.events.click();assert.equal(details.hidden,false);assert.equal(toggle.attributes['aria-expanded'],'true');
-  assert.deepEqual(c.elements.get('resultDamageRows').children.map(row=>row.children.map(cell=>String(cell.textContent))),[['Me ★','37'],['Bo','12']]);
+  assert.deepEqual(c.elements.get('resultDamageRows').children.map(row=>row.children.map(cell=>String(cell.textContent))),[['Me · YOU','10','1','40%','37'],['Bo','3','10','40%','12']]);
   toggle.events.click();assert.equal(details.hidden,true);
   toggle.events.click();c.run("latest.phase='countdown';updateRoomPhase(latest)");
   assert.equal(details.hidden,true);assert.equal(toggle.attributes['aria-expanded'],'false');
+});
+
+test('Match Details preserves fullscreen and completed statistics through a lobby return',()=>{
+  const c=client(),arena=c.elements.get('arena');c.sandbox.document.fullscreenElement=arena;
+  c.run("setExpanded(true);latest={room:'TEST',phase:'results',winner:{id:'me',name:'Me'},settings:{mode:'ffa'},players:[{id:'me',name:'Me',slot:0,connected:true,kills:10,deaths:2,damageDealt:45,shots:20,hits:12}],rematchVotes:[],rematchIn:1};updateRoomPhase(latest)");
+  c.elements.get('resultStatsToggle').events.click();assert.equal(c.elements.get('matchDetails').hidden,false);
+  const rows=JSON.stringify(c.elements.get('resultDamageRows').children.map(r=>r.children.map(t=>t.textContent)));
+  c.run("latest.phase='waiting';latest.winner=null;latest.players[0].kills=0;updateRoomPhase(latest)");
+  assert.equal(c.elements.get('matchDetails').hidden,false);assert.equal(JSON.stringify(c.elements.get('resultDamageRows').children.map(r=>r.children.map(t=>t.textContent))),rows);
+  assert.equal(c.sandbox.document.fullscreenElement,arena);assert.equal(c.run('expanded'),true);
+  c.windowEvents.keydown({code:'Escape',preventDefault(){},target:{}});assert.equal(c.elements.get('matchDetails').hidden,true);assert.equal(c.run('expanded'),true);
 });
 
 test('2 vs 2 results split players into Orange and Blue groups with team scores',()=>{
@@ -608,21 +656,41 @@ test('the room starter sees bot controls that send add, remove and skill command
   state([me,bot],'someone-else');assert.equal(c.elements.get('botControls').hidden,true);assert.match(c.elements.get('waitingMessage').textContent,/Bots: hard/);
 });
 
+test('Quick Play reveals a four-card group and sends ready or cancel without a form',()=>{
+  const c=client();c.run("latest={room:'QUICK',phase:'ready',settings:{mode:'teams'},readyIn:4,readyIds:[],players:[{id:'me',name:'Me',slot:0,team:0,connected:true},{id:'ai',name:'CopperFox',slot:1,team:1,bot:true,connected:true}]};updateRoomPhase(latest)");
+  assert.equal(c.elements.get('matchmaking').hidden,false);assert.equal(c.elements.get('matchmakingPlayers').children.length,4);assert.match(c.elements.get('matchmakingTime').textContent,/4/);
+  c.elements.get('readyButton').events.click();assert.equal(c.sent.at(-1).type,'ready');c.run('socket.close=()=>{}');c.elements.get('cancelMatchmaking').events.click();assert.equal(c.run('joined'),false);assert(c.sent.some(m=>m.type==='leave'));
+});
+
+test('network errors replace matchmaking instead of hiding underneath it',()=>{
+  const c=client();c.elements.get('matchmaking').hidden=false;c.elements.get('arena').classList.add('matchmaking-open');c.run("networkMessage('Connection lost','Trying again')");
+  assert.equal(c.elements.get('matchmaking').hidden,true);assert.equal(c.elements.get('arena').classList.contains('matchmaking-open'),false);assert.equal(c.elements.get('dialogTitle').textContent,'Connection lost');
+});
+
+test('results reactions open a horizontal picker, send fixed IDs and can be muted',()=>{
+  const c=client();c.run("latest={room:'TEST',phase:'results',roundId:'one',winner:{id:'me',name:'Me'},settings:{mode:'ffa'},rematchIn:10,rematchVotes:[],players:[{id:'me',name:'Me',slot:0,connected:true,kills:10,deaths:0,damageDealt:100,shots:10,hits:10,reaction:'gg'}]};updateRoomPhase(latest)");
+  c.elements.get('reactionToggle').events.click();assert.equal(c.elements.get('reactionStrip').hidden,false);
+  c.elements.get('reactionOptions').children[0].events.click();assert.equal(c.sent.at(-1).reaction,'gg');assert.equal(c.elements.get('reactionStrip').hidden,true);
+  c.elements.get('muteReactions').events.click();assert.equal(c.run('muteReactions'),true);assert.equal(c.elements.get('muteReactions').textContent,'REACTIONS OFF');
+});
+
 test('the leaderboard pop-up lists the top players and closes with Escape',async()=>{
   const c=client(false);c.sandbox.HTMLInputElement=class{};
-  const urls=[];c.sandbox.fetch=async url=>{urls.push(url);return {ok:true,json:async()=>({persistent:true,countries:[{code:'MY',players:2}],players:[{name:'Ann',wins:3,matches:4,kills:30,damageDealt:247,deaths:10},{name:'Bo',wins:1,matches:4,kills:12,damageDealt:61,deaths:0}]})};};
+  const urls=[];c.sandbox.fetch=async url=>{urls.push(url);return {ok:true,json:async()=>({persistent:true,countries:[{code:'MY',players:2}],players:[{name:'Ann',country:'MY',wins:3,matches:4,kills:30,damageDealt:247,deaths:10},{name:'Bo',wins:1,matches:4,kills:12,damageDealt:61,deaths:0}]})};};
   await c.run('openLeaderboard()');
   assert.equal(c.elements.get('leaderboard').hidden,false);
-  const rows=c.elements.get('leaderboardRows').children.map(r=>r.children.map(cell=>String(cell.textContent)));
-  assert.deepEqual(rows,[['🥇','Ann','3','4','30','247','10','3.0'],['🥈','Bo','1','4','12','61','0','12.0']]);
-  assert.match(c.elements.get('leaderboardNote').textContent,/Saved on the Pi/);
-  assert.match(urls.at(-1),/\/leaderboard\?period=all&country=$/);
+  const rows=c.elements.get('leaderboardRows').children.filter(r=>r.className!=='leaderboard-details').map(r=>r.children.map(cell=>String(cell.textContent)));
+  assert.deepEqual(rows,[['1','Ann','3','4','30','247','10','3.0'],['2','Bo','1','4','12','61','0','12.0']]);
+  assert.equal(c.elements.get('leaderboardRows').children[0].children[1].children[0].src,'http://localhost:8765/flags/my.svg');
+  assert.match(c.elements.get('leaderboardNote').textContent,/Scores saved/);
+  assert.match(urls.at(-1),/\/leaderboard\?period=all&country=&player=$/);
   assert.equal(c.elements.get('leaderboardRegion').children.length,2,'All regions plus each country seen');
   c.elements.get('leaderboardPeriods').events.click({target:{closest:()=>({dataset:{period:'week'}})}});await Promise.resolve();
   assert.match(urls.at(-1),/period=week/);
   c.elements.get('leaderboardRegion').value='MY';c.elements.get('leaderboardRegion').events.change();assert.match(urls.at(-1),/period=week&country=MY/);
   c.windowEvents.keydown({code:'KeyW',preventDefault(){},target:{}});assert.equal(c.run('keys.size'),0);
   c.windowEvents.keydown({code:'Escape',preventDefault(){},target:{}});assert.equal(c.elements.get('leaderboard').hidden,true);
+  await c.run('openLeaderboard()');assert.match(urls.at(-1),/period=all&country=/);
   c.sandbox.fetch=async()=>{throw Error('offline');};await c.run('openLeaderboard()');assert.match(c.elements.get('leaderboardNote').textContent,/Could not load/);
 });
 
@@ -638,6 +706,16 @@ test('a watch link opens the match as a hidden spectator with a Stop watching bu
   assert.equal(c.elements.get('leave').attributes['aria-label'],'Stop watching');assert.equal(c.elements.get('thumbControls').hidden,true,'no controls for spectators');
   c.run("status('LIVE BATTLE')");assert.match(c.elements.get('status').textContent,/^👁 WATCHING \(HIDDEN\) · LIVE BATTLE/);
   const before=c.sent.length;c.run('sendInput()');assert.equal(c.sent.length,before,'spectators never send input');
-  c.run('socket.close=()=>{}');c.elements.get('leave').events.click();
-  assert.equal(c.run('spectating'),false);assert.equal(c.elements.get('leave').attributes['aria-label'],'Leave arena');assert(c.sandbox.document.body.classList.contains('in-lobby'));
+  c.run("applySnapshot({phase:'results',settings:{mode:'ffa'},winner:{id:'a',name:'Ann'},players:[{id:'a',name:'Ann',slot:0,kills:10,deaths:2,connected:true}],shells:[],events:[]})");
+  assert.equal(c.elements.get('results').hidden,false);assert.equal(c.elements.get('resultsLeave').textContent,'Quit');assert.equal(c.elements.get('rematch').hidden,true);
+  c.run("applySnapshot({phase:'waiting',players:[],events:[]})");assert.equal(c.elements.get('results').hidden,false);assert.equal(c.run('latest.phase'),'results');
+  let closed=false;c.sandbox.window.close=()=>{closed=true;};c.elements.get('resultsLeave').events.click();assert(closed);assert.equal(c.run('socket'),null);assert.match(c.elements.get('resultsTimer').textContent,/close this tab/);
+});
+
+test('ping opt-in reuses latency, saves preference and hides stale values',()=>{
+  const c=client(),saved={};c.sandbox.localStorage={setItem(k,v){saved[k]=v;}};
+  c.run("latest={phase:'playing'};pingMs=42;pingAt=100;updatePing()");assert.equal(c.elements.get('pingIndicator').hidden,true);
+  const before=c.sent.length;c.elements.get('pingToggle').events.click();assert.equal(c.elements.get('pingIndicator').textContent,'42 ms');assert.equal(saved['tank-frenzy-ping'],'on');assert.equal(c.sent.length,before);
+  c.setTime(6000);c.intervals.get(1000)();assert.equal(c.elements.get('pingIndicator').textContent,'— ms');
+  c.run("latest.phase='results';updatePing()");assert.equal(c.elements.get('pingIndicator').hidden,true);
 });

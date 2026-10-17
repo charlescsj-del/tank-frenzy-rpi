@@ -1,5 +1,9 @@
 # Approved cartoon sound pack
 
+## Current combat refinement (v3.1.4)
+
+`effects-fire-v4.mp3` (0.68 s) supplies normal/double cannon fire; `effects-hit-v4.mp3` (0.46 s) supplies tank damage. These are original synthesized sound designs, not real tank recordings. Generate both with `node tools/generate-combat-sounds.cjs`; the same script generates `tools/previews/movement-v4.mp3` from the exact browser loop recipe. Movement runs locally with two reusable buffers and no downloaded loop. Machine-gun fire retains Cannon A's short slice. Previous immutable asset URLs remain available for cached clients.
+
 `cartoon-v1.mp3` contains the original synthesized effects from the user's approved sound audition. It is a mono 44.1 kHz / 128 kbps MP3, 174,333 bytes. No third-party recordings or external audio service are used.
 
 The source samples were generated with oscillators, filtered noise, short melodic phrases and layered percussion. The pack preserves the approved waveforms, removes only the audition's outer silence, and adds short silent gaps between clips. Clip offsets and durations are stored in `sound-bank.js`.
@@ -20,6 +24,16 @@ The user chose four original MP3s from the playable effects audition. The bytes 
 | `effects-explosion-c-v1.mp3` | Destruction C | Tank destruction |
 
 These mono 44.1 kHz / 128 kbps files total 45,731 bytes. The original asset continues to supply double cannon, menu, laser, intercept, hit, win and loss. `sound-bank.js` downloads each distinct file once and falls back to its previous cue if an approved file fails to load. The game still limits simultaneous sample voices to 12; no additional sound messages are sent to the game server. Any changed MP3 requires a new filename because assets use immutable caching.
+
+## Heavy impact (v3.1.3)
+
+`effects-hit-v3.mp3` is the current tank-hit cue: a 0.36-second dry impact with a low thump, brief midrange punch and filtered-noise crunch. It removes v2's ringing metal resonances. The original mono 44.1 kHz / 128 kbps recording is 6,770 bytes; generate it with `python3 tools/generate-hit-sound.py` and ffmpeg. Playback retains the previous gain, slight pitch variation and 12-voice cap. The old pack supplies the fallback; v2's immutable URL remains available to older cached clients.
+
+The player-lineup timer has no countdown effects. After the lineup ends, the battlefield's three-second countdown plays the existing ticks once each, then the start cue. All-ready skips only the lineup timer.
+
+## Armour impact (v3.1.2, superseded)
+
+`effects-hit-v2.mp3` was the v3.1.2 tank-hit cue, a 0.42-second metal clank and low thump. Its original deterministic synthesis recipe is preserved in that release's `tools/generate-hit-sound.py`, with no third-party samples. The mono 44.1 kHz / 128 kbps MP3 is 8,025 bytes. It layers a falling bass impact, damped inharmonic metal resonances and a brief filtered-noise contact. Its pre-encode peak is -2.2 dBFS. The file stays available for older cached clients; new clients use v3.
 
 ## Countdown and match start (v1.7.0)
 

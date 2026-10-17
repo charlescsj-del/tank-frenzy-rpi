@@ -10,6 +10,14 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
   await page.goto('http://127.0.0.1:'+game.server.address().port);await page.locator('.hero-art').waitFor({state:'visible'});
   await page.waitForFunction(()=>document.querySelector('.hero-tank').getAnimations().length>0);
   assert.equal(await page.locator('#versionBadge').textContent(),'v'+require(root+'/shared.js').version);
+  const cold=await browser.newPage({javaScriptEnabled:false,viewport:{width:1440,height:900}});
+  await cold.goto(page.url());
+  for(const size of [{width:1440,height:900},{width:390,height:844}]){
+    await cold.setViewportSize(size);assert(await cold.locator('.game.lobby-open #roomBrowser').isVisible());assert.equal(await cold.locator('#joinFields').isVisible(),false);
+    assert.equal(await cold.locator('body').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(25, 63, 53)');
+    await cold.screenshot({path:out+'/before-scripts-'+size.width+'.png',fullPage:true});
+  }
+  await cold.close();
   const motion=page.locator('#heroLayer-orange .hero-tank'),flash=page.locator('#heroLayer-orange .hero-burst'),ring=page.locator('#heroLayer-orange .hero-blast-ring');
   assert.equal(await page.locator('#heroBackdrop').getAttribute('href'),'./hero-quarry.webp');
   for(const asset of ['hero-quarry.webp','hero-tanks.webp'])assert(await page.evaluate(async asset=>{const response=await fetch('./'+asset);return response.ok&&response.headers.get('content-type')?.includes('image/webp');},asset),'layer asset loads: '+asset);
@@ -39,21 +47,48 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
   }
   assert.equal(await shell.locator('use[href="#heroProjectile"]').count(),1,'shell uses the pointed shaded projectile');
   // Freeze a firing moment for repeatable responsive screenshots.
-  for(const [width,height] of [[1440,900],[390,844],[844,390]]){
+  for(const [width,height] of [[1920,1080],[1440,900],[1366,768],[1280,720],[1024,600],[390,844],[320,640],[768,1024],[844,390]]){
    await page.setViewportSize({width,height});
    await page.evaluate(()=>document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=720)));
    assert(await flash.evaluate(el=>Number(getComputedStyle(el).opacity)>.3),'muzzle flash appears during the shot');
    assert(await ring.evaluate(el=>Number(getComputedStyle(el).opacity)>.1),'expanding muzzle ring appears during the shot');
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal page overflow');
+   if(width>=1001){const art=await page.locator('.intro').boundingBox(),panel=await page.locator('#arena').boundingBox();assert(Math.abs(art.y-panel.y)<2&&Math.abs(art.height-panel.height)<2,'desktop artwork and play panel align');assert(art.width>art.height,'desktop artwork stays landscape');}
+   for(const id of ['quickPlay','createRoom','joinCodeButton']){
+    const b=await page.locator('#'+id).boundingBox();assert(b&&b.x>=0&&b.y>=0&&b.x+b.width<=width+1&&b.y+b.height<=height+1,id+' is visible without scrolling at '+width+'x'+height);
+   }
+   assert.equal(await page.locator('#publicArenas').isVisible(),false,'empty public directory takes no space');
+   for(const id of ['leaderboardButton','sound','music'])assert.equal(await page.locator('#'+id+' svg use').count(),1,'menu icons use dependable SVGs');
    await page.screenshot({path:out+'/lobby-'+width+'.png',fullPage:true});
    if(width===390){await page.evaluate(()=>document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=0)));await page.screenshot({path:out+'/lobby-idle-390.png',fullPage:true});}
+  }
+  await page.setViewportSize({width:1440,height:900});
+  for(const size of [{width:1440,height:900},{width:390,height:844},{width:844,height:390}]){
+    await page.setViewportSize(size);await page.evaluate(()=>networkMessage('Joining the field…','Connecting to your arena.'));
+    const connecting=await page.locator('#overlay').boundingBox();assert(connecting&&connecting.x===0&&connecting.y===0&&connecting.width===size.width&&connecting.height===size.height,'connecting covers the viewport');
+    assert.equal(await page.locator('#game').isVisible(),false);assert.equal(await page.locator('#arenaMenu').isVisible(),false);
+    assert.equal(await page.locator('#overlay').evaluate(el=>getComputedStyle(el).transitionDuration),'0s');
+    await page.screenshot({path:out+'/connecting-'+size.width+'.png'});await page.evaluate(()=>showLobby());
   }
   await page.setViewportSize({width:1440,height:900});
   await page.evaluate(()=>{document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=0));document.querySelectorAll('#heroLayer-purple .hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=6100));});
   await page.screenshot({path:out+'/lobby-purple-behind-blue.png',fullPage:true});
   await page.evaluate(()=>document.body.classList.remove('hero-suspended'));assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'running');
+  for(const size of [{width:1440,height:900},{width:390,height:844},{width:844,height:390}]){
+    await page.setViewportSize(size);await page.evaluate(()=>showRoomForm('', 'join'));
+    assert.equal(await page.locator('#arenaMenu').isVisible(),false);assert.equal(await page.locator('.intro').isVisible(),false);
+    const form=await page.locator('#overlay .dialog').boundingBox();assert(form&&form.x>=0&&form.y>=0&&form.x+form.width<=size.width+1&&form.y+form.height<=size.height+1,'join form fits '+size.width);
+    assert.equal(await page.locator('.page').evaluate(el=>getComputedStyle(el).opacity),'1');
+    await page.screenshot({path:out+'/join-arena-'+size.width+'.png',fullPage:true});await page.evaluate(()=>showLobby());
+  }
+  await page.setViewportSize({width:1440,height:900});
+  await page.locator('#sound').click();assert.equal(await page.locator('#sound .audio-slash').evaluate(el=>getComputedStyle(el).display),'block');await page.locator('#sound').click();
   await page.locator('#createRoom').click();assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'paused','animation pauses outside lobby');
-  await page.locator('#browseRooms').click();
+  await page.waitForFunction(()=>joined);assert.equal(await page.locator('#arenaMenu').isVisible(),false);await page.screenshot({path:out+'/create-arena-desktop.png',fullPage:true});await page.locator('#waitingBack').click();
+  await page.waitForFunction(()=>!document.fullscreenElement&&!document.webkitFullscreenElement&&!expanded);
+  assert.equal(await page.evaluate(()=>document.body.classList.contains('in-room')),false);assert.equal(await page.locator('#leave').isVisible(),false);
+  await page.screenshot({path:out+'/lobby-return-desktop.png',fullPage:true});
+  const returned=await page.evaluate(()=>({art:document.querySelector('.intro').getBoundingClientRect().toJSON(),panel:document.getElementById('arena').getBoundingClientRect().toJSON()}));assert(Math.abs(returned.art.y-returned.panel.y)<2,'return from an arena restores desktop columns: '+JSON.stringify(returned));
   await page.evaluate(()=>{document.body.classList.add('hero-suspended');});assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationPlayState),'paused');
   await page.evaluate(()=>document.body.classList.remove('hero-suspended'));
   await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await motion.evaluate(el=>getComputedStyle(el).animationName),'none');

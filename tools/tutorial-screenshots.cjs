@@ -57,7 +57,7 @@ window.cursor=(x,y)=>{ctx.save();ctx.translate(x,y);ctx.beginPath();ctx.moveTo(0
 window.focusOn=(x,y,zoom)=>{const p=project(x,y);scale=zoom;offsetX=cssW/2-p.x*scale;offsetY=cssH/2-p.y*scale;};
 `;
 (async()=>{
-  const browser=await chromium.launch();
+  const browser=await chromium.launch({...(process.env.CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.CHROMIUM_EXECUTABLE_PATH,args:['--no-sandbox']}:{})});
   // Desktop scenes.
   const desk=await browser.newPage({viewport:{width:1240,height:860},deviceScaleFactor:1});
   await desk.goto(BASE);await desk.waitForTimeout(600);await desk.evaluate(helpers);
@@ -65,11 +65,12 @@ window.focusOn=(x,y,zoom)=>{const p=project(x,y);scale=zoom;offsetX=cssW/2-p.x*s
 
   // 1. PC controls: aim line toward the mouse, WASD movement arrows.
   await stage(desk,state({players:tanks,shells:[{id:1,x:700,y:398,vx:380,vy:150,slot:0,owner:'me'},{id:2,x:1060,y:545,vx:-400,vy:-60,slot:1,owner:'b'}]}),`
-    pointer={x:1120,y:560,active:true};
-    window.annotate=()=>{const me=project(520,330,0),m=project(1120,560,22);
+    pointer={x:780,y:390,active:true};
+    window.annotate=()=>{const P=(x,y,z=0)=>{const p=project(x,y,z);return {x:p.x*scale+offsetX,y:p.y*scale+offsetY};},me=P(520,330,0),m=P(780,390,22);
+      ctx.save();const dpr=Math.min(devicePixelRatio||1,2);ctx.setTransform(dpr,0,0,dpr,0,0);
       arrow([{x:me.x-8,y:me.y+28},{x:me.x-70,y:me.y+60}],'#365c4c',false);
       label('W A S D  =  drive',me.x-60,me.y+84);
-      cursor(m.x,m.y);label('Mouse  =  aim',m.x+20,m.y+48,'#b75226');label('Hold left click  =  fire',m.x+20,m.y+80,'#b75226');};`);
+      cursor(m.x,m.y);label('Mouse  =  aim',m.x+20,m.y+48,'#b75226');label('Hold left click  =  fire',m.x+20,m.y+80,'#b75226');ctx.restore();};`);
   await desk.evaluate(()=>{$('roster').scrollTop=0;});
   await toWebp(desk,await desk.locator('#arena').screenshot(),'pc-controls.webp');
 
@@ -89,13 +90,13 @@ window.focusOn=(x,y,zoom)=>{const p=project(x,y);scale=zoom;offsetX=cssW/2-p.x*s
       label('Bounce!',b.x,b.y-30,'#b75226');const w=project(750,700,52);label('Cover blocks a straight shot',w.x,w.y+34,'#365c4c');const t=project(975,560);label('Hit!',t.x+52,t.y-2,'#b75226');};`);
   await toWebp(desk,await desk.locator('#game').screenshot(),'bouncing.webp');
 
-  // 4. Power-ups: tokens, a laser beam and an Immortal tank.
+  // 4. Power-ups: tokens, a laser beam and an Shield tank.
   await stage(desk,state({players:[player({id:'me',slot:0,name:'You',x:520,y:560,a:0,aim:0,power:'laser',powerRemaining:6.4}),player({id:'b',slot:1,name:'Blue',x:1050,y:590,a:Math.PI,aim:Math.PI,power:'immortal',powerRemaining:7}),player({id:'c',slot:2,name:'Moss',x:780,y:860,a:0,aim:-1,power:'speed',powerRemaining:5})],
     pickups:[{id:1,x:460,y:830,type:'double'},{id:2,x:1000,y:330,type:'machine'},{id:3,x:660,y:300,type:'restore'}]}),`
     window._aimGuide??=drawAimGuide;drawAimGuide=()=>{};
     beams=[{player:'me',tankLife:1,slot:0,originX:520,originY:560,endX:1024,endY:586,muzzleDistance:40,life:.18}];
     focusOn(760,590,1.35);
-    window.annotate=()=>{const L=project(760,572,28),I=project(1050,590),T=project(460,830);label('Laser',L.x,L.y-26,'#c2345d');label('Immortal: no damage',I.x,I.y+48,'#a0761a');label('Power-up token',T.x+90,T.y+6,'#5a3fb0');};`);
+    window.annotate=()=>{const L=project(760,572,28),I=project(1050,590),T=project(460,830);label('Laser',L.x,L.y-26,'#c2345d');label('Shield: no damage',I.x,I.y+48,'#a0761a');label('Power-up token',T.x+90,T.y+6,'#5a3fb0');};`);
   await toWebp(desk,await desk.locator('#game').screenshot(),'power-ups.webp');
 
   // Getting hit: flame edges, damage numbers and sparks around your tank.

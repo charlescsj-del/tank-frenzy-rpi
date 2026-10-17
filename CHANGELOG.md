@@ -2,6 +2,110 @@
 
 Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. Dates use the earliest release or import commit available in this repository, shown in the Asia/Kuala_Lumpur time zone. For v1.1.0–v1.3.2, the original game release commits are unavailable here, so 2026-09-23 is the archive import date, not a claimed release date. The v1.5.0 notes first appear in the 2026-09-24 import of v1.6.0. The 19.x builds were originally distributed under those numbers; their entries below are relabeled as consecutive 1.19.x versions for a consistent history. Git history retains the original package numbers.
 
+## v3.2.7 [2026-10-17]
+
+- New arrivals can no longer remove AI from a full arena. AI and reconnecting humans both count as occupied seats in the arena directory.
+- A human explicitly quitting opens their seat; temporary disconnects retain the existing reconnect grace period.
+- Direct Quick Play invitations may fill a human vacancy during countdown or play, without touching AI. The Quick Play queue continues to group fresh arrivals separately.
+- Regression coverage protects AI identities, full-room rejection, reconnect reservations and repeated human join/quit cycles in both game modes.
+
+## v3.2.6 [2026-10-12]
+
+- Give the active power-up icon, timer and duration bar a dedicated HUD row below the score indicators so the win counter cannot cover them.
+- Use the same non-overlapping layout on desktop, phone portrait and phone landscape, respecting display safe areas.
+
+## v3.2.5 [2026-10-05]
+
+- Apply the dark home theme directly in the initial HTML, before JavaScript downloads or starts.
+- Give connecting/reconnecting screens the forest background and cream card. Keep the canvas concealed until the battlefield is ready.
+- Remove page and overlay fades that exposed the legacy theme during navigation.
+
+## v3.2.4 [2026-10-05]
+
+- Centre the Join arena card in a full-height layout on desktop as well as touch devices; remove leftover home artwork during setup.
+- Hide the old bottom status strip in friend waiting rooms, completing the edge-to-edge forest background.
+
+## v3.2.3 [2026-10-05]
+
+- Give player names a full row in phone friend-arena cards, keeping the tank and team-switch control above the text.
+- Remove remaining arena padding so the forest background reaches every screen edge during setup.
+
+## v3.2.2 [2026-10-05]
+
+- Restyled Create/Join arena and friend waiting rooms with the forest-green and cream theme. Hide the arena menu during setup and offer Back inside the waiting card.
+- Battle music starts with the on-field 3–2–1 countdown. Desktop defaults to full-map view; touch devices retain the centred camera.
+- Leaderboards open on All time, show local SVG country flags on every platform, and admin rankings have separate Wins and Kills columns.
+- Muted sound and music icons have a clear 45-degree slash.
+
+## v3.2.1 [2026-10-05]
+
+- Keep normal players on the completed match scoreboard when the rematch countdown expires, preserving the winner, scores and Match Details instead of opening the waiting room.
+- Replace the results Lobby action with Find new match. One tap leaves the old group and starts Quick Play in the same mode, preserving fullscreen/expanded view. When rematch voting closes, Find new match becomes the main action beside Leave.
+- Preserve admin spectators' final scoreboard and Quit-only behavior. Verify solo-vs-bot expiry in both modes and the full desktop/phone requeue flow.
+
+## v3.2.0 [2026-10-04]
+
+- Add authenticated admin Match History: latest 200 completed rounds, 20 per page, expandable human/bot results, winner, duration, mode, team, kills, deaths, damage, departures and disconnect counts. Filter by player, mode and Malaysia date. Persist details in the existing results file; show available fields for older records.
+- Add a saved, default-off Show ping menu toggle. Reuse existing two-second replies with a once-per-second display refresh and no extra requests; stale values show a dash.
+- Watch live now freezes on the final scoreboard and releases its socket at match completion. Only Quit remains; it closes the viewing tab or displays a manual-close message if blocked by the browser.
+- Balance the desktop landscape home screen with aligned artwork and play panels, bounded artwork height and a larger logo. Check common laptop/desktop sizes as well as phone orientations.
+
+## v3.1.4 [2026-10-04]
+
+- Rename Free-for-All to Deathmatch; keep the same rules and internal mode ID.
+- Replace cannon and armour-hit cues with original heavier designed effects. Movement blends cached diesel-like exhaust and speed-linked track clatter, silenced when stopped or muted.
+- Remove the redundant leaderboard podium while retaining your tank card and ranking table. Enlarge the mobile home logo.
+- Preserve the silent lineup and audible three-second battlefield countdown. No server-side audio work or extra network events.
+
+## v3.1.3 [2026-10-04]
+
+- Keep the player-lineup timer silent. When it expires or everyone presses Ready, enter the battlefield for a separate shared three-second countdown with ticks. The server freezes humans, bots and firing until the countdown ends.
+- Label the lineup counter Entering field in so it does not imply immediate battle. Ready skips only the lineup wait.
+- Replace the ringing tank-hit sound with a shorter, heavier thump and dry crunch. Use a new versioned 0.36-second MP3 while retaining the effects switch, voice limits and fallback audio.
+
+## v3.1.2 [2026-10-03]
+
+- Rename Immortal to Shield in the HUD and tutorial; use shield artwork for pickups, the HUD and orbiting protection emblems. Protection still lasts ten seconds; preserve the internal power ID for compatibility.
+- Restore a prominent Quick Play Ready counter with final 3–2–1 sound cues, retaining immediate start when all humans are ready. Keep the friend-room countdown above the arena canvas.
+- Pin the touch arena to the viewport and use dark green root, mobile page and browser-theme backgrounds to eliminate the remaining pale portrait home-indicator strip. Keep controls within safe areas.
+- Replace the tank-hit cue with a short original armour clank, bass thump and damped metallic tail. Use a versioned 8 KB MP3, subtle pitch variation, the existing voice limit and the old sound as a loading/error fallback.
+
+## v3.1.1 [2026-10-03]
+
+- Replace the home-screen How to Play label with a compact circular question-mark button, retaining its accessible name and tutorial behavior.
+- Fill the matchmaking background to the fullscreen arena edges. Move phone safe-area spacing inside the screen and hide the footer strip during searching and Ready, keeping controls clear of cutouts without pale gutters.
+
+## v3.1.0 [2026-10-03]
+
+- Keep your tank centred at every map edge and corner on mobile and PC, including respawns. Retain Full Map, add off-screen indicators on PC, and keep mouse aim aligned as the camera moves.
+- Open Match Details in a dedicated panel inside the arena, showing kills, deaths, hit rate and damage without leaving fullscreen. Preserve the completed statistics if the rematch timer returns the group to the lobby; Back closes the panel and a new battle clears it.
+- Extend Quick Play's human search window from eight to twelve seconds; four humans still reveal immediately and the five-second Ready timer is unchanged.
+- Put your own tank, name and rank above the leaderboard filters. Remember your most recent tank for views without a ranked entry.
+- Replace the home-screen name field with a top-right profile icon. Save commits a name change; Back discards the draft without changing the guest identity. Label the Join arena return action Back.
+- Prevent text selection and image dragging on game surfaces while keeping name and invitation inputs editable and copyable. Clear stale selection when control gestures begin.
+- Add regression coverage for corner-centred cameras, mouse aim, fullscreen details and expiry, profile editing, selection handling, and responsive browser flows.
+
+## v3.0.0 [2026-10-03]
+
+- Redesign the home screen around one prominent Play action, compact mode selection and direct Create arena / Join with code actions. Remove the empty directory panel; show public arenas only when available, with a retry action on errors.
+- Use the quarry backdrop, larger tank portraits and a simplified Ready action for matchmaking. Preserve the existing search deadlines, adaptive AI and shared countdown.
+- Put winner artwork and weekly rank progress first on results. Keep player reactions visible in a compact scorecard, reveal deaths, hit rate and damage through Match Details, and keep Play Again, Lobby and Leave accessible on small phones and landscape screens.
+- Replace font-dependent menu and reaction icons with inline SVG artwork; use clear numeric ranks. Refine leaderboard spacing, filter tabs, name truncation and text contrast.
+- Adapt the home layout for desktop, tablet, phone and short landscape screens, respect reduced motion, and update browser checks and the tutorial result image.
+- Keep the existing scoring, guest profiles, room protocol and separate dev app identity.
+
+## v2.0.0 [2026-10-03]
+
+- Make Quick Play one tap: group same-mode arrivals for up to eight seconds, fill spare slots with adaptive AI, reveal four tanks with a five-second timer, and start immediately when all humans are ready.
+- Create friend arenas immediately with remembered rules; join invitations directly. Add local QR invitations, host rule editing, friends-only privacy, readiness and balanced team swaps.
+- Keep friend groups together between rounds; return to an editable lobby when the rematch window expires or a participant chooses Back to Lobby.
+- Use natural AI callsigns with visible AI labels. Choose Quick Play difficulty from recent human performance, with easy-bot weighting and beginner protection.
+- Record completed solo battles against AI. Separate guest identity from display names, preserve legacy totals and an untouched migration backup, deduplicate round recording, and retain departed players’ earned statistics when a round finishes.
+- Default the leaderboard to This week, add a podium and personal rank, make phone rows expandable, use Malaysia reset times, and animate genuine weekly rank movement and statistic gains after matches.
+- Add shared result reactions with a swipeable/mouse-wheel picker, three-second bubbles, cooldown and local mute.
+- Show labelled AI starter targets separately from real regional player records; do not invent human population or countries.
+- Add server, migration, lifecycle and mobile regressions plus real desktop/phone/landscape browser checks in CI. Keep the dev app’s separate slug and port.
+
 ## v1.22.2 [2026-09-29]
 
 - Remove player names from the top battle score chips while retaining color, kills and accessible labels. Place the kill feed below the menu button.

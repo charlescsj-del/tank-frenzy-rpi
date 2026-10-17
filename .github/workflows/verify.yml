@@ -30,6 +30,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: node tools/admin-ui-check.cjs
       - run: node tools/hero-ui-check.cjs
+      - run: node tools/multiplayer-ui-check.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

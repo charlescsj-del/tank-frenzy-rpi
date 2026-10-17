@@ -13,7 +13,7 @@ test('local movement audio, local and opponent firing, and stop/mute behavior',(
     createOscillator(){return {...node(),frequency:param()};}
     createGain(){return {...node(),gain:param()};}
     createBiquadFilter(){return {...node(),frequency:param()};}
-    createBufferSource(){return node();}
+    createBufferSource(){return {...node(),playbackRate:param()};}
     createBuffer(channels,length){return {getChannelData:()=>new Float32Array(length)};}
   }
   const sandbox={assert,audioEvents,FIELD:require('../shared.js'),URL,performance:{now:()=>100},location:{href:'http://localhost:8765',origin:'http://localhost:8765',hostname:'localhost'},document:{hidden:false,getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},createElement:element,addEventListener(){}},window:{AudioContext,addEventListener:(name,handler)=>{listeners[name]=handler;}},matchMedia:()=>({matches:true}),ResizeObserver:class{observe(){}},devicePixelRatio:1,setInterval(){},setTimeout(){},clearTimeout(){},requestAnimationFrame(){},fetch:()=>new Promise(()=>{}),WebSocket:{OPEN:1}};
@@ -31,6 +31,9 @@ test('local movement audio, local and opponent firing, and stop/mute behavior',(
     release();assert.equal(engine.gain.gain.value,0,'blur/release stops engine immediately');
     sound=false;updateMovementSound(170);assert.equal(engine.gain.gain.value,0,'mute suppresses movement sound');
     sound=true;updateMovementSound(170);assert(engine.gain.gain.value>0);
+    assert(engine.motor.loop&&engine.tracks.loop);const sourcesStarted=audioEvents.length;const slowRate=engine.tracks.playbackRate.value;
+    updateMovementSound(85);assert(engine.tracks.playbackRate.value<slowRate);updateMovementSound(170);assert.equal(audioEvents.length,sourcesStarted,'movement reuses two loop sources');
+    for(const track of [false,true]){const wave=movementWave(8000,track);assert.equal(wave.length,16000);assert(wave.every(x=>Number.isFinite(x)&&Math.abs(x)<1));assert(Math.abs(wave[0]-wave.at(-1))<1e-6,'loop seam matches');}
     joined=false;updateMovementSound(170);assert.equal(engine.gain.gain.value,0,'disconnect stops engine');
     const notesBefore=audioEvents.length;playCue('start');assert.equal(audioEvents.length,notesBefore+4);
     sound=false;playCue('win');assert.equal(audioEvents.length,notesBefore+4,'mute suppresses result cues');
