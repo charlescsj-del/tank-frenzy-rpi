@@ -102,7 +102,7 @@ fs.mkdirSync(output,{recursive:true});
     await friend.evaluate(code=>joinRoomNow(code),room.code);await friend.waitForFunction(()=>document.getElementById('dialogText').textContent.includes('AI seats cannot be replaced'));
     assert.equal(room.players.size,4);assert(lockedBots.every(id=>room.players.has(id)),'rejected join preserves both AI tanks');
     await phone.evaluate(()=>leave());await pc.waitForFunction(()=>latest.players.length===3);
-    await friend.evaluate(code=>joinRoomNow(code),room.code);await friend.waitForFunction(()=>joined&&latest.phase==='playing');assert.equal(room.players.size,4);
+    await friend.evaluate(code=>joinRoomNow(code),room.code);await friend.waitForFunction(()=>joined&&latest?.phase==='playing');assert.equal(room.players.size,4);
     await friend.evaluate(()=>leave());await pc.waitForFunction(()=>latest.players.length===3);assert(lockedBots.every(id=>room.players.has(id)),'join then quit only changes the human seat');
     await friend.close();
     await phone.evaluate(()=>leave());await pc.evaluate(()=>leave());
