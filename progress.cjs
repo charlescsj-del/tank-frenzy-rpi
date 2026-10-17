@@ -28,8 +28,8 @@ class Progress {
   skinOf(id){return this.players.get(id)?.equipped||'classic';}
   dailyState(p){
     const d=p.daily,today=dayNumber(this.now()),gap=d.lastDay===null?0:today-d.lastDay;
-    const reset=gap>1&&(gap!==2||d.graceUsed),step=reset?0:d.step;
-    return {...d,step,qualified:d.lastDay===today,nextDay:step===7?1:step+1,graceAvailable:!d.graceUsed||reset,resetAt:(today+1)*day-8*3600e3,timezone:F.economy.timezone};
+    const reset=gap>1&&(gap!==2||d.graceUsed),nextCycle=d.step===7&&gap>0,step=reset||nextCycle?0:d.step;
+    return {...d,step,qualified:d.lastDay===today,nextDay:step===7?1:step+1,graceAvailable:!d.graceUsed||reset||nextCycle,resetAt:(today+1)*day-8*3600e3,timezone:F.economy.timezone};
   }
   view(id){const p=this.players.get(id)||blank();return {coins:p.coins,owned:p.owned,equipped:p.equipped,daily:this.dailyState(p),pending:p.pending,stats:p.stats,persistent:!!this.file};}
   transaction(p,type,coins,extra={}){p.transactions.push({t:this.now(),type,coins,...extra});p.transactions=p.transactions.slice(-100);}

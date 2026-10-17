@@ -79,7 +79,7 @@ function localStorageSafe(key){try{return localStorage.getItem(key);}catch{retur
 $('equipRewardSkin').addEventListener('click',async()=>{const skin=lastResult?.reward?.skin;if(!skin)return;try{await playerAction('equip',{skin});showMatchRewards(lastResult);}catch(error){$('rewardBreakdown').textContent=error.message;}});
 $('rewardProtect').addEventListener('click',()=>{$('profileButton').click();});
 $('showRecovery').addEventListener('click',async()=>{
-  $('recoveryMessage').textContent='';try{await loadPlayerProgress();$('recoveryCode').value='TF-'+profileSecret.match(/.{1,8}/g).join('-');$('recoveryPanel').hidden=false;$('recoveryCode').focus();$('recoveryCode').select();}catch(error){$('recoveryMessage').textContent=error.message;}
+  $('recoveryMessage').textContent='';try{if(!profileSecret||!playerProgress)await loadPlayerProgress();$('recoveryCode').value='TF-'+profileSecret.match(/.{1,8}/g).join('-');$('recoveryPanel').hidden=false;$('recoveryCode').focus();$('recoveryCode').select();}catch(error){$('recoveryMessage').textContent=error.message;}
 });
 $('savedRecovery').addEventListener('click',()=>{try{localStorage.setItem('tank-frenzy-recovery-saved','yes');}catch{}$('recoveryMessage').textContent='Keep your code somewhere private. It restores your coins, skins and scores on this server.';});
 $('restorePlayer').addEventListener('click',async()=>{

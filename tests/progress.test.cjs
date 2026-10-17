@@ -32,7 +32,7 @@ test('Malaysia day boundaries use completion time, with at most one daily credit
 test('Day 7 permanently unlocks a random unowned skin, then starts a new cycle',()=>{
   let now=Date.parse('2026-10-17T04:00:00Z');const f=fixture({now:()=>now,random:()=>0});
   for(let i=1;i<=7;i++){f.room.roundId=randomUUID();const r=f.award();assert.equal(r.reward.daily.day,i);if(i===7){assert.equal(r.reward.skin,'desert');assert(r.progress.owned.includes('desert'));assert.equal(r.reward.daily.coins,100);}now+=864e5;}
-  f.room.roundId=randomUUID();assert.equal(f.award().reward.daily.day,1);assert.equal(f.store.view(f.profile.id).daily.longest,8);
+  assert.equal(f.store.view(f.profile.id).daily.step,0,'the new cycle shows fresh boxes before its first match');f.room.roundId=randomUUID();assert.equal(f.award().reward.daily.day,1);assert.equal(f.store.view(f.profile.id).daily.longest,8);
 });
 test('one missed day is protected per cycle; a second or longer absence resets it',()=>{
   let now=0;const f=fixture({now:()=>now});f.award();now+=2*864e5;f.room.roundId=randomUUID();let r=f.award();assert.equal(r.reward.daily.day,2);assert.equal(r.progress.daily.graceUsed,true);
