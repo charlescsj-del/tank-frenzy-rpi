@@ -1,6 +1,16 @@
 (function(root) {
   const data = {
-    version:'3.2.7',maxHealth:10,laserDamage:4,laserRadius:6,barrelLength:40,doubleBarrelOffset:6,turretHeight:28,
+    version:'3.3.0',maxHealth:10,laserDamage:4,laserRadius:6,barrelLength:40,doubleBarrelOffset:6,turretHeight:28,
+    economy:{completion:20,win:30,kill:3,killCap:10,daily:[20,25,30,40,50,65,100],collectionBonus:200,timezone:'Asia/Kuala_Lumpur'},
+    skins:[
+      {id:'classic',name:'Classic',price:0,pattern:'none',description:'Your original colours. Ready for anything.'},
+      {id:'desert',name:'Desert Scout',price:200,pattern:'camo',body:'#dfb56c',accent:'#8c673e',description:'Sun-baked armour and desert camouflage.'},
+      {id:'arctic',name:'Arctic Ghost',price:200,pattern:'camo',body:'#dbe9ee',accent:'#7c9faa',description:'Ice-white camouflage with cool steel details.'},
+      {id:'forest',name:'Forest Ranger',price:500,pattern:'camo',body:'#87a76a',accent:'#365c43',description:'Woodland armour for a quarry explorer.'},
+      {id:'sunset',name:'Sunset Racer',price:500,pattern:'stripe',body:'#db765e',accent:'#ffe4a0',description:'Bold racing stripes in warm sunset colours.'},
+      {id:'carbon',name:'Carbon Night',price:1000,pattern:'grid',body:'#596674',accent:'#a0bdc1',description:'Dark woven armour with polished steel trim.'},
+      {id:'gold',name:'Golden Ace',price:1000,pattern:'stripe',body:'#e6bc54',accent:'#fff0a3',description:'Golden armour for a tank worth remembering.'}
+    ],
     width: 1600, height: 1040, maxPlayers: 4, targetScore: 10, fireCooldown: .42, shellSpeed: 410,
     maxShells:144,maxShellsPerPlayer:36,powerDuration:10,pickupInterval:12,pickupLifetime:20,pickupRadius:60,
     powers:['laser','double','speed','machine','immortal','restore'],

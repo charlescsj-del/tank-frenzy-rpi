@@ -1,5 +1,14 @@
 # Changelog
 
+## v3.3.0 [2026-10-17]
+
+- Earn coins for completing standard battles, winning and kills, including solo battles against AI. Results show an automatic reward breakdown; practice rules, inactivity and early departure do not earn coins.
+- Open the responsive Garage to preview, buy and equip six permanent cosmetic skins. Team identification and battle statistics remain unchanged; equipped skins appear to other players and in portraits.
+- Complete one standard match daily for increasing coin rewards. Day 7 awards 100 coins and a random permanent unowned normal skin; a full collection receives 200 extra coins. One missed day per cycle is protected, with midnight Malaysia resets.
+- Save a private recovery code through the player profile to restore coins, skins and retained scores on another device using the same server.
+- Wallets and inventory live separately from leaderboard cleanup and resets. Server-validated atomic purchases and persistent match IDs prevent duplicate deductions/rewards. Failed reward saves retry automatically.
+- Standalone launches now save scores and player progress under `data/` (override with `TANK_DATA_DIR`); Home Assistant uses `/data/player-progress.json` beside the existing leaderboard file.
+
 Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. Dates use the earliest release or import commit available in this repository, shown in the Asia/Kuala_Lumpur time zone. For v1.1.0–v1.3.2, the original game release commits are unavailable here, so 2026-09-23 is the archive import date, not a claimed release date. The v1.5.0 notes first appear in the 2026-09-24 import of v1.6.0. The 19.x builds were originally distributed under those numbers; their entries below are relabeled as consecutive 1.19.x versions for a consistent history. Git history retains the original package numbers.
 
 ## v3.2.7 [2026-10-17]

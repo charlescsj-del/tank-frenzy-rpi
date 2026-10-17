@@ -114,7 +114,7 @@ class Leaderboard {
     if(!['day','week','month','all'].includes(period))period='all';
     return this.rows(period).filter(p=>!country||p.country===country)
       .sort((a,b)=>b.wins-a.wins||b.kills-a.kills||a.deaths-b.deaths||a.name.localeCompare(b.name)||(a.profileId||'').localeCompare(b.profileId||''))
-      .slice(0,count).map(({name,country,wins,matches,kills,deaths,damageDealt,profileId,slot})=>({name,country,wins,matches,kills,deaths,damageDealt,...(profileId?{profileId,slot}:{})}));
+      .slice(0,count).map(({name,country,wins,matches,kills,deaths,damageDealt,profileId,slot})=>({name,country,wins,matches,kills,deaths,damageDealt,...(profileId?{profileId,slot,skin:this.skinOf?.(profileId)||'classic'}:{})}));
   }
   // Countries seen in all-time results, most players first, for the region filter.
   countries(){

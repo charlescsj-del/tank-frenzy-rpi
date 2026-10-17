@@ -63,7 +63,7 @@ test('ingress serves prefix-safe assets and shares live multiplayer rooms with L
 test('app options accept LAN and HTTPS addresses and reject unsafe or ambiguous invitations',()=>{
   const dir=fs.mkdtempSync(path.join(__dirname,'tank-options-')),file=path.join(dir,'options.json');
   try{
-    assert.deepEqual(readOptions(file),{ingress:true,publicUrl:'',notifyService:'',adminPassword:'',adminPath:'admin'});
+    assert.deepEqual(readOptions(file),{ingress:true,publicUrl:'',notifyService:'',adminPassword:'',adminPath:'admin',rewardsEnabled:true});
     for(const value of ['http://192.168.1.50:8765/','https://game.example/']){
       fs.writeFileSync(file,JSON.stringify({public_url:value}));assert.equal(readOptions(file).publicUrl,value.slice(0,-1));
     }
@@ -113,3 +113,4 @@ test('admin_path accepts a private address and rejects unsafe or game addresses'
     for(const value of ['a','../etc','with space','rooms','tutorial','x'.repeat(65)]){fs.writeFileSync(file,JSON.stringify({admin_path:value}));assert.throws(()=>readOptions(file),value);}
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+

@@ -16,6 +16,8 @@ Multiplayer browser tank game packaged as a **Home Assistant app** (formerly add
 | `server.cjs` | `createGameServer(options)`: HTTP routes, static allowlist (`files` map), admin routes, WebSocket protocol, 120 Hz tick loop, snapshot broadcast. `npm start` runs it standalone on port 8765. Exports `{createGameServer,countryOf}`. |
 | `game-server.cjs` | `Room`: players, bots, phases, movement, shells, lasers, pickups, damage, scoring, rematch votes, `snapshot()`. Exports `{Room,hitRect,encodeState}`. |
 | `bots.cjs` | Bot brain: `think(room,p,rayBox)` writes normal player input. `skills` (easy/normal/hard), `botNames`. |
+| `progress.cjs` | Permanent wallets/inventory, atomic purchases, Malaysia daily rewards and aggregate metrics. Never prune/reset with leaderboard data. |
+| `garage.js`, `skin-art.js` | Garage/recovery/rewards UI and shared procedural cosmetic artwork. |
 | `leaderboard.cjs` | Schema-2 guest-profile totals (≤200 profiles), 62-day history (≤20000 matches), adaptive difficulty, rank deltas, atomic saves and preserved legacy backup. |
 | `addon.cjs` | HA entry point (`CMD` in Dockerfile). `readOptions('/data/options.json')` validates options; `homeAssistantNotifier()` posts to `http://supervisor/core/api/services/notify/<service>` with `SUPERVISOR_TOKEN`, at most once a minute. Starts both listeners with `leaderboardFile:'/data/leaderboard.json'`. |
 | `map-generator.cjs` | Seeded random walls on a 5×4 grid of cells with connected lanes. |
@@ -67,11 +69,11 @@ Phases: friend `waiting` → `countdown` (3 s) → `playing` → `results` (20 s
 
 ## Home Assistant options
 
-`public_url` (invite links), `notify_service` (`notify.xxx`, empty = off), `admin_password` (≥ 8 chars), `admin_path` (3–64 of `[A-Za-z0-9_-]`, must not reuse a game path such as `audio`, `icons`, `tutorial`, `rooms`, `ws`, `health`, `leaderboard`, `network-info`). An invalid value throws in `readOptions`, so the app fails to start and the reason is in its log. `public_url` must be http(s) with no credentials, query or fragment. `homeassistant_api: true` is only for notifications. `/data/leaderboard.json` is the only persistent state; active rooms are in memory; completed match summaries and the latest 200 detailed results are stored in that file.
+`public_url` (invite links), `notify_service` (`notify.xxx`, empty = off), `admin_password` (≥ 8 chars), `admin_path` (3–64 of `[A-Za-z0-9_-]`, must not reuse a game path such as `audio`, `icons`, `tutorial`, `rooms`, `ws`, `health`, `leaderboard`, `network-info`). An invalid value throws in `readOptions`, so the app fails to start and the reason is in its log. `public_url` must be http(s) with no credentials, query or fragment. `homeassistant_api: true` is only for notifications. `/data/leaderboard.json` stores statistics/history; `/data/player-progress.json` separately stores wallets, inventory, daily rewards and credited-round IDs. Active rooms and unsaved reward retries are in memory.
 
 ## Tests
 
-`npm test` runs `node --test tests/*.test.cjs` (186 tests, about 10 seconds). CI also builds amd64/aarch64 containers and checks admin, hero and multiplayer UI. `tools/multiplayer-ui-check.cjs` exercises real HTTP/WebSocket grouping, Ready, results, shared reactions, ranks, privacy, QR invitations and direct invite joining at desktop, phone and landscape sizes. Playwright is a CI-only dependency. Browser check artifacts go under `artifacts/`; local tools may set `CHROMIUM_EXECUTABLE_PATH` and `ARTIFACT_DIR`.
+`npm test` runs `node --test tests/*.test.cjs` (204 tests, about 10 seconds). CI also builds amd64/aarch64 containers and checks admin, hero, multiplayer and progression UI. `tools/progress-ui-check.cjs` covers purchasing, recovery, Day 7 rewards and responsive Garage layouts. `tools/multiplayer-ui-check.cjs` exercises real HTTP/WebSocket grouping, Ready, results, shared reactions, ranks, privacy, QR invitations and direct invite joining at desktop, phone and landscape sizes. Playwright is a CI-only dependency. Browser check artifacts go under `artifacts/`; local tools may set `CHROMIUM_EXECUTABLE_PATH` and `ARTIFACT_DIR`.
 
 Harness quirks:
 - `client.js` and `server.cjs` are loaded into `vm` sandboxes with hand-made fake DOM elements (children, `append`, `prepend`, `replaceChildren`, `classList`, events, `setAttribute`). They have no `querySelector`, `closest` or `dataset`; if new client code uses a browser API, add it to the fake (or guard the call), or the sandbox throws.

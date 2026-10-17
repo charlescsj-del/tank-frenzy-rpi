@@ -1,6 +1,6 @@
 # Multi-architecture image: Docker selects ARM64 on a 64-bit Raspberry Pi.
 FROM node:22-alpine
-ARG BUILD_VERSION=3.2.7
+ARG BUILD_VERSION=3.3.0
 ARG BUILD_ARCH
 LABEL io.hass.name="Tank Frenzy" \
       io.hass.description="Multiplayer tank battles for Home Assistant" \
@@ -12,8 +12,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund && npm cache clean --force
-COPY server.cjs game-server.cjs map-generator.cjs bots.cjs leaderboard.cjs system-metrics.cjs shared.js ./
-COPY index.html admin.html client.js qr.js sound-bank.js music.js mode-banner.webp mode-banner-idle.webp hero-quarry.webp hero-tanks.webp manifest.webmanifest ./
+COPY server.cjs game-server.cjs map-generator.cjs bots.cjs leaderboard.cjs progress.cjs system-metrics.cjs shared.js ./
+COPY index.html admin.html client.js garage.js skin-art.js qr.js sound-bank.js music.js mode-banner.webp mode-banner-idle.webp hero-quarry.webp hero-tanks.webp manifest.webmanifest ./
 COPY audio/ ./audio/
 COPY tutorial/ ./tutorial/
 COPY icons/ ./icons/

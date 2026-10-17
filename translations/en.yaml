@@ -1,4 +1,9 @@
 configuration:
+  rewards_enabled:
+    name: Coins and daily rewards
+    description: >-
+      Enable match coins, daily rewards and skin purchases. Turn off temporarily to pause
+      earning and purchases while keeping existing coins, owned skins and equipped appearances.
   public_url:
     name: Public game address
     description: >-
@@ -23,3 +28,4 @@ configuration:
       links to it. Letters, digits, - and _ only. Leave empty for /admin.
 network:
   8765/tcp: Game access for LAN players (no Home Assistant login)
+

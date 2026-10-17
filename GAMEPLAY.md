@@ -8,7 +8,7 @@ A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarr
 
 On a phone, creating an arena and adding bots fit within the viewport. The map remains edge to edge during the countdown and on the result screen.
 
-Current release: **v3.2.7**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
+Current release: **v3.3.0**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
 
 The private admin page uses **system CPU and memory gauges**, with the game's share overlaid in orange from the zero end of each arc. CPU converts the game's one-core reading to a fraction of all cores; memory compares resident game memory with total RAM. Game percentages appear inside the gauges, with resident MiB in the memory gauge. Pi load shows 1-, 5- and 15-minute averages, values per CPU core and a 60-second history collected while the page is open. Core-count reference markers make load easier to interpret. Resource readings refresh once a second and are marked stale when disconnected; room views still refresh twice a second. See [DOCS.md](DOCS.md) for measurement details.
 
@@ -16,7 +16,17 @@ See [SOUND_DESIGN.md](SOUND_DESIGN.md) for the approved cartoon arcade audio dir
 
 The main-screen illustration animates with tank recoil, brief muzzle flashes and slow flying shells between shots. Reduced-motion preferences keep the illustration still. Animation pauses when the lobby or browser tab is hidden.
 
-## Rooms
+## Coins, Garage and daily rewards
+
+Complete a standard match (first to 10, bouncing and powers enabled) for 20 coins, plus 30 for a victory and 3 per kill, capped at 30 kill coins. Both winning teammates earn the victory bonus. Solo games against AI count. Participate through movement or firing and stay until the result; early departures, inactive players, spectators and disconnected finishes do not earn coins. Custom rules are practice for coins, but completed scores still follow leaderboard rules. Brief disconnects can rejoin before the match ends. Results automatically show the breakdown without an extra claim action.
+
+Open **Garage** beside the profile icon to preview, buy and equip skins. Desert Scout and Arctic Ghost cost 200 coins; Forest Ranger and Sunset Racer 500; Carbon Night and Golden Ace 1000. Ownership is permanent. All are cosmetic, with identical health, damage, speed and collision size. Team markers and your own-tank halo retain their identity colours. Equip outside the field countdown/battle; an unlocked Day 7 skin can be equipped directly from results.
+
+The first eligible match each Malaysia day earns 20, 25, 30, 40, 50, 65 and 100 daily coins across Days 1–7. Day 7 also unlocks one random unowned normal skin permanently; if all six are owned, receive 200 extra coins instead. One missed calendar day per cycle pauses progress; a second missed day or a gap longer than one missing day resets the next reward to Day 1. After Day 7, the next qualifying day begins a fresh cycle. Coins and owned skins never reset with a streak. The Garage shows the next reward and reset time.
+
+Under the profile icon, expand **Protect or restore progress** and save your private recovery code. Enter it on another device on the same server to restore that profile's coins, skins and retained leaderboard scores. Leave any arena on the other device first. Anyone possessing the code can access the profile; do not share it with other players. Admin leaderboard resets do not remove wallets or skins. Progress starts with future matches; earlier leaderboard results are not retroactively credited.
+
+## Rooms and invitations
 
 Open the game's address (in the Home Assistant app: `http://YOUR_PI_IP:8765`, the sidebar, or your `public_url` such as a Cloudflare Tunnel address) to browse active rooms or create a new room. Select a room to preview player names and available spots before joining. The list refreshes every five seconds; reconnecting players keep their reserved spots briefly, and full rooms remain visible but cannot be joined.
 

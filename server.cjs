@@ -7,6 +7,7 @@ const {randomBytes,createHash,timingSafeEqual}=require('node:crypto');
 const {WebSocketServer,WebSocket}=require('ws');
 const {Room,encodeState}=require('./game-server.cjs');
 const {Leaderboard}=require('./leaderboard.cjs');
+const {Progress}=require('./progress.cjs');
 const {createMetrics}=require('./system-metrics.cjs');
 const F=require('./shared.js'),{maxPlayers}=F;
 const ingressRequest=Symbol('supervisor ingress');
@@ -37,7 +38,7 @@ function securityHeaders(res,req,scriptHash=''){
   res.setHeader('Content-Security-Policy',`default-src 'self'; script-src 'self'${scriptHash?` '${scriptHash}'`:''}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors ${framing}`);
   res.setHeader('X-Frame-Options',req[ingressRequest]?'SAMEORIGIN':'DENY');res.setHeader('Referrer-Policy','no-referrer');
 }
-function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoomCreated=null,adminPassword='',adminPath='admin',quickSearchSeconds=12,quickReadySeconds=5}={}){
+function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progressFile=leaderboardFile?path.join(path.dirname(leaderboardFile),'player-progress.json'):null,rewardsEnabled=true,onRoomCreated=null,adminPassword='',adminPath='admin',quickSearchSeconds=12,quickReadySeconds=5}={}){
   // The admin page lives at a private address of your choosing; nothing in the game links to it.
   const adminRoot='/'+(/^[A-Za-z0-9_-]{3,64}$/.test(adminPath)?adminPath:'admin');
   // Hidden spectators watch a room with a short-lived pass from the admin page. They are not
@@ -48,13 +49,29 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
     closeSpectators(room,title,watcherMessage);rooms.delete(room.code);
   }
   function closeSpectators(room,title,message){for(const [ws,watch] of spectators)if(watch.room===room){send(ws,{type:'error',title,message});ws.close(1000,title);spectators.delete(ws);}}
-  const rooms=new Map(),sessions=new Map(),leaderboard=new Leaderboard(leaderboardFile);
+  const rooms=new Map(),sessions=new Map(),leaderboard=new Leaderboard(leaderboardFile),progress=new Progress(progressFile),pendingRewards=new Map();
+  leaderboard.skinOf=id=>progress.skinOf(id);
+  function award(room){
+    if(!rewardsEnabled){for(const result of room.lastResults?.values()||[])result.reward={round:room.roundId,total:0,reason:'Coin rewards are temporarily paused by the host.'};return;}
+    try{
+      const rewards=progress.record(room);pendingRewards.delete(room.roundId);
+      for(const [id,value]of rewards){
+        const result=room.lastResults?.get(id);if(result)Object.assign(result,value,{rewardError:false});
+        for(const s of sessions.values())if(s.player.id===id&&s.player.connected&&s.room.roundId===room.roundId&&result)send(s.ws,result);
+      }
+    }catch(error){
+      console.error('Tank Frenzy: reward save pending:',error.message);
+      if(!pendingRewards.has(room.roundId))pendingRewards.set(room.roundId,{...room,settings:{...room.settings},winner:{...room.winner},players:new Map([...room.players].map(([id,p])=>[id,{...p}])),matchPlayers:new Map([...room.matchPlayers||[]].map(([id,p])=>[id,{...p}]))});
+      for(const value of room.lastResults?.values()||[])value.rewardError=true;
+    }
+  }
   function finish(room){
-    if(room.recorded||!room.winner)return;room.recorded=true;room.lastResults=leaderboard.record(room);
+    if(room.recorded||!room.winner)return;room.recorded=true;room.rewardAt=Date.now();room.lastResults=leaderboard.record(room);
+    award(room);
     for(const s of sessions.values())if(s.room===room&&s.player.connected){const result=room.lastResults?.get(s.player.id);if(result)send(s.ws,result);}
   }
   function prepare(room){room.onFinish=finish;room.chooseBotSkill=players=>leaderboard.skill(players);return room;}
-  const files={'/':['index.html','text/html'],'/index.html':['index.html','text/html'],'/qr.js':['qr.js','text/javascript'],'/client.js':['client.js','text/javascript'],'/shared.js':['shared.js','text/javascript'],'/sound-bank.js':['sound-bank.js','text/javascript'],'/music.js':['music.js','text/javascript'],'/audio/cartoon-v1.mp3':['audio/cartoon-v1.mp3','audio/mpeg'],'/mode-banner.webp':['mode-banner.webp','image/webp'],'/mode-banner-idle.webp':['mode-banner-idle.webp','image/webp'],'/hero-quarry.webp':['hero-quarry.webp','image/webp'],'/hero-tanks.webp':['hero-tanks.webp','image/webp']};
+  const files={'/garage.js':['garage.js','text/javascript'],'/skin-art.js':['skin-art.js','text/javascript'],'/':['index.html','text/html'],'/index.html':['index.html','text/html'],'/qr.js':['qr.js','text/javascript'],'/client.js':['client.js','text/javascript'],'/shared.js':['shared.js','text/javascript'],'/sound-bank.js':['sound-bank.js','text/javascript'],'/music.js':['music.js','text/javascript'],'/audio/cartoon-v1.mp3':['audio/cartoon-v1.mp3','audio/mpeg'],'/mode-banner.webp':['mode-banner.webp','image/webp'],'/mode-banner-idle.webp':['mode-banner-idle.webp','image/webp'],'/hero-quarry.webp':['hero-quarry.webp','image/webp'],'/hero-tanks.webp':['hero-tanks.webp','image/webp']};
   for(const name of ['iron-advance','overdrive','steel-pressure'])files[`/audio/music-${name}-v1.mp3`]=[`audio/music-${name}-v1.mp3`,'audio/mpeg'];
   for(const name of ['fire-a','ricochet-c','pickup-a','explosion-c'])files[`/audio/effects-${name}-v1.mp3`]=[`audio/effects-${name}-v1.mp3`,'audio/mpeg'];
   for(const name of ['countdown','battle-start'])files[`/audio/${name}-v1.mp3`]=[`audio/${name}-v1.mp3`,'audio/mpeg'];
@@ -79,11 +96,11 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
   }
   function adminState(){
     const system=readMetrics();
-    return {version:require('./package.json').version,board:{width:F.width,height:F.height},palette:F.palette.map(p=>p.body),uptime:Math.round((Date.now()-started)/1000),system,cpu:system.game.cpuPercent,
+    return {version:require('./package.json').version,board:{width:F.width,height:F.height},palette:F.palette.map(p=>p.body),skinColors:Object.fromEntries(F.skins.filter(s=>s.body).map(s=>[s.id,s.body])),uptime:Math.round((Date.now()-started)/1000),system,cpu:system.game.cpuPercent,
       memory:system.game.rssBytes===null?null:Math.round(system.game.rssBytes/1048576),load:system.load,sessions:sessions.size,
       rooms:[...rooms.values()].filter(room=>room.players.size).map(room=>({code:room.code,phase:room.phase,settings:room.settings,botSkill:room.botSkill,time:Math.round(room.time),
         winner:room.winner,teamScores:room.teamScores,walls:room.map.walls,
-        players:[...room.players.values()].map(({id,name,slot,team,bot,connected,hp,kills,deaths,x,y,aim,country,power})=>({id,name,slot,team,bot:!!bot,connected,hp,kills,deaths,x:Math.round(x),y:Math.round(y),aim:Math.round(aim*100)/100,country:country||'',power:power||null}))}))};
+        players:[...room.players.values()].map(({id,name,slot,skin,team,bot,connected,hp,kills,deaths,x,y,aim,country,power})=>({id,name,slot,skin,team,bot:!!bot,connected,hp,kills,deaths,x:Math.round(x),y:Math.round(y),aim:Math.round(aim*100)/100,country:country||'',power:power||null}))}))};
   }
   // Slow down password guessing: 10 wrong passwords a minute per visitor (300 across everyone),
   // so a stranger guessing cannot lock you out of your own admin page.
@@ -102,6 +119,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
     if(req.method==='GET'&&route==='/'){securityHeaders(res,req,adminScript);res.setHeader('Content-Type','text/html; charset=utf-8');res.end(adminPage);return;}
     if(req.method==='GET'&&route==='/state'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify(adminState()));return;}
     if(req.method==='GET'&&route==='/history'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify(leaderboard.history(Object.fromEntries(url.searchParams))));return;}
+    if(req.method==='GET'&&route==='/economy'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({...progress.report(),enabled:rewardsEnabled,pending:pendingRewards.size}));return;}
     if(req.method==='GET'&&route==='/leaderboard'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({players:leaderboard.top({period:'all',count:Infinity})}));return;}
     // Remove one name (for example an offensive one) or start the leaderboard over.
     if(req.method==='POST'&&route==='/leaderboard/remove'&&req.headers['x-tank-admin']==='1'){
@@ -131,6 +149,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
     let url;try{url=new URL(req.url,'http://localhost');}catch{res.writeHead(400);res.end('Bad request');return;}
     res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');securityHeaders(res,req);
     if(url.pathname===adminRoot||url.pathname.startsWith(adminRoot+'/')){admin(req,res,url);return;}
+    if(url.pathname==='/progress'){playerRequest(req,res);return;}
     if(req.method!=='GET'){res.writeHead(405);res.end();return;}
     if(url.pathname==='/health'){
       res.setHeader('Content-Type','application/json');res.end(JSON.stringify({status:'ok',version:require('./package.json').version}));return;
@@ -164,6 +183,41 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
     if(file[1]==='audio/mpeg')res.setHeader('Cache-Control','public, max-age=31536000, immutable');
     res.setHeader('Content-Type',file[1]+(file[1].startsWith('text/')?'; charset=utf-8':''));
     fs.createReadStream(path.join(__dirname,file[0])).on('error',()=>{if(!res.headersSent)res.writeHead(404);res.end();}).pipe(res);
+  }
+  const playerRequests=new Map();
+  function playerRequest(req,res){
+    res.setHeader('Content-Type','application/json');
+    const fail=(status,message)=>{res.writeHead(status);res.end(JSON.stringify({error:message}));};
+    if(req.method!=='POST'||req.headers['x-tank-player']!=='1'){fail(405,'Use the player menu.');return;}
+    if(req.headers.origin){try{if(new URL(req.headers.origin).host!==req.headers.host){fail(403,'Invalid origin.');return;}}catch{fail(403,'Invalid origin.');return;}}
+    const visitor=visitorOf(req),now=Date.now(),bucket=playerRequests.get(visitor);
+    if(!bucket||now-bucket.since>60000){for(const [key,b]of playerRequests)if(now-b.since>60000)playerRequests.delete(key);if(playerRequests.size>=4096&&!bucket){fail(429,'Please try again shortly.');return;}playerRequests.set(visitor,{since:now,count:1});}
+    else if(++bucket.count>120){fail(429,'Please wait a moment before trying again.');return;}
+    let raw='',size=0,ended=false;
+    req.on('data',chunk=>{if(ended)return;size+=Buffer.byteLength(chunk);if(size>2048){ended=true;fail(413,'Player request too large.');return;}raw+=chunk;});
+    req.on('error',()=>{ended=true;});
+    req.on('end',()=>{
+      if(ended)return;
+      try{
+        const msg=JSON.parse(raw);if(!msg||typeof msg!=='object')throw Error('Invalid player request.');
+        if(!['load','recover','buy','equip','ack'].includes(msg.action))throw Error('Unknown player action.');
+        let credential=text(msg.profile);
+        if(msg.action==='recover'){credential=text(msg.code).replace(/^TF-/i,'').replace(/[\s-]/g,'').toLowerCase();if(!/^[a-f0-9]{48}$/.test(credential))throw Error('Enter the full recovery code.');}
+        if(!credential&&msg.action!=='load')throw Error('Load your player first.');
+        const profile=progress.identify(credential);
+        if(msg.action==='recover'&&!progress.players.has(profile.id))throw Error('Recovery code not found on this game server.');
+        if(msg.action==='recover'&&[...sessions.values()].some(s=>s.player.profileId===profile.id&&s.room.players.has(s.player.id)))throw Error('Leave the arena on the other device before recovering this player.');
+        let value=progress.ensure(profile.id);
+        if(msg.action==='buy'){if(!rewardsEnabled)throw Error('Purchases are temporarily paused by the host.');value=progress.buy(profile.id,text(msg.skin));}
+        if(msg.action==='equip'){
+          if([...sessions.values()].some(s=>s.player.profileId===profile.id&&['countdown','playing'].includes(s.room.phase)))throw Error('Equip your skin after the battle.');
+          value=progress.equip(profile.id,text(msg.skin));
+          for(const s of sessions.values())if(s.player.profileId===profile.id)s.player.skin=value.equipped;
+        }
+        if(msg.action==='ack')value=progress.acknowledge(profile.id,text(msg.round));
+        res.end(JSON.stringify({profile,progress:{...value,enabled:rewardsEnabled}}));
+      }catch(error){const storage=/could not be saved/.test(error.message);fail(storage?503:400,storage?'Progress could not be saved. Please try again.':error instanceof SyntaxError?'Invalid player request.':error.message);}
+    });
   }
   const wss=new WebSocketServer({noServer:true,maxPayload:2048});
   // Connections per visitor: at most 32 open and 16 not yet in an arena (256 for the whole server).
@@ -240,10 +294,10 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
           if(room.quick&&msg.type!=='quick'&&(!['countdown','playing'].includes(room.phase)||room.players.size>=maxPlayers)){send(ws,{type:'error',message:'This Quick Play group has no open human seat. AI seats cannot be replaced. Use Quick Play to find a new match.'});ws.close();return;}
           if(room.phase==='postgame'){send(ws,{type:'error',message:'This match has ended and its rematch window closed. Choose another arena or create a new one.'});ws.close();return;}
           const player=room.add(name);if(!player){send(ws,{type:'error',message:'Arena full (4 players). AI seats cannot be replaced. Join when a human leaves or choose another arena.'});ws.close();return;}
-          player.profileId=profile.id;player.country=country;session={room,player,profile,token:randomBytes(24).toString('hex'),ws};sessions.set(session.token,session);
+          player.profileId=profile.id;player.skin=progress.skinOf(profile.id);player.country=country;session={room,player,profile,token:randomBytes(24).toString('hex'),ws};sessions.set(session.token,session);
           if(created)try{onRoomCreated?.({code,name:player.name,mode:room.settings.mode,url:publicUrl?publicUrl+'/?room='+encodeURIComponent(code):''});}catch{/* Notifications never block play. */}
         }
-        session.ws=ws;clearTimeout(joinTimeout);settle();send(ws,{type:'welcome',id:session.player.id,token:session.token,profile:session.profile,slot:session.player.slot,room:code,seq:session.player.seq});sendRaw(ws,encodeState(session.room.snapshot()));const result=session.room.lastResults?.get(session.player.id);if(result)send(ws,result);return;
+        session.ws=ws;clearTimeout(joinTimeout);settle();send(ws,{type:'welcome',id:session.player.id,token:session.token,profile:session.profile,progress:{...progress.view(session.profile.id),enabled:rewardsEnabled},slot:session.player.slot,room:code,seq:session.player.seq});sendRaw(ws,encodeState(session.room.snapshot()));const result=session.room.lastResults?.get(session.player.id);if(result)send(ws,result);return;
       }
       if(!session)return;
       if(session.ws!==ws)return;
@@ -284,11 +338,13 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,onRoo
     }
   },1000/60);
   const heartbeat=setInterval(()=>{for(const ws of wss.clients){if(ws.missedPongs>=6){ws.terminate();continue;}ws.missedPongs++;ws.ping();}},5000);
-  async function close(){leaderboard.save();clearInterval(timer);clearInterval(heartbeat);for(const ws of wss.clients)ws.terminate();await new Promise(resolve=>wss.close(resolve));await new Promise(resolve=>server.close(resolve));if(ingressServer)await new Promise(resolve=>ingressServer.close(resolve));}
-  return {server,ingressServer,wss,rooms,leaderboard,close};
+  const rewardRetry=setInterval(()=>{for(const room of pendingRewards.values())award(room);},5000);
+  async function close(){leaderboard.save();for(const room of pendingRewards.values())award(room);clearInterval(rewardRetry);clearInterval(timer);clearInterval(heartbeat);for(const ws of wss.clients)ws.terminate();await new Promise(resolve=>wss.close(resolve));await new Promise(resolve=>server.close(resolve));if(ingressServer)await new Promise(resolve=>ingressServer.close(resolve));}
+  return {server,ingressServer,wss,rooms,leaderboard,progress,close};
 }
 if(require.main===module){
-  const game=createGameServer(),port=Number(process.env.PORT)||8765;
+  const dataDir=process.env.TANK_DATA_DIR||path.join(__dirname,'data');fs.mkdirSync(dataDir,{recursive:true});
+  const game=createGameServer({leaderboardFile:path.join(dataDir,'leaderboard.json'),progressFile:path.join(dataDir,'player-progress.json')}),port=Number(process.env.PORT)||8765;
   game.server.on('error',error=>{console.error(`Cannot start game: ${error.message}`);process.exit(1);});
   game.server.listen(port,'0.0.0.0',()=>{console.log(`Tank Frenzy: http://localhost:${port}`);for(const address of lanAddresses())console.log(`Network: http://${address}:${port}`);});
   for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>game.close().then(()=>process.exit(0)));

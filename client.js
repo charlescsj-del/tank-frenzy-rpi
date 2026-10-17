@@ -88,8 +88,9 @@ function showRoomForm(code,mode=null){
   $('gameMode').value=selectedGameMode;$('bounceOption').checked=true;$('powersOption').checked=true;$('targetScore').value=FIELD.targetScore;syncTargetScore();
   window.scrollTo?.(0,0);
 }
-function syncTargetScore(){$('targetScoreValue').textContent=String($('targetScore').value);}
+function syncTargetScore(){$('targetScoreValue').textContent=String($('targetScore').value);$('formRewardNote').textContent=Number($('targetScore').value)===FIELD.targetScore&&$('bounceOption').checked&&$('powersOption').checked?'Standard rules · Earn coins and daily rewards':'Practice rules · No coins or daily rewards';}
 $('targetScore').addEventListener('input',syncTargetScore);
+for(const id of ['bounceOption','powersOption'])$(id).addEventListener('change',syncTargetScore);
 for(const [id,step] of [['targetScoreLess',-1],['targetScoreMore',1]])$(id).addEventListener('click',()=>{
   const slider=$('targetScore');slider.value=Math.max(5,Math.min(50,Number(slider.value)+step));syncTargetScore();
 });
@@ -200,20 +201,20 @@ function connect(){
   const wsUrl=new URL(appUrl('ws'));wsUrl.protocol=wsUrl.protocol==='https:'?'wss:':'ws:';
   const ws=new WebSocket(wsUrl.href);socket=ws;
   const timeout=setTimeout(()=>{if(ws.readyState!==WebSocket.OPEN)ws.close();},15000);
-  ws.addEventListener('open',()=>{clearTimeout(timeout);ws.send(JSON.stringify({type:quickRequested&&!token?'quick':'join',room:roomCode,name:$('callsign').value||'Rookie',profile:profileSecret,token,mode:joinMode,settings:{mode:$('gameMode').value,bouncing:$('bounceOption').checked,powers:$('powersOption').checked,targetScore:Number($('targetScore').value)}}));});
+  ws.addEventListener('open',async()=>{clearTimeout(timeout);if(typeof loadPlayerProgress==='function'&&!profileSecret)try{await loadPlayerProgress();}catch{}if(socket!==ws||ws.readyState!==undefined&&ws.readyState!==WebSocket.OPEN)return;ws.send(JSON.stringify({type:quickRequested&&!token?'quick':'join',room:roomCode,name:$('callsign').value||'Rookie',profile:profileSecret,token,mode:joinMode,settings:{mode:$('gameMode').value,bouncing:$('bounceOption').checked,powers:$('powersOption').checked,targetScore:Number($('targetScore').value)}}));});
   ws.addEventListener('message',event=>{
     if(socket!==ws)return;
     let data;try{data=JSON.parse(event.data);}catch{return;}
     if(data.type==='welcome'){
       lastTankSlot=data.slot??0;try{localStorage.setItem('tank-frenzy-slot',String(lastTankSlot));}catch{}
       roomCode=data.room;$('roomInput').value=roomCode;$('roomCode').textContent=roomCode;quickRequested=false;
-      if(data.profile){profileSecret=data.profile.secret;profileId=data.profile.id;try{localStorage.setItem('tank-frenzy-profile',JSON.stringify(data.profile));}catch{}}updateInvite();
+      if(data.profile){profileSecret=data.profile.secret;profileId=data.profile.id;try{localStorage.setItem('tank-frenzy-profile',JSON.stringify(data.profile));}catch{}}if(typeof receiveProgress==='function')receiveProgress(data.progress);updateInvite();
       myId=data.id;token=data.token;joinMode=null;seq=Math.max(seq,data.seq+1);joined=true;connecting=false;retry=0;lastEvent=0;rosterSignature='';pointer.active=false;
       try{sessionStorage.setItem(sessionKey,JSON.stringify({room:roomCode,token,name:$('callsign').value}));}catch{}
       touchAim=null;$('overlay').classList.add('hidden');$('leave').hidden=false;updateTouchControls();canvas.focus({preventScroll:true});
       history.replaceState(null,'','?room='+encodeURIComponent(roomCode));sendInput();
     }else if(data.type==='state'){applySnapshot(data);}
-    else if(data.type==='result'){lastResult=data;renderRankChange();}
+    else if(data.type==='result'){lastResult=data;if(typeof receiveProgress==='function')receiveProgress(data.progress);renderRankChange();}
     else if(data.type==='pong'){const value=performance.now()-data.sent;if(Number.isFinite(value)&&value>=0){pingMs=Math.round(value);pingAt=performance.now();$('latency').textContent=pingMs+' MS';updatePing();}}
     else if(data.type==='error'){
       const requeue=data.code==='session_expired'&&latest?.quick&&['searching','ready'].includes(latest.phase);
@@ -311,7 +312,8 @@ function applySnapshot(data){
   }
   updateRoomPhase(data);updateHud(data);
 }
-function tankPortrait(slot){
+function tankPortrait(slot,skin='classic'){
+  if(skin!=='classic'&&typeof TankSkins!=='undefined')return TankSkins.portrait(slot,skin);
   const art=document.createElement('span');art.className='tank-portrait';art.setAttribute('aria-hidden','true');art.style.setProperty('--tank',colors[slot]||colors[0]);
   if(document.createElementNS){
     const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg'),sprite=document.createElementNS(ns,'use');
@@ -331,13 +333,13 @@ function renderMatchmaking(data){
   $('matchmakingTime').textContent=searching?'Finding a match · '+seconds+'s':String(seconds);
   $('matchmakingTime').setAttribute('aria-label',searching?'Finding a match':`Entering the field in ${seconds} seconds`);
   const ready=(data.readyIds||[]).includes(myId);$('readyButton').hidden=searching;$('readyButton').disabled=ready;$('readyButton').textContent=ready?'READY ✓':'READY';
-  const signature=JSON.stringify([data.phase,data.players.map(p=>[p.id,p.name,p.slot,p.bot,p.team]),data.readyIds]);
+  const signature=JSON.stringify([data.phase,data.players.map(p=>[p.id,p.name,p.slot,p.skin,p.bot,p.team]),data.readyIds]);
   if($('matchmakingPlayers').signature===signature)return;$('matchmakingPlayers').signature=signature;$('matchmakingPlayers').replaceChildren();
   const players=data.settings?.mode==='teams'?[...data.players].sort((a,b)=>(a.team??0)-(b.team??0)):data.players;
   for(let i=0;i<4;i++){
     const p=players[i],card=document.createElement('div');card.className='match-player'+(p?.id===myId?' is-you':'')+(!p?' is-searching':'');
     const name=document.createElement('strong'),detail=document.createElement('small');
-    if(p){card.append(tankPortrait(p.slot));name.textContent=p.name+(p.id===myId?' · YOU':'');detail.textContent=(p.bot?'AI · ':'')+(p.team!=null?(p.team===0?'ORANGE':'BLUE')+' TEAM · ':'')+(p.bot||(data.readyIds||[]).includes(p.id)?'READY ✓':'MATCHED');}
+    if(p){card.append(tankPortrait(p.slot,p.skin));name.textContent=p.name+(p.id===myId?' · YOU':'');detail.textContent=(p.bot?'AI · ':'')+(p.team!=null?(p.team===0?'ORANGE':'BLUE')+' TEAM · ':'')+(p.bot||(data.readyIds||[]).includes(p.id)?'READY ✓':'MATCHED');}
     else{const radar=document.createElement('span');radar.className='search-radar';card.append(radar);name.textContent='Searching…';detail.textContent='Finding your rival';}
     card.append(name,detail);$('matchmakingPlayers').append(card);
   }
@@ -350,6 +352,7 @@ function reactionContent(element,id){
   svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('class','ui-icon');svg.setAttribute('aria-hidden','true');use.setAttribute('href','#ui-'+id);svg.append(use);element.replaceChildren(svg);element.setAttribute('aria-label',reactionLabels[id]);element.title=reactionLabels[id];
 }
 function renderRankChange(){
+  if(typeof showMatchRewards==='function')showMatchRewards(lastResult);
   if(!lastResult||!latest?.winner||(latest.roundId&&lastResult.roundId!==latest.roundId)){ $('rankChange').hidden=true;return; }
   const key=lastResult.roundId;if(rankSignature===key)return;rankSignature=key;$('rankChange').hidden=false;
   const before=lastResult.before,after=lastResult.after,delta=before&&after?before.rank-after.rank:0;
@@ -359,7 +362,7 @@ function renderRankChange(){
   const count=()=>{if(rankSignature!==key)return;const progress=reducedMotion?1:Math.min(1,(performance.now()-started)/800),ease=1-(1-progress)**3;$('rankChangeScore').textContent=['wins','kills','damageDealt'].map((s,i)=>Math.round(from[s]+(to[s]-from[s])*ease)+' '+['wins','kills','damage'][i]).join(' · ');if(progress<1)requestAnimationFrame(count);};count();
   for(const p of lastResult.nearby||[]){
     const row=document.createElement('div');row.className='rank-row'+(p.profileId===profileId?' rank-self':'');
-    const rank=document.createElement('b'),name=document.createElement('span'),wins=document.createElement('strong');rank.textContent='#'+p.rank;name.textContent=p.name;if(/^[A-Z]{2}$/.test(p.country||''))name.append(countryFlag(p.country));wins.textContent=p.wins+' W · '+p.kills+' K';row.append(rank,tankPortrait(p.slot||0),name,wins);
+    const rank=document.createElement('b'),name=document.createElement('span'),wins=document.createElement('strong');rank.textContent='#'+p.rank;name.textContent=p.name;if(/^[A-Z]{2}$/.test(p.country||''))name.append(countryFlag(p.country));wins.textContent=p.wins+' W · '+p.kills+' K';row.append(rank,tankPortrait(p.slot||0,p.skin),name,wins);
     row.style.setProperty('--rank-offset',Math.max(-3,Math.min(3,(p.beforeRank??p.rank)-p.rank))*44+'px');if(!reducedMotion)row.classList.add('rank-moving');$('rankChangeRows').append(row);
   }
 }
@@ -383,11 +386,11 @@ function updateRoomPhase(data){
     const connected=data.players.filter(p=>p.connected),votes=data.rematchVotes||[],voted=votes.includes(myId);
     const needed=data.rematchNeeded||connected.length,ready=votes.filter(id=>connected.some(p=>p.id===id)).length;
     $('resultsVotes').textContent=postgame?'Round finished':ready+' / '+needed+' ready to play again';
-    const board=JSON.stringify([data.settings?.mode,data.winner.team,data.teamScores,data.players.map(p=>[p.id,p.team,p.kills,p.deaths,p.damageDealt,p.shots,p.hits,p.reaction]),muteReactions]);
+    const board=JSON.stringify([data.settings?.mode,data.winner.team,data.teamScores,data.players.map(p=>[p.id,p.skin,p.team,p.kills,p.deaths,p.damageDealt,p.shots,p.hits,p.reaction]),muteReactions]);
     if(board!==resultsSignature){
       resultsSignature=board;$('resultsRows').replaceChildren();$('resultDamageRows').replaceChildren();
       const winners=data.players.filter(p=>data.settings?.mode==='teams'?p.team===data.winner.team:p.id===data.winner.id);
-      $('resultsWinnerArt').replaceChildren(...winners.map(p=>tankPortrait(p.slot)));
+      $('resultsWinnerArt').replaceChildren(...winners.map(p=>tankPortrait(p.slot,p.skin)));
       const teams=data.settings?.mode==='teams';
       for(const team of teams?[0,1]:[null]){
         if(teams){
@@ -402,7 +405,7 @@ function updateRoomPhase(data){
         for(const p of data.players.filter(p=>!teams||p.team===team).sort((a,b)=>b.kills-a.kills||a.deaths-b.deaths)){
         const row=document.createElement('tr');if(p.id===myId)row.className='me';
          const cells=[p.name+(p.bot?' · AI':'')+(p.id===myId?' ★':''),p.kills,p.deaths,p.shots?Math.round(100*Math.min(p.hits,p.shots)/p.shots)+'%':'—'].map(value=>{const cell=document.createElement('td');cell.textContent=value;return cell;});
-         cells[0].prepend?.(tankPortrait(p.slot));if(/^[A-Z]{2}$/.test(p.country||''))cells[0].append(countryFlag(p.country));if(!muteReactions&&p.reaction){const bubble=document.createElement('span');bubble.className='reaction-bubble';reactionContent(bubble,p.reaction);cells[0].append(bubble);}
+         cells[0].prepend?.(tankPortrait(p.slot,p.skin));if(/^[A-Z]{2}$/.test(p.country||''))cells[0].append(countryFlag(p.country));if(!muteReactions&&p.reaction){const bubble=document.createElement('span');bubble.className='reaction-bubble';reactionContent(bubble,p.reaction);cells[0].append(bubble);}
         cells[0].style.color=colors[p.slot];row.append(...cells);$('resultsRows').append(row);
         const damageRow=document.createElement('tr');if(p.id===myId)damageRow.className='me';
         const values=[p.name+(p.bot?' · AI':'')+(p.id===myId?' · YOU':''),p.kills,p.deaths,p.shots?Math.round(100*Math.min(p.hits,p.shots)/p.shots)+'%':'—',Number.isFinite(p.damageDealt)?p.damageDealt:'—'];
@@ -427,13 +430,13 @@ function updateRoomPhase(data){
     $('results').classList.add('spectator-results');
   }
   if(waiting){
-    const signature=JSON.stringify([data.ownerId,data.readyIds,data.settings,data.private,data.players.map(p=>[p.id,p.name,p.connected,p.team,p.bot])]);
+    const signature=JSON.stringify([data.ownerId,data.readyIds,data.settings,data.private,data.players.map(p=>[p.id,p.name,p.skin,p.connected,p.team,p.bot])]);
     if(signature!==waitingSignature){
       waitingSignature=signature;$('waitingPlayers').replaceChildren();
       for(const p of data.players){
         const item=document.createElement('li');item.style.setProperty('--tank',colors[p.slot]);
         const name=document.createElement('strong'),detail=document.createElement('small');name.textContent=p.name+(p.id===myId?' · YOU':'');detail.textContent=(p.bot?'AI · ':'')+(p.team!=null?(p.team===0?'Orange':'Blue')+' team · ':'')+(p.id===data.ownerId?'HOST · ':'')+(p.connected?(p.bot||(data.readyIds||[]).includes(p.id)?'READY ✓':'Joined'):'Reconnecting');
-        const copy=document.createElement('span');copy.append(name,detail);item.append(tankPortrait(p.slot),copy);
+        const copy=document.createElement('span');copy.append(name,detail);item.append(tankPortrait(p.slot,p.skin),copy);
         if(data.ownerId===myId&&p.team!=null){const swap=document.createElement('button');swap.type='button';swap.className='tool team-swap';swap.textContent='⇄';swap.setAttribute('aria-label','Swap '+p.name+' to the other team');swap.addEventListener('click',()=>send({type:'room',action:'team',player:p.id,team:1-p.team}));item.append(swap);}
         $('waitingPlayers').append(item);
       }
@@ -443,6 +446,7 @@ function updateRoomPhase(data){
     const ruleSignature=JSON.stringify([data.settings,data.private]);if($('lobbyRules').signature!==ruleSignature){$('lobbyRules').signature=ruleSignature;$('lobbyMode').value=data.settings?.mode||'ffa';$('lobbyTarget').value=data.settings?.targetScore||10;$('lobbyBounce').checked=data.settings?.bouncing!==false;$('lobbyPowers').checked=data.settings?.powers!==false;$('lobbyPrivate').checked=data.private;}
     $('startGame').hidden=!mine;$('startGame').disabled=!mine;
     $('waitingTitle').textContent='Arena '+data.room+' · first to '+(data.settings?.targetScore||FIELD.targetScore);
+    $('waitingRewardNote').textContent=data.settings?.targetScore===FIELD.targetScore&&data.settings?.bouncing&&data.settings?.powers?'Standard match · Earn coins and daily rewards':'Practice match · No coins or daily rewards';
     const bots=data.players.filter(p=>p.bot).length,skill=data.botSkill||'normal';
     $('botControls').hidden=!mine;$('addBot').disabled=data.players.length>=FIELD.maxPlayers;$('removeBot').disabled=!bots;
     if($('botSkill').value!==skill)$('botSkill').value=skill;
@@ -610,7 +614,7 @@ async function loadLeaderboard(){
     const ownName=document.createElement('strong'),ownRank=document.createElement('span'),ownCopy=document.createElement('div');
     ownName.textContent=($('callsign').value||data.you?.name||'Your tank')+' · YOU';
     ownRank.textContent=data.you?'#'+data.you.rank+' · '+data.you.wins+' wins · '+data.you.kills+' kills':'Finish a battle to rank in this view. Solo battles count too.';
-    ownCopy.append(ownName,ownRank);$('leaderboardYou').replaceChildren(tankPortrait(data.you?.slot??lastTankSlot),ownCopy);
+    ownCopy.append(ownName,ownRank);$('leaderboardYou').replaceChildren(tankPortrait(data.you?.slot??lastTankSlot,data.you?.skin||(typeof playerProgress!=='undefined'?playerProgress?.equipped:'classic')),ownCopy);
     data.players.forEach((p,i)=>{
       const row=document.createElement('tr');
       if(p.profileId&&p.profileId===profileId)row.className='me';
@@ -1242,7 +1246,7 @@ function drawTank(t){
     ctx.beginPath();ctx.arc(p.x,p.y,35*boardScale,0,Math.PI*2);ctx.strokeStyle=t.power==='immortal'?powerColors.immortal:t.shield?'#fffceb':powerColors[t.power]||colors[t.slot];ctx.lineWidth=t.id===myId?2.5:1.5;ctx.stroke();
     if(t.power==='immortal')for(let i=0;i<3;i++){const a=i*Math.PI*2/3+(reducedMotion?0:last/650);drawPowerIcon(ctx,'immortal',p.x+Math.cos(a)*24,p.y+Math.sin(a)*24,9);}
   }
-  const color=t.flash>0?'#fff7cf':colors[t.slot];
+  const skin=FIELD.skins.find(s=>s.id===t.skin)||FIELD.skins[0],color=t.flash>0?'#fff7cf':skin.body||colors[t.slot];
   ctx.save();ctx.translate(p.x,p.y-2);ctx.scale(boardScale,boardScale);ctx.rotate(t.a);
   for(const side of [-1,1]){
     roundedRect(ctx,-25,side*19-7,50,14,6,ink,'#253d39',2.5);
@@ -1250,6 +1254,8 @@ function drawTank(t){
   }
   roundedRect(ctx,-23,-17,46,36,10,tint(color,.78),ink,3);
   roundedRect(ctx,-22,-19,44,32,9,color,ink,3);
+  if(t.flash<=0&&typeof TankSkins!=='undefined')TankSkins.plate(ctx,skin.id,-21,-18,42,30);
+  if(skin.id!=='classic')roundedRect(ctx,-22,-10,4,20,1,colors[t.slot],ink,1);
   roundedRect(ctx,-16,-15,28,4,2,'#ffffff88');
   for(let y=-7;y<=7;y+=7)roundedRect(ctx,-18,y-1,8,2,1,tint(color,.65));
   roundedRect(ctx,16,-11,5,6,2,'#fff5ba');roundedRect(ctx,16,6,5,6,2,'#fff5ba');
@@ -1265,6 +1271,7 @@ function drawTank(t){
   }
   roundedRect(ctx,-11,-13,27,27,10,tint(color,.82),ink,3);
   roundedRect(ctx,-12,-16,27,26,10,color,ink,3);
+  if(t.flash<=0&&typeof TankSkins!=='undefined')TankSkins.plate(ctx,skin.id,-11,-15,25,24);
   roundedRect(ctx,-6,-12,15,3,1.5,'#ffffff99');star(ctx,1,-2,7,'#fff4c5');
   ctx.restore();
   if(t.power&&powerColors[t.power]){const badge=project(t.x+34,t.y-16,30);ctx.beginPath();ctx.arc(badge.x,badge.y,7,0,Math.PI*2);ctx.fillStyle=powerColors[t.power];ctx.fill();drawPowerIcon(ctx,t.power,badge.x,badge.y,12);}
