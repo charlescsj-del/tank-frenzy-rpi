@@ -54,7 +54,7 @@ async function openGarage(){
   try{await loadPlayerProgress();}catch(error){$('garageMessage').textContent=error.message;}
 }
 function closeGarage(){garageOpen=false;$('garageDialog').hidden=true;$('garageButton').focus?.({preventScroll:true});}
-$('garageButton').addEventListener('click',openGarage);$('dailyHome').addEventListener('click',openGarage);$('closeGarage').addEventListener('click',closeGarage);
+$('garageButton').addEventListener('click',openGarage);$('dailyHome').addEventListener('click',async()=>{await openGarage();if(garageOpen)$('dailyTitle').scrollIntoView({block:'start'});});$('closeGarage').addEventListener('click',closeGarage);
 $('garageDialog').addEventListener('click',e=>{if(e.target===$('garageDialog'))closeGarage();});
 $('garageDialog').addEventListener('keydown',e=>{if(e.code==='Escape'){e.preventDefault();closeGarage();}else trapModalFocus(e,$('garageDialog'));});
 $('garageAction').addEventListener('click',async()=>{

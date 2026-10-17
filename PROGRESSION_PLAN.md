@@ -20,7 +20,7 @@ Daily bonuses: 20 / 25 / 30 / 40 / 50 / 65 / 100 coins. Day 7 additionally award
 
 Unit/integration coverage: reward amounts/caps, team wins, solo AI, participation, practice, early departure, disconnect, duplicate credit, date boundaries, missed days, Day 7/full collection, rollback, restart/recovery, leaderboard reset isolation and privacy. Browser coverage: actual purchase/equip, reload, recovery between devices, Day 7 results, shared equipped appearance, insufficient funds, desktop/portrait/landscape layouts. Existing multiplayer/hero/admin checks and amd64/aarch64 container health remain required.
 
-Real Safari/Android and Raspberry Pi observations remain hardware verification; CI Chromium is not a substitute. Existing battle tutorial screenshots still describe controls/rules; progression instructions are in GAMEPLAY.md and the Garage.
+Real Safari/Android and Raspberry Pi observations remain hardware verification; CI Chromium is not a substitute. The tutorial result image is refreshed from the verified Day 7 results flow; existing control/rule screenshots remain applicable. Progression instructions are in GAMEPLAY.md and the Garage.
 
 ## Phase 7: dev rollout and observation
 
