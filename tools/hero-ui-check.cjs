@@ -52,7 +52,7 @@ const root=require('node:path').resolve(__dirname,'..'),out=root+'/artifacts/her
    await page.evaluate(()=>document.querySelectorAll('.hero-motion-layer').forEach(el=>el.getAnimations().forEach(a=>a.currentTime=720)));
    assert(await flash.evaluate(el=>Number(getComputedStyle(el).opacity)>.3),'muzzle flash appears during the shot');
    assert(await ring.evaluate(el=>Number(getComputedStyle(el).opacity)>.1),'expanding muzzle ring appears during the shot');
-   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal page overflow');
+   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);if(overflow)await page.screenshot({path:out+'/overflow-'+width+'.png',fullPage:true});assert(!overflow,'no horizontal page overflow at '+width);
    if(width>=1001){const art=await page.locator('.intro').boundingBox(),panel=await page.locator('#arena').boundingBox();assert(Math.abs(art.y-panel.y)<2&&Math.abs(art.height-panel.height)<2,'desktop artwork and play panel align');assert(art.width>art.height,'desktop artwork stays landscape');}
    for(const id of ['quickPlay','createRoom','joinCodeButton']){
     const b=await page.locator('#'+id).boundingBox();assert(b&&b.x>=0&&b.y>=0&&b.x+b.width<=width+1&&b.y+b.height<=height+1,id+' is visible without scrolling at '+width+'x'+height);

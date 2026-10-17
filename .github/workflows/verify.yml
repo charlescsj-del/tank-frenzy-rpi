@@ -29,9 +29,13 @@ jobs:
       - run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.62.1
       - run: npx playwright install --with-deps chromium
       - run: node tools/admin-ui-check.cjs
+        if: ${{ !cancelled() }}
       - run: node tools/hero-ui-check.cjs
+        if: ${{ !cancelled() }}
       - run: node tools/multiplayer-ui-check.cjs
+        if: ${{ !cancelled() }}
       - run: node tools/progress-ui-check.cjs
+        if: ${{ !cancelled() }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
