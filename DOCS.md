@@ -40,7 +40,7 @@ Recovery codes represent the existing private player credential, formatted for c
 
 `npm start` stores both JSON files under `data/`. Set `TANK_DATA_DIR` to an existing or creatable directory to choose a persistent location. Embedded `createGameServer()` instances remain in-memory unless file paths are supplied; if `leaderboardFile` is set, player progress defaults beside it. Back up both files together.
 
-The authenticated admin **Coins & Progress** panel loads aggregate statistics only on opening or Refresh, without polling or external analytics. It reports completed/second-match profiles, next-day/day-7 returns among old-enough profiles, coins earned, wallet totals, unlocked skins, purchase participation and average matches to first purchase. Profiles include unused guests; these are game-instance figures, not verified unique people. Coin/match counters cover eligible standard matches from v3.3.0 onwards. Recovery codes and individual balances are not exposed by this endpoint.
+The authenticated admin **Coins & Progress** panel loads aggregate statistics only on opening or Refresh, without polling or external analytics. It reports completed/second-match profiles, next-day/day-7 returns among old-enough profiles, coins earned, wallet totals, unlocked skins, purchase participation and average matches to first purchase. Profiles include unused guests; these are game-instance figures, not verified unique people. Coin/match counters cover eligible standard matches from v3.3.0 onwards. Recovery codes and individual balances are not exposed by this endpoint. Achievement badges added in v3.4.0 use the same progress file without replacing existing wallets or daily rewards.
 
 ## Reading the resource charts
 
@@ -55,7 +55,7 @@ The authenticated admin **Coins & Progress** panel loads aggregate statistics on
 1. The app log should show listeners on game port `8765` and internal ingress port `8099`.
 2. Open **Web UI**: the lobby, banner and room list should load.
 3. Open `http://YOUR_PI_IP:8765` on two devices. Create and join one arena, set a win count between 5 and 50 (default 10), start a round, move, shoot, and confirm sound after interacting.
-4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `3.3.0`.
+4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `3.4.0`.
 5. Test an invitation generated from the sidebar after setting `public_url`.
 
 ## Updates

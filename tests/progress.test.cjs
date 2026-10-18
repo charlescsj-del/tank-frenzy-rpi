@@ -72,3 +72,24 @@ test('admin reports aggregate progression without exposing identities or credent
   let now=0;const f=fixture({now:()=>now});f.award();now+=864e5;f.room.roundId=randomUUID();f.award();f.store.buy(f.profile.id,'desert');
   const report=f.store.report();assert.equal(report.profiles,1);assert.equal(report.secondMatch,1);assert.equal(report.nextDay.returned,1);assert.equal(report.firstPurchaseMatches,2);assert.equal(report.skins,1);assert.equal(report.earned,205);assert(!JSON.stringify(report).includes(f.profile.id));assert(!JSON.stringify(report).includes(f.profile.secret));
 });
+test('first wins and personal records are earned once while repeat comeback highlights require actual deficits',()=>{
+  const f=fixture();f.p.maxDeficit=4;let r=f.award();assert(r.reward.highlights.some(h=>h.id==='first-win'));assert(r.reward.highlights.some(h=>h.id==='comeback'));assert.equal(r.reward.highlights.length,2);assert(r.progress.achievements['first-win']);assert(r.progress.achievements.comeback);assert.equal(r.reward.total,100,'badges never change coin amounts');
+  f.room.roundId=randomUUID();f.p.maxDeficit=0;r=f.award();assert.equal(r.reward.highlights.length,0,'same performance has no repeated unlock/record announcement');
+  f.room.roundId=randomUUID();f.room.winner={id:'opponent'};f.p.kills=11;r=f.award();assert.equal(r.reward.highlights[0].id,'personal-best');assert.match(r.reward.highlights[0].detail,/Previous best: 10/);assert.equal(r.progress.stats.bestKills,11);
+});
+test('accuracy badges exclude practice and inactive rounds and survive profile reload',t=>{
+  const f=fixture();f.p.shots=20;f.p.hits=10;f.p.activeSeconds=0;assert.deepEqual(f.award().progress.achievements,{});
+  f.p.activeSeconds=12;f.room.roundId=randomUUID();f.room.settings={...f.room.settings,targetScore:5};assert.deepEqual(f.award().progress.achievements,{});
+  f.room.settings={...f.room.settings,targetScore:10};f.room.roundId=randomUUID();let r=f.award();assert(r.progress.achievements.sharpshooter);f.room.roundId=randomUUID();assert(!f.award().reward.highlights.some(h=>h.id==='sharpshooter'));
+  const dir=fs.mkdtempSync(path.join(__dirname,'tank-achievements-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));f.store.file=path.join(dir,'progress.json');f.store.save();assert.deepEqual(new Progress(f.store.file).view(f.profile.id).achievements,f.store.view(f.profile.id).achievements);
+});
+test('existing victories show the earned badge without replaying a first-victory unlock',()=>{
+  const f=fixture();f.store.players.get(f.profile.id).stats.wins=2;assert(f.store.view(f.profile.id).achievements['first-win']);assert(!f.award().reward.highlights.some(h=>h.id==='first-win'));
+});
+test('comeback deficit follows real kill events in both modes, resets per round and stays private',()=>{
+  for(const mode of ['ffa','teams']){
+    const room=new Room('COMEBACK',{mode}),a=room.add('Leader'),b=room.add('Challenger');room.start(a);room.step(3);
+    for(let i=0;i<3;i++){b.hp=10;b.shieldUntil=0;room.damage(b,a.id,10);}assert.equal(b.maxDeficit,3);assert.equal(a.maxDeficit,0);assert(!JSON.stringify(room.snapshot()).includes('maxDeficit'));
+    room.resetRound();assert.equal(b.maxDeficit,0);
+  }
+});

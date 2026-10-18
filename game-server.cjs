@@ -29,7 +29,7 @@ class Room {
   configureQuick(searchSeconds=12,readySeconds=5){this.quick=true;this.phase='searching';this.searchUntil=this.time+searchSeconds;this.readySeconds=readySeconds;this.readyIds=new Set();}
   resetRound(){
     this.winner=null;this.recorded=false;this.lastResults=null;this.rematchUntil=0;this.rematchVotes.clear();this.teamScores=[0,0];this.map=generateMap();this.matchPlayers=new Map();
-    for(const p of this.players.values()){p.kills=0;p.deaths=0;p.damageDealt=0;p.shots=0;p.hits=0;p.streak=0;p.reaction=null;p.activeSeconds=0;}
+    for(const p of this.players.values()){p.kills=0;p.deaths=0;p.damageDealt=0;p.shots=0;p.hits=0;p.streak=0;p.reaction=null;p.activeSeconds=0;p.maxDeficit=0;}
   }
   lobby(p){
     if(this.players.get(p?.id)!==p||!p?.connected||p.bot||!['results','postgame'].includes(this.phase))return false;
@@ -78,7 +78,7 @@ class Room {
     const teams=[0,1].map(team=>[...this.players.values()].filter(t=>t.team===team).length);
     p.team=this.settings.mode==='teams'?(teams[0]<=teams[1]?0:1):null;
     if(this.phase==='waiting'&&!bot)this.ownerId??=p.id;
-    this.players.set(p.id,p);if(['countdown','playing'].includes(this.phase)&&!bot){p.activeSeconds=0;p.joinedRoundAt=Math.max(this.time,this.roundStarted||this.time);this.matchPlayers?.set(p.id,p);}this.spawn(p);return p;
+    this.players.set(p.id,p);if(['countdown','playing'].includes(this.phase)&&!bot){p.activeSeconds=0;p.joinedRoundAt=Math.max(this.time,this.roundStarted||this.time);this.matchPlayers?.set(p.id,p);}if(this.phase==='playing')this.trackDeficits();this.spawn(p);return p;
   }
   refreshOwner(){
     if(!['waiting','results','postgame'].includes(this.phase)){this.ownerId=null;return;}
@@ -144,6 +144,10 @@ class Room {
   disconnect(p){if(p.connected&&this.phase==='playing')p.disconnections=(p.disconnections||0)+1;p.connected=false;p.disconnectedAt=this.time;p.input=neutral();p.pendingShot=false;this.refreshOwner();}
   blocked(x,y,p){return x<26||x>F.width-26||y<26||y>F.height-26||this.map.walls.some(w=>hitRect(x,y,26,w))||[...this.players.values()].some(t=>t!==p&&t.connected&&t.hp>0&&Math.hypot(x-t.x,y-t.y)<50);}
   friendly(a,b){return this.settings.mode==='teams'&&a.team!=null&&a.team===b.team;}
+  trackDeficits(){
+    const teams=this.settings.mode==='teams',leading=teams?Math.max(...this.teamScores):Math.max(0,...[...this.players.values()].map(p=>p.kills));
+    for(const p of this.players.values())p.maxDeficit=Math.max(p.maxDeficit||0,leading-(teams?this.teamScores[p.team]||0:p.kills));
+  }
   invulnerable(p){return p.shieldUntil>this.time||(this.settings.powers&&p.power==='immortal'&&p.powerUntil>this.time);}
   damage(p,owner,amount=1){
     if(this.phase!=='playing')return;
@@ -158,6 +162,7 @@ class Room {
     if(!attacker)return;
     attacker.kills++;
     const teams=this.settings.mode==='teams',score=teams?++this.teamScores[attacker.team]:attacker.kills;
+    this.trackDeficits();
     if(score>=this.settings.targetScore){this.winner={id:attacker.id,team:attacker.team,name:teams?(attacker.team===0?'Orange team':'Blue team'):attacker.name};this.phase='results';this.rematchUntil=this.time+20;this.rematchVotes.clear();this.shells=[];this.pickups=[];this.refreshOwner();this.onFinish?.(this);}
   }
   spawnPickup(){

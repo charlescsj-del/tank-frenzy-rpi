@@ -310,7 +310,7 @@ function applySnapshot(data){
     }
     if(e.type==='restart'){tracks=[];particles=[];beams=[];pickupFlashes=[];floaters=[];rings=[];hurt=0;}
   }
-  updateRoomPhase(data);updateHud(data);
+  updateRoomPhase(data);updateHud(data);if(typeof updateCoach==='function')updateCoach(data);
 }
 function tankPortrait(slot,skin='classic'){
   if(skin!=='classic'&&typeof TankSkins!=='undefined')return TankSkins.portrait(slot,skin);

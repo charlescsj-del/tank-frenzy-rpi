@@ -18,6 +18,7 @@ Multiplayer browser tank game packaged as a **Home Assistant app** (formerly add
 | `bots.cjs` | Bot brain: `think(room,p,rayBox)` writes normal player input. `skills` (easy/normal/hard), `botNames`. |
 | `progress.cjs` | Permanent wallets/inventory, atomic purchases, Malaysia daily rewards and aggregate metrics. Never prune/reset with leaderboard data. |
 | `garage.js`, `skin-art.js` | Garage/recovery/rewards UI and shared procedural cosmetic artwork. |
+| `onboarding.js` | Optional device-aware first-match tips, driven by snapshots; no input/network changes. |
 | `leaderboard.cjs` | Schema-2 guest-profile totals (≤200 profiles), 62-day history (≤20000 matches), adaptive difficulty, rank deltas, atomic saves and preserved legacy backup. |
 | `addon.cjs` | HA entry point (`CMD` in Dockerfile). `readOptions('/data/options.json')` validates options; `homeAssistantNotifier()` posts to `http://supervisor/core/api/services/notify/<service>` with `SUPERVISOR_TOKEN`, at most once a minute. Starts both listeners with `leaderboardFile:'/data/leaderboard.json'`. |
 | `map-generator.cjs` | Seeded random walls on a 5×4 grid of cells with connected lanes. |
@@ -73,7 +74,7 @@ Phases: friend `waiting` → `countdown` (3 s) → `playing` → `results` (20 s
 
 ## Tests
 
-`npm test` runs `node --test tests/*.test.cjs` (204 tests, about 10 seconds). CI also builds amd64/aarch64 containers and checks admin, hero, multiplayer and progression UI. `tools/progress-ui-check.cjs` covers purchasing, recovery, Day 7 rewards and responsive Garage layouts. `tools/multiplayer-ui-check.cjs` exercises real HTTP/WebSocket grouping, Ready, results, shared reactions, ranks, privacy, QR invitations and direct invite joining at desktop, phone and landscape sizes. Playwright is a CI-only dependency. Browser check artifacts go under `artifacts/`; local tools may set `CHROMIUM_EXECUTABLE_PATH` and `ARTIFACT_DIR`.
+`npm test` runs `node --test tests/*.test.cjs` (210 tests, about 10 seconds). CI also builds amd64/aarch64 containers and checks admin, hero, multiplayer and progression UI. `tools/progress-ui-check.cjs` covers purchasing, recovery, Day 7 rewards and responsive Garage layouts. `tools/multiplayer-ui-check.cjs` exercises real HTTP/WebSocket grouping, Ready, results, shared reactions, ranks, privacy, QR invitations and direct invite joining at desktop, phone and landscape sizes. Playwright is a CI-only dependency. Browser check artifacts go under `artifacts/`; local tools may set `CHROMIUM_EXECUTABLE_PATH` and `ARTIFACT_DIR`.
 
 Harness quirks:
 - `client.js` and `server.cjs` are loaded into `vm` sandboxes with hand-made fake DOM elements (children, `append`, `prepend`, `replaceChildren`, `classList`, events, `setAttribute`). They have no `querySelector`, `closest` or `dataset`; if new client code uses a browser API, add it to the fake (or guard the call), or the sandbox throws.

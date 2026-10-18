@@ -2,7 +2,7 @@
 const fs=require('node:fs'),{randomBytes,createHash,randomInt}=require('node:crypto'),F=require('./shared.js');
 const day=864e5,validSecret=value=>typeof value==='string'&&/^[a-f0-9]{48}$/.test(value);
 const dayNumber=now=>Math.floor((now+8*3600e3)/day);
-const blank=()=>({coins:0,owned:['classic'],equipped:'classic',daily:{step:0,lastDay:null,graceUsed:false,longest:0,streak:0},credited:{},transactions:[],pending:null,stats:{matches:0,wins:0,kills:0,bestKills:0,earned:0,firstDay:null,nextDayReturn:false,day7Return:false,firstPurchaseMatches:null}});
+const blank=()=>({coins:0,owned:['classic'],equipped:'classic',achievements:{},daily:{step:0,lastDay:null,graceUsed:false,longest:0,streak:0},credited:{},transactions:[],pending:null,stats:{matches:0,wins:0,kills:0,bestKills:0,earned:0,firstDay:null,nextDayReturn:false,day7Return:false,firstPurchaseMatches:null}});
 class Progress {
   constructor(file=null,{now=Date.now,random=randomInt}={}){
     this.file=file;this.now=now;this.random=random;this.players=new Map();
@@ -31,7 +31,7 @@ class Progress {
     const reset=gap>1&&(gap!==2||d.graceUsed),nextCycle=d.step===7&&gap>0,step=reset||nextCycle?0:d.step;
     return {...d,step,qualified:d.lastDay===today,nextDay:step===7?1:step+1,graceAvailable:!d.graceUsed||reset||nextCycle,resetAt:(today+1)*day-8*3600e3,timezone:F.economy.timezone};
   }
-  view(id){const p=this.players.get(id)||blank();return {coins:p.coins,owned:p.owned,equipped:p.equipped,daily:this.dailyState(p),pending:p.pending,stats:p.stats,persistent:!!this.file};}
+  view(id){const p=this.players.get(id)||blank();return {coins:p.coins,owned:p.owned,equipped:p.equipped,achievements:{...(p.stats.wins>0?{'first-win':{t:null}}:{}),...p.achievements},daily:this.dailyState(p),pending:p.pending,stats:p.stats,persistent:!!this.file};}
   transaction(p,type,coins,extra={}){p.transactions.push({t:this.now(),type,coins,...extra});p.transactions=p.transactions.slice(-100);}
   buy(id,skinId){
     const skin=F.skins.find(s=>s.id===skinId);if(!skin)throw Error('Unknown skin.');
@@ -62,8 +62,14 @@ class Progress {
         const participated=(player.activeSeconds||0)>=Math.min(10,Math.max(2,(room.time-(player.joinedRoundAt??room.roundStarted??room.time))*.1));
         const reason=!eligible?'Practice match · Standard rules earn coins':player.left?'Left early · Finish the match to earn coins':!player.connected?'Disconnected at match end':!participated?'No coins · Participate in the battle':'';
         const won=!reason&&(room.settings.mode==='teams'?player.team!=null&&player.team===room.winner.team:player.id===room.winner.id);
-        const reward={round:room.roundId,completion:reason?0:F.economy.completion,victory:won?F.economy.win:0,kills:reason?0:Math.max(0,Math.min(F.economy.killCap,Math.floor(player.kills)||0))*F.economy.kill,daily:null,skin:null,reason};
+        const reward={round:room.roundId,completion:reason?0:F.economy.completion,victory:won?F.economy.win:0,kills:reason?0:Math.max(0,Math.min(F.economy.killCap,Math.floor(player.kills)||0))*F.economy.kill,daily:null,skin:null,reason,highlights:[]};
         if(!reason){
+          p.achievements??={};
+          const unlock=(id,title,detail)=>{p.achievements[id]={t:room.rewardAt??this.now()};reward.highlights.push({id,title,detail});};
+          if(won&&p.stats.wins===0&&!p.achievements['first-win'])unlock('first-win','First victory!','Your first standard-match win. Nicely played.');
+          if((player.kills||0)>p.stats.bestKills)reward.highlights.push({id:'personal-best',title:'Personal best · '+player.kills+' kills',detail:p.stats.bestKills?'Previous best: '+p.stats.bestKills+' kills.':'Your first kill record. Can you beat it next time?'});
+          if(won&&(player.maxDeficit||0)>=3){if(!p.achievements.comeback)p.achievements.comeback={t:room.rewardAt??this.now()};reward.highlights.push({id:'comeback',title:'Comeback win!',detail:'Won after trailing by '+player.maxDeficit+' points.'});}
+          if(!p.achievements.sharpshooter&&player.shots>=10&&player.hits>=10&&player.hits/player.shots>=.5)unlock('sharpshooter','Sharpshooter unlocked',player.hits+' hits from '+player.shots+' shots.');
           const today=dayNumber(room.rewardAt??this.now()),d=p.daily,gap=d.lastDay===null?0:today-d.lastDay;
           if(d.lastDay===null||gap>0){
             if(gap>1){if(gap===2&&!d.graceUsed)d.graceUsed=true;else{d.step=0;d.graceUsed=false;d.streak=0;}}
@@ -75,6 +81,7 @@ class Progress {
           p.stats.firstDay??=today;p.stats.nextDayReturn||=today===p.stats.firstDay+1;p.stats.day7Return||=today===p.stats.firstDay+7;
           p.stats.matches++;p.stats.wins+=won?1:0;p.stats.kills+=Math.max(0,Math.floor(player.kills)||0);p.stats.bestKills=Math.max(p.stats.bestKills,player.kills||0);
         }
+        const priority={'comeback':0,'first-win':1,'personal-best':2,'sharpshooter':3};reward.highlights.sort((a,b)=>priority[a.id]-priority[b.id]);reward.highlights=reward.highlights.slice(0,2);
         reward.total=reward.completion+reward.victory+reward.kills+(reward.daily?.coins||0)+(reward.daily?.collectionBonus||0);
         p.coins+=reward.total;p.stats.earned+=reward.total;p.credited[room.roundId]=1;p.pending=reward;
         this.transaction(p,'match',reward.total,{round:room.roundId});rewards.set(player.id,{reward,progress:this.view(player.profileId)});

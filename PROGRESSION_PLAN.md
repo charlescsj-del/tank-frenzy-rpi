@@ -30,6 +30,8 @@ Admin Coins & Progress loads on demand without external analytics. Observe first
 
 ## Phase 8: expansion after observations
 
+v3.4.0 starts items 1–2: optional device-aware first-match prompts, personal best highlights and server-verified First victory, Sharpshooter and Comeback badges. Garage navigation also receives the iPhone safe-area/touch fix reported after v3.3.0. Later challenges, group requeue, maps and vehicle balancing remain separate follow-ups.
+
 1. First-match prompts: movement/fire/ricochet guidance based on beginner exits. Match keyboard/touch input, dismiss cleanly and avoid covering combat HUD; no mandatory tutorial before Play.
 2. Personal achievements: server-verified first win, personal kill record and comeback highlights. Avoid repeated announcements or incentives to abandon teammates.
 3. Weekly challenges: a small optional set rewarding normal match completion, wins and ricochet skill. Clear progress and Malaysia Monday reset. Final targets/rewards depend on v3.3.0 earnings.

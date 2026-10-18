@@ -8,7 +8,7 @@ A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarr
 
 On a phone, creating an arena and adding bots fit within the viewport. The map remains edge to edge during the countdown and on the result screen.
 
-Current release: **v3.3.0**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
+Current release: **v3.4.0**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
 
 The private admin page uses **system CPU and memory gauges**, with the game's share overlaid in orange from the zero end of each arc. CPU converts the game's one-core reading to a fraction of all cores; memory compares resident game memory with total RAM. Game percentages appear inside the gauges, with resident MiB in the memory gauge. Pi load shows 1-, 5- and 15-minute averages, values per CPU core and a 60-second history collected while the page is open. Core-count reference markers make load easier to interpret. Resource readings refresh once a second and are marked stale when disconnected; room views still refresh twice a second. See [DOCS.md](DOCS.md) for measurement details.
 
@@ -17,6 +17,12 @@ See [SOUND_DESIGN.md](SOUND_DESIGN.md) for the approved cartoon arcade audio dir
 The main-screen illustration animates with tank recoil, brief muzzle flashes and slow flying shells between shots. Reduced-motion preferences keep the illustration still. Animation pauses when the lobby or browser tab is hidden.
 
 ## Coins, Garage and daily rewards
+
+The Garage header stays outside phone safe areas, so **Back** remains tappable below the status bar and after scrolling the collection. On desktop it remains in the fixed card header.
+
+New players see optional movement/fire tips during their first match. The text follows keyboard/mouse or touch controls; moving and firing advance it to brief ricochet and win-target tips. **Skip** dismisses guidance for this player on this browser. Tips never freeze combat and stay hidden for spectators, completed-match players, results and menus.
+
+Standard matches can earn permanent **First victory**, **Sharpshooter** (at least 10 hits from at least 10 shots, 50% accuracy or better) and **Comeback** (win after trailing by at least 3 points) badges. See earned/locked badges in the Garage. Results show up to two relevant first-win, comeback or improved-kill-record highlights, including records earned in a loss. Repeat performances do not replay first-win or accuracy unlocks. Existing recorded victories already qualify for the First victory badge. Badges add no coins or combat advantage.
 
 Complete a standard match (first to 10, bouncing and powers enabled) for 20 coins, plus 30 for a victory and 3 per kill, capped at 30 kill coins. Both winning teammates earn the victory bonus. Solo games against AI count. Participate through movement or firing and stay until the result; early departures, inactive players, spectators and disconnected finishes do not earn coins. Custom rules are practice for coins, but completed scores still follow leaderboard rules. Brief disconnects can rejoin before the match ends. Results automatically show the breakdown without an extra claim action.
 

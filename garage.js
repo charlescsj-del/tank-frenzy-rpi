@@ -48,6 +48,16 @@ function renderGarage(){
   $('garageAction').textContent=garageBusy?'Saving…':equipped?'Equipped ✓':owned?'Equip':p?.enabled===false?'Purchases paused':need>0?'Need '+need+' more coins':'Buy · '+skin.price+' coins';
   renderDaily();
   $('garageStats').textContent=p?p.stats.matches+' completed matches · '+p.stats.wins+' wins · Best: '+p.stats.bestKills+' kills · Longest streak: '+p.daily.longest+' days':'';
+  renderAchievements();
+}
+function renderAchievements(){
+  $('achievementList').replaceChildren();
+  for(const badge of FIELD.achievements){
+    const earned=Boolean(playerProgress?.achievements?.[badge.id]),item=document.createElement('div'),copy=document.createElement('div'),name=document.createElement('strong'),detail=document.createElement('small');
+    item.className='achievement-item'+(earned?'':' locked');name.textContent=badge.name+(earned?' · Earned ✓':'');detail.textContent=badge.description;copy.append(name,detail);
+    if(document.createElementNS){const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg'),use=document.createElementNS(ns,'use');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('class','ui-icon');svg.setAttribute('aria-hidden','true');use.setAttribute('href','#ui-trophy');svg.append(use);item.append(svg);}
+    item.append(copy);$('achievementList').append(item);
+  }
 }
 async function openGarage(){
   release();garageOpen=true;$('garageDialog').hidden=false;$('garageMessage').textContent=playerProgress?.pending?.skin?'Your Day 7 skin is permanently unlocked. Select Equip to use it.':'';garageSelected=playerProgress?.pending?.skin||playerProgress?.equipped||'classic';renderGarage();$('closeGarage').focus?.({preventScroll:true});
@@ -69,6 +79,9 @@ function showMatchRewards(result){
   const signature=JSON.stringify([result.roundId,result.rewardError,result.reward,playerProgress?.equipped,localStorageSafe('tank-frenzy-recovery-saved')]);if(signature===rewardSignature)return;rewardSignature=signature;
   if(result.rewardError){$('rewardTotal').textContent='Saving rewards…';$('rewardBreakdown').textContent='Your result is saved. Coin rewards will retry automatically.';return;}
   const r=result.reward;if(!r){$('matchRewards').hidden=true;return;}
+  $('matchHighlights').replaceChildren();
+  for(const highlight of r.highlights||[]){const item=document.createElement('div'),title=document.createElement('strong'),detail=document.createElement('span');item.className='match-highlight';title.textContent=highlight.title;detail.textContent=highlight.detail;item.append(title,detail);$('matchHighlights').append(item);}
+  $('matchHighlights').hidden=!(r.highlights?.length);
   $('rewardTotal').textContent='+'+r.total+' coins';
   $('rewardBreakdown').textContent=r.reason||['Completed +'+r.completion,r.victory?'Victory +'+r.victory:'',r.kills?'Kills +'+r.kills:'',r.daily?'Day '+r.daily.day+' +'+r.daily.coins:'',r.daily?.collectionBonus?'Full collection +'+r.daily.collectionBonus:''].filter(Boolean).join(' · ');
   const skin=FIELD.skins.find(s=>s.id===r.skin);$('rewardSkin').hidden=!skin;$('equipRewardSkin').hidden=!skin;

@@ -1,6 +1,11 @@
 (function(root) {
   const data = {
-    version:'3.3.0',maxHealth:10,laserDamage:4,laserRadius:6,barrelLength:40,doubleBarrelOffset:6,turretHeight:28,
+    version:'3.4.0',maxHealth:10,laserDamage:4,laserRadius:6,barrelLength:40,doubleBarrelOffset:6,turretHeight:28,
+    achievements:[
+      {id:'first-win',name:'First victory',description:'Win your first standard match.'},
+      {id:'sharpshooter',name:'Sharpshooter',description:'Land at least 10 hits with 50% accuracy in a standard match.'},
+      {id:'comeback',name:'Comeback',description:'Win a standard match after trailing by at least 3 points.'}
+    ],
     economy:{completion:20,win:30,kill:3,killCap:10,daily:[20,25,30,40,50,65,100],collectionBonus:200,timezone:'Asia/Kuala_Lumpur'},
     skins:[
       {id:'classic',name:'Classic',price:0,pattern:'none',description:'Your original colours. Ready for anything.'},
