@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.5.0 [2026-10-18]
+
+- Add optional weekly challenges: finish 5 standard matches (+75 coins), win 3 (+100), and land 10 ricochet hits (+125). Solo vs AI counts, with the same participation/finish checks as normal match rewards.
+- View progress bars and automatic reward status in the responsive Garage, with a direct home shortcut. Results include newly completed weekly bonuses without a claim step. Preserve the fixed, touch-safe Back button.
+- Reset goals Monday midnight Malaysia, using server match completion time. Atomic saves, persistent round credits and separate per-week records prevent duplicate payouts and keep delayed retries from changing the wrong week. Existing wallets, skins and daily streaks are preserved; no retroactive progress.
+- Count ricochet hits only from bounced shells that damage opponents, before the winning hit is saved. Keep counters private and off shared snapshots. Admin aggregate metrics include weekly goals and bonus coins, and the existing reward pause also pauses challenges.
+
 ## v3.4.0 [2026-10-18]
 
 - Keep the home and Garage buttons below the iPhone status/notch area and away from landscape cutouts. Preserve a non-scrolling Garage header and a 44-pixel Back target. Add touch regression checks after scrolling with simulated portrait/landscape safe areas.

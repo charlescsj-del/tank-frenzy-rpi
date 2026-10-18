@@ -4,6 +4,7 @@ async function setup(t){const game=createGameServer();game.server.listen(0,'127.
 test('player API authenticates by private code, restores identity and keeps internal files private',async t=>{
   const {action,game,base}=await setup(t),first=await action({action:'load'});assert.equal(first.status,200);assert.equal(first.progress.coins,0);assert.match(first.profile.secret,/^[a-f0-9]{48}$/);
   const same=await action({action:'load',profile:first.profile.secret});assert.equal(same.profile.id,first.profile.id);
+  const forged=await action({action:'load',profile:first.profile.secret,weekly:{matches:5,wins:3,ricochetHits:10},coins:99999});assert.equal(forged.progress.coins,0);assert(forged.progress.weekly.challenges.every(c=>c.progress===0));
   const restored=await action({action:'recover',code:'TF-'+first.profile.secret.match(/.{8}/g).join('-')});assert.equal(restored.profile.id,first.profile.id);
   assert.equal((await action({action:'load',profile:first.profile.id})).status,400,'public profile id is not an authentication credential');
   assert.equal((await action({action:'recover',code:'TF-'+'a'.repeat(48)})).status,400);assert.equal(game.progress.players.size,1);
@@ -30,6 +31,7 @@ test('a real server result carries private rewards and spectators/public ranking
   const room=game.rooms.get('REWARDS'),p=room.humans()[0],bot=room.add('',{bot:true});room.start(p);room.step(3);p.activeSeconds=12;p.kills=9;bot.shieldUntil=0;room.damage(bot,p.id,10);
   while(!messages.some(m=>m.type==='result'))await new Promise(resolve=>setTimeout(resolve,5));
   const result=messages.find(m=>m.type==='result');assert.equal(result.reward.total,100);assert.equal(result.progress.coins,100);assert.equal(result.progress.daily.step,1);
+  assert.deepEqual(result.progress.weekly.challenges.map(c=>c.progress),[1,1,0]);assert.equal(JSON.stringify(room.snapshot()).includes('weekly'),false);
   assert.equal(JSON.stringify(room.snapshot()).includes('coins'),false);const publicBoard=await fetch(base+'/leaderboard').then(r=>r.json());assert.equal(JSON.stringify(publicBoard).includes('coins'),false);assert.equal(JSON.stringify(publicBoard).includes(first.profile.secret),false);
   ws.close();
 });
@@ -38,4 +40,6 @@ test('reward pause retains inventory and rejects purchases; admin progress requi
   const request=body=>fetch(base+'/progress',{method:'POST',headers:{'Content-Type':'application/json','X-Tank-Player':'1'},body:JSON.stringify(body)});
   const loaded=await (await request({action:'load'})).json();assert.equal(loaded.progress.enabled,false);assert.equal((await request({action:'buy',profile:loaded.profile.secret,skin:'desert'})).status,400);
   assert.equal((await fetch(base+'/admin/economy')).status,401);const report=await fetch(base+'/admin/economy',{headers:{Authorization:'Basic '+Buffer.from('admin:test-password').toString('base64')}}).then(r=>r.json());assert.equal(report.profiles,1);assert.equal(report.enabled,false);assert(!JSON.stringify(report).includes(loaded.profile.secret));
+  const ws=new WebSocket(base.replace('http','ws')+'/ws'),messages=[];ws.on('message',raw=>messages.push(JSON.parse(raw)));await once(ws,'open');ws.send(JSON.stringify({type:'join',mode:'create',room:'PAUSED',profile:loaded.profile.secret}));while(!messages.some(m=>m.type==='welcome'))await new Promise(resolve=>setTimeout(resolve,5));
+  const room=game.rooms.get('PAUSED'),p=room.humans()[0],bot=room.add('',{bot:true}),before=game.progress.view(loaded.profile.id);room.start(p);room.step(3);p.activeSeconds=12;p.kills=9;p.ricochetHits=9;bot.shieldUntil=0;room.damage(bot,p.id,10,true);while(!messages.some(m=>m.type==='result'))await new Promise(resolve=>setTimeout(resolve,5));assert.equal(messages.find(m=>m.type==='result').reward.total,0);assert.deepEqual(game.progress.view(loaded.profile.id),before,'paused matches cannot advance weekly, daily or coin progress');ws.close();
 });

@@ -1,9 +1,9 @@
 'use strict';
-let playerProgress=null,progressLoading=null,garageOpen=false,garageSelected='classic',garageBusy=false,progressSerial=Promise.resolve(),rewardSignature='';
+let playerProgress=null,progressLoading=null,garageOpen=false,garageSelected='classic',garageBusy=false,progressSerial=Promise.resolve(),rewardSignature='',weeklyTimer=null;
 // These dialogs must remain available inside the fullscreen arena after a match.
 $('arena').append($('garageDialog'),$('profileDialog'));
 function savePlayerProfile(profile){profileSecret=profile.secret;profileId=profile.id;try{localStorage.setItem('tank-frenzy-profile',JSON.stringify(profile));}catch{}}
-function receiveProgress(value){if(!value)return;playerProgress=value;renderProgressHome();if(garageOpen)renderGarage();}
+function receiveProgress(value){if(!value)return;playerProgress=value;renderProgressHome();if(garageOpen)renderGarage();clearTimeout(weeklyTimer);if(value.weekly)weeklyTimer=setTimeout(()=>loadPlayerProgress().catch(()=>{}),Math.max(1000,value.weekly.resetAt-Date.now()+100));}
 async function playerAction(action,extra={}){
   const run=async()=>{
     const response=await fetch(appUrl('progress'),{method:'POST',headers:{'Content-Type':'application/json','X-Tank-Player':'1'},body:JSON.stringify({action,profile:profileSecret,...extra})});
@@ -20,6 +20,7 @@ function renderProgressHome(){
   const p=playerProgress;if(!p)return;
   $('coinBalance').textContent=p.coins.toLocaleString()+' coins';$('garageButton').setAttribute('aria-label','Garage · '+p.coins+' coins');
   const daily=p.daily;$('dailyHome').textContent=p.enabled===false?'Daily rewards paused':daily.qualified?'Day '+daily.step+' complete · Tomorrow: Day '+daily.nextDay:'Daily reward · Day '+daily.nextDay;
+  const weekly=p.weekly?.challenges||[];$('weeklyHome').textContent=p.enabled===false?'Weekly challenges paused':'Weekly challenges · '+weekly.filter(c=>c.completed).length+'/'+weekly.length+' complete →';
   $('progressHomeNote').textContent=p.persistent?'Play matches. Earn coins. Make it yours.':'Progress lasts for this server session. Ask the host to enable permanent storage.';
   $('progressHome').hidden=spectating;
 }
@@ -32,6 +33,18 @@ function renderDaily(){
   const reset=new Date(p.daily.resetAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   $('dailyNote').textContent=(p.enabled===false?'Daily rewards are temporarily paused by the host.':p.daily.qualified?'Today’s reward earned.':'Complete one standard match to earn today’s reward.')+' Resets at '+reset+' your time (midnight Malaysia). '+(p.daily.graceAvailable?'One missed day is protected this cycle.':'Missed-day protection used this cycle.');
   $('dailyCollection').textContent='Day 7: a random unowned normal skin, yours permanently. Full collection? +'+FIELD.economy.collectionBonus+' bonus coins. All skins are cosmetic.';
+}
+function renderWeekly(){
+  const p=playerProgress;$('weeklyChallenges').replaceChildren();if(!p?.weekly)return;
+  $('weeklyBudget').textContent='Play your way · +'+p.weekly.challenges.reduce((n,c)=>n+c.coins,0)+' coins';
+  for(const challenge of p.weekly.challenges){
+    const card=document.createElement('div'),heading=document.createElement('div'),title=document.createElement('strong'),coins=document.createElement('span'),detail=document.createElement('p'),bar=document.createElement('progress'),state=document.createElement('small');
+    card.className='weekly-challenge'+(challenge.completed?' completed':'');heading.className='weekly-challenge-heading';title.textContent=challenge.name;coins.textContent='+'+challenge.coins+' coins';heading.append(title,coins);detail.textContent=challenge.description;
+    bar.max=challenge.target;bar.value=challenge.progress;bar.setAttribute('aria-label',challenge.description+' '+challenge.progress+' of '+challenge.target);state.textContent=challenge.completed?'Reward added automatically ✓':challenge.progress+' / '+challenge.target;
+    card.append(heading,detail,bar,state);$('weeklyChallenges').append(card);
+  }
+  const reset=new Date(p.weekly.resetAt).toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  $('weeklyNote').textContent=(p.enabled===false?'Weekly earning is paused by the host.':'Finish standard matches to save progress, including solo vs AI. Rewards are automatic; no claiming needed.')+' Resets Monday 00:00 Malaysia ('+reset+' your time).';
 }
 function renderGarage(){
   const p=playerProgress,skin=FIELD.skins.find(s=>s.id===garageSelected)||FIELD.skins[0];
@@ -46,7 +59,7 @@ function renderGarage(){
   const owned=p?.owned.includes(skin.id),equipped=p?.equipped===skin.id,need=skin.price-(p?.coins||0);
   $('garageAction').disabled=garageBusy||!p||equipped||!owned&&(need>0||p.enabled===false);
   $('garageAction').textContent=garageBusy?'Saving…':equipped?'Equipped ✓':owned?'Equip':p?.enabled===false?'Purchases paused':need>0?'Need '+need+' more coins':'Buy · '+skin.price+' coins';
-  renderDaily();
+  renderDaily();renderWeekly();
   $('garageStats').textContent=p?p.stats.matches+' completed matches · '+p.stats.wins+' wins · Best: '+p.stats.bestKills+' kills · Longest streak: '+p.daily.longest+' days':'';
   renderAchievements();
 }
@@ -65,6 +78,7 @@ async function openGarage(){
 }
 function closeGarage(){garageOpen=false;$('garageDialog').hidden=true;$('garageButton').focus?.({preventScroll:true});}
 $('garageButton').addEventListener('click',openGarage);$('dailyHome').addEventListener('click',async()=>{await openGarage();if(garageOpen)$('dailyTitle').scrollIntoView({block:'start'});});$('closeGarage').addEventListener('click',closeGarage);
+$('weeklyHome').addEventListener('click',async()=>{await openGarage();if(garageOpen)$('weeklyTitle').scrollIntoView({block:'start'});});
 $('garageDialog').addEventListener('click',e=>{if(e.target===$('garageDialog'))closeGarage();});
 $('garageDialog').addEventListener('keydown',e=>{if(e.code==='Escape'){e.preventDefault();closeGarage();}else trapModalFocus(e,$('garageDialog'));});
 $('garageAction').addEventListener('click',async()=>{
@@ -84,6 +98,7 @@ function showMatchRewards(result){
   $('matchHighlights').hidden=!(r.highlights?.length);
   $('rewardTotal').textContent='+'+r.total+' coins';
   $('rewardBreakdown').textContent=r.reason||['Completed +'+r.completion,r.victory?'Victory +'+r.victory:'',r.kills?'Kills +'+r.kills:'',r.daily?'Day '+r.daily.day+' +'+r.daily.coins:'',r.daily?.collectionBonus?'Full collection +'+r.daily.collectionBonus:''].filter(Boolean).join(' · ');
+  $('rewardWeekly').hidden=!r.weekly?.length;$('rewardWeekly').textContent=(r.weekly||[]).map(c=>'Weekly: '+c.name+' +'+c.coins).join(' · ');
   const skin=FIELD.skins.find(s=>s.id===r.skin);$('rewardSkin').hidden=!skin;$('equipRewardSkin').hidden=!skin;
   if(skin){$('rewardSkin').replaceChildren(TankSkins.portrait(lastTankSlot,skin.id));const text=document.createElement('span');text.textContent='Day 7 unlocked · '+skin.name+' · Yours forever';$('rewardSkin').append(text);$('equipRewardSkin').textContent=playerProgress?.equipped===skin.id?'Equipped ✓':'Equip '+skin.name;$('equipRewardSkin').disabled=playerProgress?.equipped===skin.id;}
   $('rewardProtect').hidden=!playerProgress?.stats.matches||Boolean(localStorageSafe('tank-frenzy-recovery-saved')); 

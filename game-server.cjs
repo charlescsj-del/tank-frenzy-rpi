@@ -29,7 +29,7 @@ class Room {
   configureQuick(searchSeconds=12,readySeconds=5){this.quick=true;this.phase='searching';this.searchUntil=this.time+searchSeconds;this.readySeconds=readySeconds;this.readyIds=new Set();}
   resetRound(){
     this.winner=null;this.recorded=false;this.lastResults=null;this.rematchUntil=0;this.rematchVotes.clear();this.teamScores=[0,0];this.map=generateMap();this.matchPlayers=new Map();
-    for(const p of this.players.values()){p.kills=0;p.deaths=0;p.damageDealt=0;p.shots=0;p.hits=0;p.streak=0;p.reaction=null;p.activeSeconds=0;p.maxDeficit=0;}
+    for(const p of this.players.values()){p.kills=0;p.deaths=0;p.damageDealt=0;p.shots=0;p.hits=0;p.ricochetHits=0;p.streak=0;p.reaction=null;p.activeSeconds=0;p.maxDeficit=0;}
   }
   lobby(p){
     if(this.players.get(p?.id)!==p||!p?.connected||p.bot||!['results','postgame'].includes(this.phase))return false;
@@ -74,7 +74,7 @@ class Room {
     if(this.players.size>=F.maxPlayers)return null;
     const slot=Array.from({length:F.maxPlayers},(_,i)=>i).find(i=>![...this.players.values()].some(p=>p.slot===i));
     const used=new Set([...this.players.values()].map(t=>t.name));const botName=Bots.botNames.find(n=>!used.has(n))||'Nova';
-    const p={id:randomUUID(),slot,bot,name:bot?botName:name||F.palette[slot].name,x:0,y:0,a:0,aim:0,hp:F.maxHealth,kills:0,deaths:0,damageDealt:0,shots:0,hits:0,streak:0,cool:0,respawnAt:0,shieldUntil:0,connected:true,disconnectedAt:0,input:neutral(),lastInput:this.time,seq:-1,life:0};
+    const p={id:randomUUID(),slot,bot,name:bot?botName:name||F.palette[slot].name,x:0,y:0,a:0,aim:0,hp:F.maxHealth,kills:0,deaths:0,damageDealt:0,shots:0,hits:0,ricochetHits:0,streak:0,cool:0,respawnAt:0,shieldUntil:0,connected:true,disconnectedAt:0,input:neutral(),lastInput:this.time,seq:-1,life:0};
     const teams=[0,1].map(team=>[...this.players.values()].filter(t=>t.team===team).length);
     p.team=this.settings.mode==='teams'?(teams[0]<=teams[1]?0:1):null;
     if(this.phase==='waiting'&&!bot)this.ownerId??=p.id;
@@ -149,12 +149,12 @@ class Room {
     for(const p of this.players.values())p.maxDeficit=Math.max(p.maxDeficit||0,leading-(teams?this.teamScores[p.team]||0:p.kills));
   }
   invulnerable(p){return p.shieldUntil>this.time||(this.settings.powers&&p.power==='immortal'&&p.powerUntil>this.time);}
-  damage(p,owner,amount=1){
+  damage(p,owner,amount=1,ricochet=false){
     if(this.phase!=='playing')return;
     const attacker=this.players.get(owner);
     if(p.hp<=0||this.invulnerable(p)||(attacker&&this.friendly(attacker,p)))return;
     const dealt=Math.min(p.hp,amount);p.hp=Math.max(0,p.hp-amount);const dead=p.hp===0;
-    if(attacker){attacker.hits++;if(attacker!==p)attacker.damageDealt+=dealt;}
+    if(attacker){attacker.hits++;if(attacker!==p){attacker.damageDealt+=dealt;if(ricochet)attacker.ricochetHits++;}}
     if(dead){p.streak=0;if(attacker)attacker.streak++;}
     this.emit(dead?'destroyed':'hit',{x:p.x,y:p.y,slot:p.slot,player:p.id,damage:amount,...(dead&&attacker?{by:attacker.id,streak:attacker.streak}:{})});
     if(!dead)return;
@@ -304,7 +304,7 @@ class Room {
         this.emit('shell-clash',{x:(a.x+a.dx*time+b.x+b.dx*time)/2,y:(a.y+a.dy*time+b.y+b.dy*time)/2,slot:s.slot,otherSlot:other.slot});
       }else{
         if(p.hp<=0)continue;
-        s.life=0;this.damage(p,s.owner);
+        s.life=0;this.damage(p,s.owner,1,s.bounces>0);
       }
       if(this.winner)break;
     }

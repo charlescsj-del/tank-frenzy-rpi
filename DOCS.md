@@ -42,6 +42,8 @@ Recovery codes represent the existing private player credential, formatted for c
 
 The authenticated admin **Coins & Progress** panel loads aggregate statistics only on opening or Refresh, without polling or external analytics. It reports completed/second-match profiles, next-day/day-7 returns among old-enough profiles, coins earned, wallet totals, unlocked skins, purchase participation and average matches to first purchase. Profiles include unused guests; these are game-instance figures, not verified unique people. Coin/match counters cover eligible standard matches from v3.3.0 onwards. Recovery codes and individual balances are not exposed by this endpoint. Achievement badges added in v3.4.0 use the same progress file without replacing existing wallets or daily rewards.
 
+Weekly challenges added in v3.5.0 keep compact per-week counters and awarded-goal IDs in that same progress file (schema 1, compatible with older wallets). Counters are capped at their targets. Older weeks are retained so an in-memory delayed-save retry can settle the match's original week without replacing current-week progress; only the current week is returned to its owner. Recovery restores this history too. No challenge counters or wallets are added to shared 30 Hz snapshots. The existing `rewards_enabled` switch pauses weekly progress and bonuses as well as daily/match coins. Admin aggregates include completed weekly goals and weekly bonus coins earned, without per-player challenge data. Initial weekly targets/rewards are provisional; review actual play and earning rates before repricing. A new week requires no server restart and preserves owned skins/coins.
+
 ## Reading the resource charts
 
 - **System CPU** is busy CPU time across all host cores over the latest sample interval. The orange game segment starts at 0% on the same arc and divides the game's one-core CPU reading by the number of cores. For example, 20% of one core on a four-core Pi covers 5% of the total gauge. The exact one-core reading remains in the gauge’s accessible description; the visible game percentage uses the total host CPU scale: **100% core means one full core**, so it can exceed 100% when the process uses multiple cores.
@@ -55,7 +57,7 @@ The authenticated admin **Coins & Progress** panel loads aggregate statistics on
 1. The app log should show listeners on game port `8765` and internal ingress port `8099`.
 2. Open **Web UI**: the lobby, banner and room list should load.
 3. Open `http://YOUR_PI_IP:8765` on two devices. Create and join one arena, set a win count between 5 and 50 (default 10), start a round, move, shoot, and confirm sound after interacting.
-4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `3.4.0`.
+4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `3.5.0`.
 5. Test an invitation generated from the sidebar after setting `public_url`.
 
 ## Updates
