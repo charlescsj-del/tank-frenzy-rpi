@@ -2,7 +2,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
 function coach(mobile){
   const elements=new Map(),storage=new Map(),element=()=>({hidden:true,textContent:'',addEventListener(){}});
-  const sandbox={document:{hidden:false},localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},profileId:'player',joined:true,spectating:false,profileOpen:false,tutorialOpen:false,leaveDialogOpen:false,resultDetailsOpen:false,myId:'me',touchMedia:{matches:mobile},playerProgress:{stats:{matches:0}},$:(id)=>{if(!elements.has(id))elements.set(id,element());return elements.get(id);}};
+  const sandbox={cssW:390,cssH:844,showPing:false,document:{hidden:false},localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},profileId:'player',joined:true,spectating:false,profileOpen:false,tutorialOpen:false,leaveDialogOpen:false,resultDetailsOpen:false,myId:'me',touchMedia:{matches:mobile},playerProgress:{stats:{matches:0}},$:(id)=>{if(!elements.has(id))elements.set(id,element());return elements.get(id);}};
   sandbox.$('arena').classList={contains:()=>false};vm.createContext(sandbox);vm.runInContext(fs.readFileSync(require.resolve('../onboarding.js'),'utf8'),sandbox);
   let time=10,round='one';const me={id:'me',hp:10,x:100,y:100,shots:0};
   const update=(extra={})=>sandbox.updateCoach({roundId:round,time,phase:'playing',settings:{bouncing:true,targetScore:10,mode:'ffa'},players:[me],...extra});

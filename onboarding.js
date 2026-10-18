@@ -14,6 +14,8 @@ function updateCoach(data){
     matchCoach={round,step:0,x:me.x,y:me.y,moved:false,fired:false,at:data.time,done:coachSeen()};
   }
   const c=matchCoach;c.moved||=Math.hypot(me.x-c.x,me.y-c.y)>=36;c.fired||=me.shots>0;
+  const layout=[cssW,cssH,me.power||'',showPing,data.players.length].join('|');
+  if(c.layout!==layout){const header=$('arenaHeader').getBoundingClientRect?.(),stage=$('game').parentElement?.getBoundingClientRect?.();if(header&&stage)$('matchCoach').style.setProperty('--coach-top',Math.max(12,header.bottom-stage.top+8)+'px');c.layout=layout;}
   if(c.step===0&&c.moved){c.step=1;c.at=data.time;}
   if(c.step===1&&c.fired){c.step=data.settings?.bouncing===false?3:2;c.at=data.time;}
   if(c.step===2&&data.time-c.at>=6){c.step=3;c.at=data.time;}
