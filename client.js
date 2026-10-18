@@ -189,6 +189,12 @@ function sendInput(){
   const aim=touchAim?{x:(me?.x??500)+touchAim.x*150,y:(me?.y??330)+touchAim.y*150}:pointer.active?pointer:{x:(me?.x??500)+Math.cos(me?.aim||0)*150,y:(me?.y??330)+Math.sin(me?.aim||0)*150};
   send({type:'input',seq:++seq,x:Math.max(-1,Math.min(1,sticks.move.x+Number(keys.has('KeyD'))-Number(keys.has('KeyA')))),y:Math.max(-1,Math.min(1,sticks.move.y+Number(keys.has('KeyS'))-Number(keys.has('KeyW')))),aimX:aim.x,aimY:aim.y,fire:firing||Math.hypot(sticks.aim.x,sticks.aim.y)>0});
 }
+function resetForRequeue(){
+  release();resetResultDamage();closeLeaveDialog();setArenaMenu(false);if(profileOpen)closeProfile();if(shareOpen)closeShare();if(typeof garageOpen!=='undefined'&&garageOpen&&typeof closeGarage==='function')closeGarage();
+  lastResult=null;rankSignature='';resultsSignature='';waitingSignature='';roomPhase=null;roundAudioMap=null;resultAudioKey=null;countdownAudioKey=null;lastEvent=0;
+  $('rankChange').hidden=true;$('reactionStrip').hidden=true;$('groupError').hidden=true;$('groupError').textContent='';$('results').hidden=true;$('groupRequeue').hidden=true;
+  tanks=[];shells=[];particles=[];tracks=[];pickups=[];beams=[];pickupFlashes=[];floaters=[];rings=[];hurt=0;mapId=null;latest=null;$('killFeed').replaceChildren();$('streakBanner').hidden=true;stopCueSounds();
+}
 function release(){keys.clear();firing=false;for(const name of ['move','aim'])resetStick(name);stopMovementSound();sendInput();}
 function connect(){
   if(connecting||joined)return;
@@ -206,6 +212,7 @@ function connect(){
     if(socket!==ws)return;
     let data;try{data=JSON.parse(event.data);}catch{return;}
     if(data.type==='welcome'){
+      if(data.requeued)resetForRequeue();
       lastTankSlot=data.slot??0;try{localStorage.setItem('tank-frenzy-slot',String(lastTankSlot));}catch{}
       roomCode=data.room;$('roomInput').value=roomCode;$('roomCode').textContent=roomCode;quickRequested=false;
       if(data.profile){profileSecret=data.profile.secret;profileId=data.profile.id;try{localStorage.setItem('tank-frenzy-profile',JSON.stringify(data.profile));}catch{}}if(typeof receiveProgress==='function')receiveProgress(data.progress);updateInvite();
@@ -216,6 +223,7 @@ function connect(){
     }else if(data.type==='state'){applySnapshot(data);}
     else if(data.type==='result'){lastResult=data;if(typeof receiveProgress==='function')receiveProgress(data.progress);renderRankChange();}
     else if(data.type==='pong'){const value=performance.now()-data.sent;if(Number.isFinite(value)&&value>=0){pingMs=Math.round(value);pingAt=performance.now();$('latency').textContent=pingMs+' MS';updatePing();}}
+    else if(data.type==='queue-error'){$('groupError').textContent=data.message||'Your group could not queue. Try again.';$('groupError').hidden=false;if(latest)updateRoomPhase(latest);}
     else if(data.type==='error'){
       const requeue=data.code==='session_expired'&&latest?.quick&&['searching','ready'].includes(latest.phase);
       intentional=true;joined=false;connecting=false;try{sessionStorage.removeItem(sessionKey);}catch{}
@@ -374,6 +382,12 @@ function updateRoomPhase(data){
   $('arena').classList.toggle('battle-field',!waiting&&!matching&&(joined||spectating));
   $('countdown').hidden=!countdown;
   $('results').hidden=!(results||postgame);
+  const humans=data.players.filter(p=>!p.bot&&p.connected),group=humans.filter(p=>(data.groupIds||[]).includes(p.id)),inGroup=group.some(p=>p.id===myId),together=postgame&&inGroup&&group.length>=2;
+  $('groupRequeue').hidden=!postgame||spectating||humans.length<2||typeof data.roundId!=='string';
+  $('groupConsent').setAttribute('aria-pressed',String(inGroup));$('groupConsent').textContent=inGroup?'Joined group ✓':'Stay together';
+  const groupNote=!group.length?'Opt in, then find a new match together. Only players who opt in will move.':group.length===1?'1 player opted in. Find new match still searches solo until another joins.':group.length+' opted in: '+group.map(p=>p.id===myId?'You':p.name).join(', ')+'. Anyone in this group can start the search.';
+  if($('groupStatus').textContent!==groupNote)$('groupStatus').textContent=groupNote;
+  $('resultsLobby').textContent=together?'Find match together':'Find new match';
   if(!results&&!postgame&&!waiting&&resultDetailsOpen)resetResultDamage();
   if(waiting&&resultDetailsOpen)$('matchDetailsNote').textContent='Round finished. Your group is back in the lobby; these are the previous battle statistics.';
   if(countdown){const number=String(Math.max(1,Math.ceil(data.countdownIn)));if($('countdownNumber').textContent!==number)$('countdownNumber').textContent=number;}
@@ -386,6 +400,7 @@ function updateRoomPhase(data){
     const connected=data.players.filter(p=>p.connected),votes=data.rematchVotes||[],voted=votes.includes(myId);
     const needed=data.rematchNeeded||connected.length,ready=votes.filter(id=>connected.some(p=>p.id===id)).length;
     $('resultsVotes').textContent=postgame?'Round finished':ready+' / '+needed+' ready to play again';
+    $('resultsVotes').hidden=postgame||spectating;
     const board=JSON.stringify([data.settings?.mode,data.winner.team,data.teamScores,data.players.map(p=>[p.id,p.skin,p.team,p.kills,p.deaths,p.damageDealt,p.shots,p.hits,p.reaction]),muteReactions]);
     if(board!==resultsSignature){
       resultsSignature=board;$('resultsRows').replaceChildren();$('resultDamageRows').replaceChildren();
@@ -420,7 +435,7 @@ function updateRoomPhase(data){
     $('rematch').hidden=postgame||spectating;$('results').classList.toggle('rematch-closed',postgame);
     $('resultsLobby').classList.toggle('primary',postgame);$('resultsLobby').classList.toggle('tool',!postgame);
     $('rematch').textContent=postgame?'ROUND FINISHED':voted?'READY ✓':'PLAY AGAIN';
-    $('resultsTimer').textContent=postgame?'Rematch closed. Find a new match whenever you’re ready.':'Rematch available for '+Math.ceil(data.rematchIn)+'s';
+    $('resultsTimer').textContent=postgame?$('groupRequeue').hidden?'Rematch closed. Find a new match whenever you’re ready.':'Quick Play · Standard rules · Open seats can match other players.':'Rematch available for '+Math.ceil(data.rematchIn)+'s';
   }
   $('reactionToggle').hidden=!results||spectating;$('reactionStrip').hidden=spectating||!results||$('reactionStrip').hidden;$('resultsLobby').hidden=!(results||postgame)||spectating;renderRankChange();
   if(spectating&&(results||postgame)){
@@ -464,8 +479,14 @@ $('rematch').addEventListener('click',()=>{if(joined&&latest?.phase==='results'&
 $('resultsLeave').addEventListener('click',leave);
 $('readyButton').addEventListener('click',()=>send({type:'ready'}));$('waitingBack').addEventListener('click',()=>leave());
 $('waitingReady').addEventListener('click',()=>send({type:'ready'}));$('cancelMatchmaking').addEventListener('click',leave);
+$('groupConsent').addEventListener('click',()=>{
+  if(!joined||spectating||latest?.phase!=='postgame'||typeof latest.roundId!=='string')return;
+  $('groupError').hidden=true;send({type:'group',roundId:latest.roundId,joined:!(latest.groupIds||[]).includes(myId)});
+});
 $('resultsLobby').addEventListener('click',()=>{
   if(spectating||!['results','postgame'].includes(latest?.phase))return;
+  const group=latest.players.filter(p=>!p.bot&&p.connected&&(latest.groupIds||[]).includes(p.id));
+  if(latest.phase==='postgame'&&group.length>=2&&group.some(p=>p.id===myId)){$('groupError').hidden=true;send({type:'requeue',roundId:latest.roundId});return;}
   const mode=latest.settings?.mode||selectedGameMode;leave({keepFullscreen:true});selectGameMode(mode);quickPlay();
 });
 $('saveLobbyRules').addEventListener('click',()=>{

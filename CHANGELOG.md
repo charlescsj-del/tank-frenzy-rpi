@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.6.0 [2026-10-18]
+
+- After the rematch timer closes, opt into Stay together on the finished leaderboard. When two or more humans opt in, any member can choose Find match together. Consent alone never starts a search, and players who do not opt in stay on their result screen.
+- Reserve the whole consenting group in one same-mode Quick Play search, or create a fresh search if it cannot fit. Never split a group or remove AI from locked lineups. Quick Play uses standard rules and balances teams; group membership does not guarantee the same team.
+- Clear consent on withdrawal, departure, disconnect or a new round. Capacity failures leave players and results intact. Transfer using the existing connections and private credentials, preserving fullscreen, skins and earned rewards; support reconnecting with the previous room token if a transfer welcome was missed.
+- Add server, client and responsive browser regression checks for group consent, atomic admission, failure rollback, AI protection, solo search, reconnects and spectator exclusion. Keep group fields out of active-match snapshots.
+
 ## v3.5.0 [2026-10-18]
 
 - Add optional weekly challenges: finish 5 standard matches (+75 coins), win 3 (+100), and land 10 ricochet hits (+125). Solo vs AI counts, with the same participation/finish checks as normal match rewards.

@@ -71,6 +71,31 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
     for(const s of sessions.values())if(s.room===room&&s.player.connected){const result=room.lastResults?.get(s.player.id);if(result)send(s.ws,result);}
   }
   function prepare(room){room.onFinish=finish;room.chooseBotSkill=players=>leaderboard.skill(players);return room;}
+  function requeueGroup(request,key,roundId){
+    const source=request.room;
+    if(source.phase!=='postgame'||typeof roundId!=='string'||roundId!==source.roundId||!request.player.connected||!source.groupIds?.has(request.player.id))return;
+    const fail=message=>send(request.ws,{type:'queue-error',message});
+    const members=[...sessions.values()].filter(s=>s.room===source&&source.players.get(s.player.id)===s.player&&s.player.connected&&source.groupIds.has(s.player.id)&&s.ws.readyState===WebSocket.OPEN);
+    if(!members.includes(request)||members.length<2){fail('Choose Stay together with at least one other player, or find a new match on your own.');return;}
+    // Reserve the whole group in one searching arena. Never split it or displace AI.
+    let target=[...rooms.values()].find(r=>r!==source&&r.quick&&r.phase==='searching'&&r.time<r.searchUntil&&r.settings.mode===source.settings.mode&&r.players.size+members.length<=maxPlayers);
+    const created=!target,emptiesSource=source.humans().every(p=>members.some(s=>s.player===p));
+    if(created){
+      if(rooms.size-(emptiesSource?1:0)>=32){fail('The server is full. Your group is still here; try again shortly.');return;}
+      if(key&&[...rooms.values()].filter(r=>r.creator===key).length-(emptiesSource&&source.creator===key?1:0)>=limits.arenas){fail('Your network has too many open arenas. Your group is still here; try again when an arena ends.');return;}
+      target=prepare(Object.assign(new Room('QUICK-'+randomBytes(4).toString('hex').toUpperCase(),{mode:source.settings.mode}),{creator:key,private:false}));target.configureQuick(quickSearchSeconds,quickReadySeconds);
+    }
+    finish(source);
+    const arrivals=[];
+    try{for(const s of members){const p=target.add(s.player.name);if(!p)throw Error('No group space');p.profileId=s.profile.id;p.skin=progress.skinOf(s.profile.id);p.country=s.player.country;arrivals.push({session:s,player:p});}}
+    catch{for(const a of arrivals)target.remove(a.player);fail('Could not reserve the whole group. Everyone is still on the results screen; try again.');return;}
+    if(created)rooms.set(target.code,target);
+    for(const a of arrivals){const s=a.session;source.remove(s.player);s.previousRoom=source.code;s.room=target;s.player=a.player;}
+    if(!source.players.size){closeSpectators(source,'Match over','Everyone left this room.');rooms.delete(source.code);}
+    const snapshot=encodeState(target.snapshot());
+    for(const {session:s}of arrivals){send(s.ws,{type:'welcome',requeued:true,id:s.player.id,token:s.token,profile:s.profile,progress:{...progress.view(s.profile.id),enabled:rewardsEnabled},slot:s.player.slot,room:target.code,seq:s.player.seq});sendRaw(s.ws,snapshot);}
+    if(created)try{onRoomCreated?.({code:target.code,name:request.player.name,mode:target.settings.mode,url:publicUrl?publicUrl+'/?room='+encodeURIComponent(target.code):''});}catch{}
+  }
   const files={'/onboarding.js':['onboarding.js','text/javascript'],'/garage.js':['garage.js','text/javascript'],'/skin-art.js':['skin-art.js','text/javascript'],'/':['index.html','text/html'],'/index.html':['index.html','text/html'],'/qr.js':['qr.js','text/javascript'],'/client.js':['client.js','text/javascript'],'/shared.js':['shared.js','text/javascript'],'/sound-bank.js':['sound-bank.js','text/javascript'],'/music.js':['music.js','text/javascript'],'/audio/cartoon-v1.mp3':['audio/cartoon-v1.mp3','audio/mpeg'],'/mode-banner.webp':['mode-banner.webp','image/webp'],'/mode-banner-idle.webp':['mode-banner-idle.webp','image/webp'],'/hero-quarry.webp':['hero-quarry.webp','image/webp'],'/hero-tanks.webp':['hero-tanks.webp','image/webp']};
   for(const name of ['iron-advance','overdrive','steel-pressure'])files[`/audio/music-${name}-v1.mp3`]=[`audio/music-${name}-v1.mp3`,'audio/mpeg'];
   for(const name of ['fire-a','ricochet-c','pickup-a','explosion-c'])files[`/audio/effects-${name}-v1.mp3`]=[`audio/effects-${name}-v1.mp3`,'audio/mpeg'];
@@ -264,15 +289,16 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
       }
       if(spectators.has(ws))return;
       if((msg.type==='join'||msg.type==='quick')&&!session){
-        let code=(text(msg.room)||'QUARRY').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,16)||'QUARRY';
+        let code=(text(msg.room)||'QUARRY').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,16)||'QUARRY',requeued=false;
         if(msg.type==='quick'){
           const mode=msg.settings?.mode==='teams'?'teams':'ffa';
           const waiting=[...rooms.values()].find(r=>r.quick&&r.phase==='searching'&&r.settings.mode===mode&&r.humans().length<maxPlayers);
           code=waiting?.code||'QUICK-'+randomBytes(4).toString('hex').toUpperCase();msg.settings={mode};msg.mode='quick';
         }
         const existing=typeof msg.token==='string'?sessions.get(msg.token):null;
-        if(msg.token&&(!existing||existing.room.code!==code||!existing.room.players.has(existing.player.id))){send(ws,{type:'error',code:'session_expired',message:'Your arena reservation expired. Join a new match.'});ws.close();return;}
-        if(existing&&existing.room.code===code&&existing.room.players.has(existing.player.id)){
+        if(msg.token&&(!existing||existing.room.code!==code&&existing.previousRoom!==code||!existing.room.players.has(existing.player.id))){send(ws,{type:'error',code:'session_expired',message:'Your arena reservation expired. Join a new match.'});ws.close();return;}
+        if(existing&&existing.room.players.has(existing.player.id)){
+          requeued=existing.room.code!==code;code=existing.room.code;
           session=existing;const previous=session.ws;session.ws=ws;
           if(previous!==ws)previous.terminate();
           session.player.connected=true;session.player.disconnectedAt=0;session.player.pendingShot=false;session.player.input={x:0,y:0,aimX:session.player.x+100,aimY:session.player.y,fire:false};session.player.lastInput=session.room.time;
@@ -297,12 +323,14 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
           player.profileId=profile.id;player.skin=progress.skinOf(profile.id);player.country=country;session={room,player,profile,token:randomBytes(24).toString('hex'),ws};sessions.set(session.token,session);
           if(created)try{onRoomCreated?.({code,name:player.name,mode:room.settings.mode,url:publicUrl?publicUrl+'/?room='+encodeURIComponent(code):''});}catch{/* Notifications never block play. */}
         }
-        session.ws=ws;clearTimeout(joinTimeout);settle();send(ws,{type:'welcome',id:session.player.id,token:session.token,profile:session.profile,progress:{...progress.view(session.profile.id),enabled:rewardsEnabled},slot:session.player.slot,room:code,seq:session.player.seq});sendRaw(ws,encodeState(session.room.snapshot()));const result=session.room.lastResults?.get(session.player.id);if(result)send(ws,result);return;
+        session.ws=ws;clearTimeout(joinTimeout);settle();send(ws,{type:'welcome',...(requeued?{requeued:true}:{}),id:session.player.id,token:session.token,profile:session.profile,progress:{...progress.view(session.profile.id),enabled:rewardsEnabled},slot:session.player.slot,room:code,seq:session.player.seq});sendRaw(ws,encodeState(session.room.snapshot()));const result=session.room.lastResults?.get(session.player.id);if(result)send(ws,result);return;
       }
       if(!session)return;
       if(session.ws!==ws)return;
       if(msg.type==='start')session.room.start(session.player);
       if(msg.type==='rematch')session.room.voteRematch(session.player);
+      if(msg.type==='group')session.room.groupConsent(session.player,msg);
+      if(msg.type==='requeue')requeueGroup(session,key,msg.roundId);
       if(msg.type==='bot')session.room.botCommand(session.player,msg);
       if(msg.type==='ready')session.room.ready(session.player);
       if(msg.type==='lobby')session.room.lobby(session.player);

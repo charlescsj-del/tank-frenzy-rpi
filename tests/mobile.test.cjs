@@ -25,6 +25,25 @@ function client(mobile=true,url='http://localhost:8765'){
   return {elements,windowEvents,documentEvents,media,sent,intervals,setTime:ms=>{clock=ms;},run,event,sandbox};
 }
 
+test('postgame group controls are opt-in, reversible, distinct from solo search and hidden for spectators',()=>{
+  const c=client();c.run("latest={room:'OLD',roundId:'round-one',phase:'postgame',winner:{id:'me',name:'Me'},settings:{mode:'ffa'},players:[{id:'me',name:'Me',slot:0,connected:true},{id:'friend',name:'Friend',slot:1,connected:true},{id:'ai',bot:true,name:'AI',slot:2,connected:true}],groupIds:[],rematchVotes:[]};updateRoomPhase(latest)");
+  assert.equal(c.elements.get('groupRequeue').hidden,false);assert.equal(c.elements.get('resultsLobby').textContent,'Find new match');assert.equal(c.elements.get('groupConsent').attributes['aria-pressed'],'false');
+  c.elements.get('groupConsent').events.click();assert.equal(JSON.stringify(c.sent.at(-1)),JSON.stringify({type:'group',roundId:'round-one',joined:true}));assert.equal(c.run('latest.phase'),'postgame','opt-in never leaves the results');
+  c.run("latest.groupIds=['me'];updateRoomPhase(latest)");assert.equal(c.elements.get('resultsLobby').textContent,'Find new match');c.elements.get('groupConsent').events.click();assert.equal(c.sent.at(-1).joined,false);
+  c.run("latest.groupIds=['me','friend'];updateRoomPhase(latest)");assert.equal(c.elements.get('resultsLobby').textContent,'Find match together');assert.match(c.elements.get('groupStatus').textContent,/You, Friend/);const before=c.run('latest');c.elements.get('resultsLobby').events.click();assert.equal(JSON.stringify(c.sent.at(-1)),JSON.stringify({type:'requeue',roundId:'round-one'}));assert.equal(c.run('latest'),before);assert.equal(c.run('joined'),true);
+  c.run("latest.players[1].connected=false;latest.groupIds=['me'];updateRoomPhase(latest)");assert.equal(c.elements.get('groupRequeue').hidden,true);assert.equal(c.elements.get('resultsLobby').textContent,'Find new match');
+  c.run("latest.players[1].connected=true;spectating=true;updateRoomPhase(latest)");assert.equal(c.elements.get('groupRequeue').hidden,true);const sent=c.sent.length;c.elements.get('groupConsent').events.click();c.elements.get('resultsLobby').events.click();assert.equal(c.sent.length,sent);
+});
+
+test('group queue notices preserve results; a transfer welcome clears old panels without exiting fullscreen',()=>{
+  const c=client(false),sockets=[];c.sandbox.WebSocket=class{static OPEN=1;readyState=1;bufferedAmount=0;listeners={};constructor(){sockets.push(this);}addEventListener(n,f){this.listeners[n]=f;}send(){}close(){}};
+  c.run("joined=false;$('roomInput').value='OLD';connect();joined=true;myId='me';expanded=true;latest={room:'OLD',roundId:'round-one',phase:'postgame',winner:{id:'me',name:'Me'},settings:{mode:'ffa'},players:[{id:'me',name:'Me',slot:0,connected:true},{id:'friend',name:'Friend',slot:1,connected:true}],groupIds:['me','friend'],rematchVotes:[]};updateRoomPhase(latest)");const ws=sockets[0];
+  ws.listeners.message({data:JSON.stringify({type:'queue-error',message:'Server full. Try again.'})});assert.equal(c.run('joined'),true);assert.equal(c.run('latest.phase'),'postgame');assert.equal(c.elements.get('results').hidden,false);assert.equal(c.elements.get('groupError').hidden,false);assert.match(c.elements.get('groupError').textContent,/Server full/);
+  c.run("resultDetailsOpen=true;$('matchDetails').hidden=false;profileOpen=true;$('profileDialog').hidden=false;shareOpen=true;$('shareDialog').hidden=false;lastResult={roundId:'round-one'}");
+  ws.listeners.message({data:JSON.stringify({type:'welcome',requeued:true,room:'QUICK-NEW',id:'new-me',slot:1,seq:-1,token:'same-token',profile:{secret:'private',id:'own-profile'}})});
+  assert.equal(c.run('joined'),true);assert.equal(c.run('expanded'),true);assert.equal(c.run('socket'),ws);assert.equal(c.run('roomCode'),'QUICK-NEW');assert.equal(c.run('myId'),'new-me');assert.equal(c.run('lastResult'),null);for(const id of ['results','matchDetails','profileDialog','shareDialog','groupRequeue'])assert.equal(c.elements.get(id).hidden,true,id+' closes for the next match');
+});
+
 test('two thumbs move and aim independently, retain relative aim, and stop individually',()=>{
   const c=client(),move=c.elements.get('moveStick'),aim=c.elements.get('aimStick');
   move.events.pointerdown(c.event(1,82,50));

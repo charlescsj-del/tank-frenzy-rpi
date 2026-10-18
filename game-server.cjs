@@ -27,8 +27,12 @@ class Room {
   constructor(code,options={}){this.code=code;this.settings=Object.freeze({mode:options?.mode==='teams'?'teams':'ffa',bouncing:options?.bouncing!==false,powers:options?.powers!==false,targetScore:Number.isInteger(options?.targetScore)&&options.targetScore>=5&&options.targetScore<=50?options.targetScore:F.targetScore});this.phase='waiting';this.countdownUntil=0;this.ownerId=null;this.teamScores=[0,0];this.pickups=[];this.pickupId=0;this.nextPickup=6;this.map=generateMap();this.players=new Map();this.shells=[];this.events=[];this.time=0;this.eventId=0;this.shellId=0;this.winner=null;this.botSkill='normal';this.rematchUntil=0;this.rematchVotes=new Set();}
   emit(type,data){this.events.push({id:++this.eventId,type,...data});}
   configureQuick(searchSeconds=12,readySeconds=5){this.quick=true;this.phase='searching';this.searchUntil=this.time+searchSeconds;this.readySeconds=readySeconds;this.readyIds=new Set();}
+  groupConsent(p,msg){
+    if(this.phase!=='postgame'||!p?.connected||p.bot||this.players.get(p.id)!==p||typeof msg.roundId!=='string'||msg.roundId!==this.roundId||typeof msg.joined!=='boolean')return false;
+    this.groupIds??=new Set();if(msg.joined)this.groupIds.add(p.id);else this.groupIds.delete(p.id);return true;
+  }
   resetRound(){
-    this.winner=null;this.recorded=false;this.lastResults=null;this.rematchUntil=0;this.rematchVotes.clear();this.teamScores=[0,0];this.map=generateMap();this.matchPlayers=new Map();
+    this.winner=null;this.recorded=false;this.lastResults=null;this.rematchUntil=0;this.rematchVotes.clear();this.groupIds?.clear();this.teamScores=[0,0];this.map=generateMap();this.matchPlayers=new Map();
     for(const p of this.players.values()){p.kills=0;p.deaths=0;p.damageDealt=0;p.shots=0;p.hits=0;p.ricochetHits=0;p.streak=0;p.reaction=null;p.activeSeconds=0;p.maxDeficit=0;}
   }
   lobby(p){
@@ -88,7 +92,7 @@ class Room {
     if(this.phase==='countdown'&&!p.bot)this.matchPlayers?.delete(p.id);
     if(this.phase==='playing'&&!p.bot)this.matchPlayers?.set(p.id,{...p,left:true});
     this.players.delete(p.id);this.rematchVotes.delete(p.id);
-    this.readyIds?.delete(p.id);
+    this.readyIds?.delete(p.id);this.groupIds?.delete(p.id);
     // Bots never keep an otherwise empty room alive.
     if(!this.humans().length)this.players.clear();
     this.refreshOwner();
@@ -141,7 +145,7 @@ class Room {
     if(m.fire&&!p.input.fire&&p.hp>0)p.pendingShot=true;
     p.input={x:clamp(m.x,-1,1),y:clamp(m.y,-1,1),aimX:clamp(m.aimX,-200,F.width+200),aimY:clamp(m.aimY,-200,F.height+200),fire:m.fire};
   }
-  disconnect(p){if(p.connected&&this.phase==='playing')p.disconnections=(p.disconnections||0)+1;p.connected=false;p.disconnectedAt=this.time;p.input=neutral();p.pendingShot=false;this.refreshOwner();}
+  disconnect(p){if(p.connected&&this.phase==='playing')p.disconnections=(p.disconnections||0)+1;p.connected=false;p.disconnectedAt=this.time;p.input=neutral();p.pendingShot=false;this.groupIds?.delete(p.id);this.refreshOwner();}
   blocked(x,y,p){return x<26||x>F.width-26||y<26||y>F.height-26||this.map.walls.some(w=>hitRect(x,y,26,w))||[...this.players.values()].some(t=>t!==p&&t.connected&&t.hp>0&&Math.hypot(x-t.x,y-t.y)<50);}
   friendly(a,b){return this.settings.mode==='teams'&&a.team!=null&&a.team===b.team;}
   trackDeficits(){
@@ -314,7 +318,7 @@ class Room {
   snapshot({withMap=true}={}){
     const matchEnded=this.phase==='results'||this.phase==='postgame';
     const pregame=['searching','ready','waiting'].includes(this.phase);
-    return {type:'state',room:this.code,settings:this.settings,phase:this.phase,quick:!!this.quick,private:!!this.private,roundId:this.roundId,...(pregame?{readyIds:[...(this.readyIds||[])],searchIn:Math.max(0,(this.searchUntil||0)-this.time),readyIn:Math.max(0,(this.readyUntil||0)-this.time)}:{}),countdownIn:this.phase==='countdown'?Math.max(0,this.countdownUntil-this.time):0,ownerId:this.ownerId,teamScores:this.teamScores,pickups:this.pickups,map:withMap?this.map:undefined,mapId:this.map.id,time:this.time,winner:this.winner,rematchIn:this.phase==='results'?Math.max(0,this.rematchUntil-this.time):0,rematchVotes:[...this.rematchVotes],botSkill:this.botSkill,rematchNeeded:this.phase==='results'?this.rematchNeeded():0,players:[...this.players.values()].map(({id,slot,skin,bot,name,x,y,a,aim,hp,kills,deaths,damageDealt,shots,hits,streak,connected,respawnAt,shieldUntil,life,team,power,powerUntil,reaction})=>({id,slot,...(skin&&skin!=='classic'?{skin}:{}),bot,name,x,y,a,aim,hp,kills,deaths,...(matchEnded?{damageDealt,reaction:reaction?.until>this.time?reaction.value:null}:{}),shots,hits,streak,connected,respawnIn:Math.max(0,respawnAt-this.time),shield:shieldUntil>this.time,life,team,power,powerRemaining:Math.max(0,powerUntil-this.time)})),shells:this.shells.map(({id,x,y,slot})=>({id,x,y,slot})),events:this.events};
+    return {type:'state',room:this.code,settings:this.settings,phase:this.phase,quick:!!this.quick,private:!!this.private,roundId:this.roundId,...(this.phase==='postgame'?{groupIds:[...(this.groupIds||[])].filter(id=>this.players.get(id)?.connected)}:{}),...(pregame?{readyIds:[...(this.readyIds||[])],searchIn:Math.max(0,(this.searchUntil||0)-this.time),readyIn:Math.max(0,(this.readyUntil||0)-this.time)}:{}),countdownIn:this.phase==='countdown'?Math.max(0,this.countdownUntil-this.time):0,ownerId:this.ownerId,teamScores:this.teamScores,pickups:this.pickups,map:withMap?this.map:undefined,mapId:this.map.id,time:this.time,winner:this.winner,rematchIn:this.phase==='results'?Math.max(0,this.rematchUntil-this.time):0,rematchVotes:[...this.rematchVotes],botSkill:this.botSkill,rematchNeeded:this.phase==='results'?this.rematchNeeded():0,players:[...this.players.values()].map(({id,slot,skin,bot,name,x,y,a,aim,hp,kills,deaths,damageDealt,shots,hits,streak,connected,respawnAt,shieldUntil,life,team,power,powerUntil,reaction})=>({id,slot,...(skin&&skin!=='classic'?{skin}:{}),bot,name,x,y,a,aim,hp,kills,deaths,...(matchEnded?{damageDealt,reaction:reaction?.until>this.time?reaction.value:null}:{}),shots,hits,streak,connected,respawnIn:Math.max(0,respawnAt-this.time),shield:shieldUntil>this.time,life,team,power,powerRemaining:Math.max(0,powerUntil-this.time)})),shells:this.shells.map(({id,x,y,slot})=>({id,x,y,slot})),events:this.events};
   }
 }
 // Snapshots go out 30 times a second; tenths of a unit (hundredths of a radian for angles) look identical and are a quarter smaller.

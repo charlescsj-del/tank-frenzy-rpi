@@ -41,6 +41,74 @@ function server(options={}){
   return {game,join,list,read,watch,connect,tick};
 }
 
+function finishedGroup({mode='ffa',count=3}={}){
+  const s=server(),sockets=Array.from({length:count},(_,i)=>s.join('GROUP',i?'join':'create','Human'+i,undefined,{mode})),room=s.game.rooms.get('GROUP');
+  while(room.players.size<4)room.add('',{bot:true});const players=room.humans();room.start(players[0]);room.step(3);for(const p of players)p.activeSeconds=15;players[0].kills=9;if(mode==='teams')room.teamScores[players[0].team]=9;
+  const victim=[...room.players.values()].find(p=>p!==players[0]&&(mode!=='teams'||p.team!==players[0].team));victim.shieldUntil=0;room.damage(victim,players[0].id,10);room.step(21);
+  const message=(i,type,extra={})=>sockets[i].emit('message',JSON.stringify({type,roundId:room.roundId,...extra})),opt=(...indices)=>indices.forEach(i=>message(i,'group',{joined:true}));
+  return {...s,sockets,room,players,message,opt,welcome:ws=>ws.messages.filter(m=>m.type==='welcome').at(-1)};
+}
+
+test('postgame group consent is explicit, round-bound, revocable and never counts bots',()=>{
+  const f=finishedGroup(),outsider=f.connect();outsider.emit('message',JSON.stringify({type:'group',roundId:f.room.roundId,joined:true}));assert.deepEqual(f.room.snapshot().groupIds,[]);
+  for(const extra of [{roundId:'older',joined:true},{joined:'yes'},{joined:{toString:1}},{roundId:{toString:1},joined:true}])f.message(0,'group',extra);assert.deepEqual(f.room.snapshot().groupIds,[]);
+  f.message(0,'group',{joined:true,player:f.players[1].id});assert.deepEqual(f.room.snapshot().groupIds,[f.players[0].id],'a caller can only opt themselves in');f.message(0,'group',{joined:false});assert.deepEqual(f.room.snapshot().groupIds,[]);
+  const bot=[...f.room.players.values()].find(p=>p.bot);assert.equal(f.room.groupConsent(bot,{roundId:f.room.roundId,joined:true}),false);assert.equal(f.room.groupConsent({...f.players[0]},{roundId:f.room.roundId,joined:true}),false);
+  f.room.phase='results';f.opt(0,1);assert.deepEqual([...(f.room.groupIds||[])],[]);assert.equal(f.room.snapshot().groupIds,undefined);f.room.phase='postgame';f.opt(0,1,2);assert.equal(f.room.phase,'postgame','consenting never starts a search on its own');assert.equal(f.room.winner.id,f.players[0].id);
+  f.room.resetRound();assert.equal(f.room.groupIds.size,0);
+});
+
+test('group requeue atomically moves only consenting humans and preserves everyone else’s results and AI',()=>{
+  for(const mode of ['ffa','teams']){
+    const f=finishedGroup({mode}),before=f.players.map(p=>({id:p.id,kills:p.kills})),bot=[...f.room.players.values()].find(p=>p.bot),coins=f.game.progress.view(f.players[0].profileId).coins;
+    f.opt(0,1);f.message(0,'requeue');const a=f.welcome(f.sockets[0]),b=f.welcome(f.sockets[1]),target=f.game.rooms.get(a.room);assert.notEqual(a.room,f.room.code);assert.equal(a.room,b.room);assert.equal(a.requeued,true);assert.equal(target.settings.mode,mode);assert.equal(target.phase,'searching');assert.equal(target.humans().length,2);assert(target.humans().every(p=>p.kills===0));assert.equal(target.private,false);
+    assert.equal(a.profile.id,f.players[0].profileId);assert.equal(a.token,f.sockets[0].messages.find(m=>m.type==='welcome').token);assert.equal(f.welcome(f.sockets[2]).room,f.room.code);assert.equal(f.room.phase,'postgame');assert.equal(f.room.winner.id,before[0].id);assert(f.room.players.has(bot.id));assert.equal(f.players[2].kills,before[2].kills);assert.equal(f.room.players.size,2);assert.equal(f.game.progress.view(f.players[0].profileId).coins,coins,'moving groups never awards a second result');
+    const size=f.game.rooms.size;f.message(0,'requeue');assert.equal(f.game.rooms.size,size,'a duplicate old-round request cannot move the group again');assert(!JSON.stringify(target.snapshot()).includes(a.profile.secret));assert.equal(target.snapshot().groupIds,undefined);
+    target.step(12.1);assert.equal(target.phase,'ready');assert.equal(target.players.size,4);assert.equal(target.humans().length,2);for(const p of target.humans())target.ready(p);assert.equal(target.phase,'countdown');
+  }
+});
+
+test('a group joins one matching search only if every member fits; locked AI groups are never displaced',()=>{
+  for(const queued of [2,3]){
+    const f=finishedGroup(),others=Array.from({length:queued},()=>{const ws=f.connect();ws.emit('message',JSON.stringify({type:'quick'}));return ws;}),waiting=f.game.rooms.get(f.welcome(others[0]).room),oldIds=[...waiting.players.keys()];
+    f.opt(0,1);f.message(1,'requeue');const target=f.game.rooms.get(f.welcome(f.sockets[0]).room);assert.equal(f.welcome(f.sockets[1]).room,target.code);assert.equal(target===waiting,queued===2);assert(oldIds.every(id=>waiting.players.has(id)));assert.equal(waiting.players.size,queued===2?4:3);
+  }
+  const f=finishedGroup(),ws=f.connect();ws.emit('message',JSON.stringify({type:'quick'}));const locked=f.game.rooms.get(f.welcome(ws).room);locked.step(13);const ids=[...locked.players.keys()];f.opt(0,1);f.message(0,'requeue');assert.notEqual(f.welcome(f.sockets[0]).room,locked.code);assert.deepEqual([...locked.players.keys()],ids);
+});
+
+test('withdrawals and disconnects clear consent; consent is not silently restored by reconnecting',()=>{
+  const f=finishedGroup(),original=f.welcome(f.sockets[1]);f.opt(0,1,2);f.message(2,'group',{joined:false});f.sockets[1].close();assert.deepEqual(f.room.snapshot().groupIds,[f.players[0].id]);
+  f.message(0,'requeue');assert.equal(f.sockets[0].messages.at(-1).type,'queue-error');assert.equal(f.sockets[0].readyState,1);assert.equal(f.welcome(f.sockets[0]).room,'GROUP');
+  const back=f.join('GROUP','join','Human1',original.token);assert.equal(f.welcome(back).id,original.id);assert.deepEqual(f.room.snapshot().groupIds,[f.players[0].id]);f.message(0,'group',{joined:false});assert.deepEqual(f.room.snapshot().groupIds,[]);
+  back.emit('message',JSON.stringify({type:'group',roundId:f.room.roundId,joined:true}));back.emit('message',JSON.stringify({type:'leave'}));assert.deepEqual(f.room.snapshot().groupIds,[]);
+});
+
+test('group admission failures leave memberships, results, votes and wallets intact',()=>{
+  for(const networkLimit of [false,true]){
+    const f=finishedGroup(),{Room}=require('../game-server.cjs'),count=networkLimit?5:31;
+    for(let i=0;i<count;i++){const busy=new Room('BUSY'+i);busy.add('Occupied');busy.creator=networkLimit?'local':'another-network';f.game.rooms.set(busy.code,busy);}
+    f.opt(0,1);const before=JSON.stringify(f.room.snapshot()),coins=f.game.progress.view(f.players[0].profileId).coins;f.message(0,'requeue');assert.equal(f.sockets[0].messages.at(-1).type,'queue-error');assert.equal(f.sockets[0].readyState,1);assert.equal(f.welcome(f.sockets[0]).room,'GROUP');assert.equal(JSON.stringify(f.room.snapshot()),before);assert.equal(f.game.progress.view(f.players[0].profileId).coins,coins);assert.equal(f.game.rooms.size,count+1);
+  }
+});
+
+test('a failed group reservation rolls back every allocated seat before moving a session',()=>{
+  const f=finishedGroup(),others=Array.from({length:2},()=>{const ws=f.connect();ws.emit('message',JSON.stringify({type:'quick'}));return ws;}),target=f.game.rooms.get(f.welcome(others[0]).room),ids=[...target.players.keys()],add=target.add;let calls=0;
+  target.add=function(...args){return ++calls===2?null:add.apply(this,args);};f.opt(0,1);const before=JSON.stringify(f.room.snapshot());f.message(0,'requeue');assert.equal(f.sockets[0].messages.at(-1).type,'queue-error');assert.deepEqual([...target.players.keys()],ids);assert.equal(JSON.stringify(f.room.snapshot()),before);assert.equal(f.welcome(f.sockets[1]).room,'GROUP');
+});
+
+test('an entirely consenting group can recycle its empty source at room and network limits',()=>{
+  for(const networkLimit of [false,true]){
+    const f=finishedGroup({count:4}),{Room}=require('../game-server.cjs'),count=networkLimit?5:31;
+    for(let i=0;i<count;i++){const busy=new Room('BUSY'+i);busy.add('Occupied');busy.creator=networkLimit?'local':'another-network';f.game.rooms.set(busy.code,busy);}
+    f.opt(0,1,2,3);f.message(0,'requeue');const target=f.game.rooms.get(f.welcome(f.sockets[0]).room);assert.notEqual(target,f.room);assert.equal(f.game.rooms.has('GROUP'),false);assert.equal(target.players.size,4);assert.equal(f.game.rooms.size,count+1);assert(f.sockets.every(ws=>f.welcome(ws).room===target.code));target.step(.01);assert.equal(target.phase,'ready');assert(target.humans().every(p=>!p.bot));
+  }
+});
+
+test('a missed transfer welcome reconnects with the prior room token without duplication or secret leaks',()=>{
+  const f=finishedGroup(),old=f.welcome(f.sockets[0]);f.opt(0,1);f.message(1,'requeue');const transferred=f.welcome(f.sockets[0]),target=f.game.rooms.get(transferred.room),back=f.join('GROUP','join','Ignore rename',old.token),restored=f.welcome(back);assert.equal(restored.room,target.code);assert.equal(restored.id,transferred.id);assert.equal(restored.profile.id,old.profile.id);assert.equal(restored.requeued,true);assert.equal(target.humans().length,2);assert.equal(target.players.get(restored.id).connected,true);assert.equal(f.sockets[0].readyState,3);
+  const snapshots=f.sockets[1].messages.filter(m=>m.type==='state');assert(snapshots.every(m=>!JSON.stringify(m).includes(old.profile.secret)));assert(!JSON.stringify(f.room.snapshot()).includes(old.token));
+});
+
 test('Quick Play groups same-mode arrivals, fills bots at the deadline, and excludes late joins',()=>{
   const s=server(),quick=(mode='ffa')=>{const ws=s.connect();ws.emit('message',JSON.stringify({type:'quick',name:'Guest',settings:{mode}}));return ws;};
   const a=quick(),b=quick(),team=quick('teams'),welcome=ws=>ws.messages.find(m=>m.type==='welcome');
@@ -362,6 +430,7 @@ test('hidden spectators watch a room without appearing to its players, and leave
   assert.equal(s.list().body.rooms[0].available,2,'open seats unchanged');
   assert.equal(JSON.parse(JSON.stringify(room.snapshot())).players.length,2,'players never receive the spectator');
   spy.emit('message',JSON.stringify({type:'join',room:'ALPHA',name:'Sneaky'}));assert.equal(room.players.size,2,'a spectator socket cannot also join');
+  room.phase='postgame';room.roundId='spectator-round';spy.emit('message',JSON.stringify({type:'group',roundId:room.roundId,joined:true}));spy.emit('message',JSON.stringify({type:'requeue',roundId:room.roundId}));assert.deepEqual(room.snapshot().groupIds,[]);assert.equal(s.game.rooms.size,1,'spectators cannot consent or move players');
   await s.read('/admin/close?room=ALPHA',{method:'POST',headers:auth});
   assert.equal(spy.messages.at(-1).title,'Arena closed');assert.equal(spy.readyState,3);assert.equal(ann.messages.at(-1).title,'Arena closed');
 });
