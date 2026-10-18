@@ -2,7 +2,7 @@
 
 ## v3.4.0 [2026-10-18]
 
-- Keep the Garage Back button below the iPhone status/notch area and away from landscape cutouts. Preserve a non-scrolling header and a 44-pixel touch target. Add touch regression checks after scrolling with simulated portrait/landscape safe areas.
+- Keep the home and Garage buttons below the iPhone status/notch area and away from landscape cutouts. Preserve a non-scrolling Garage header and a 44-pixel Back target. Add touch regression checks after scrolling with simulated portrait/landscape safe areas.
 - New players get short, optional first-match tips for movement, aiming/firing, ricochets and the win target. Prompts adapt to mouse/keyboard or touch, never pause the match, and can be skipped. Completed-match profiles and spectators do not see beginner tips.
 - Results highlight first victories, improved personal kill records and genuine comeback wins, with at most two highlights at once. Permanent First victory, Sharpshooter and Comeback badges appear in the Garage.
 - Verify achievements from server-owned eligible-match statistics. Preserve earlier victories without replaying the first-win announcement. Cosmetic badges add no coins, damage, armour or other battle advantages.
