@@ -49,6 +49,8 @@ fs.mkdirSync(output,{recursive:true});
     }
     assert.equal(await pc.evaluate(()=>mapOverview),true);assert.equal(await phone.evaluate(()=>mapOverview),false);
     await screenshot(pc,'default-map-desktop');await pc.locator('#arenaMenu').click();await pc.locator('#viewMode').click();
+    // Chromium cannot resize a native fullscreen window through the protocol.
+    await phone.evaluate(async()=>{if(document.fullscreenElement)await document.exitFullscreen();setExpanded(true);});
     for(const [width,height]of [[390,844],[844,390]]){await phone.setViewportSize({width,height});await phone.locator('#arenaMenu').click();await phone.locator('#viewMode').click();await phone.waitForFunction(()=>mapOverview);await fits(phone,'#game');await screenshot(phone,'crossroads-map-'+width);await phone.locator('#arenaMenu').click();await phone.locator('#viewMode').click();}
     await phone.setViewportSize({width:390,height:844});
     for(const p of [pc,phone]){
