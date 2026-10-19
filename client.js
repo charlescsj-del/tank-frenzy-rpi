@@ -4,7 +4,7 @@ const appBase=new URL('.',document.baseURI||location.href);
 const appUrl=name=>new URL(name,appBase).href;
 const W=FIELD.width,H=FIELD.height,boardScale=FIELD.viewScale,colors=FIELD.palette.map(p=>p.body);
 const shellColors=FIELD.palette.map(p=>({body:p.bullet,glow:p.bullet,trail:p.bullet+'a0',rim:'#374332'}));
-let walls=FIELD.walls,spawns=FIELD.spawns,mapId=null;
+let walls=FIELD.walls,spawns=FIELD.spawns,mapId=null,mapLayout=null;
 const keys=new Set(),moveKeys=new Set(['KeyW','KeyA','KeyS','KeyD']);
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const touchMedia=matchMedia('(pointer: coarse) and (hover: none)');
@@ -193,7 +193,7 @@ function resetForRequeue(){
   release();resetResultDamage();closeLeaveDialog();setArenaMenu(false);if(profileOpen)closeProfile();if(shareOpen)closeShare();if(typeof garageOpen!=='undefined'&&garageOpen&&typeof closeGarage==='function')closeGarage();
   lastResult=null;rankSignature='';resultsSignature='';waitingSignature='';roomPhase=null;roundAudioMap=null;resultAudioKey=null;countdownAudioKey=null;lastEvent=0;
   $('rankChange').hidden=true;$('reactionStrip').hidden=true;$('groupError').hidden=true;$('groupError').textContent='';$('results').hidden=true;$('groupRequeue').hidden=true;
-  tanks=[];shells=[];particles=[];tracks=[];pickups=[];beams=[];pickupFlashes=[];floaters=[];rings=[];hurt=0;mapId=null;latest=null;$('killFeed').replaceChildren();$('streakBanner').hidden=true;stopCueSounds();
+  tanks=[];shells=[];particles=[];tracks=[];pickups=[];beams=[];pickupFlashes=[];floaters=[];rings=[];hurt=0;mapId=null;mapLayout=null;latest=null;$('killFeed').replaceChildren();$('streakBanner').hidden=true;stopCueSounds();
 }
 function release(){keys.clear();firing=false;for(const name of ['move','aim'])resetStick(name);stopMovementSound();sendInput();}
 function connect(){
@@ -276,7 +276,7 @@ function leave({keepFullscreen=false}={}){
   intentional=true;clearTimeout(retryTimer);release();send({type:'leave'});socket?.close();socket=null;joined=false;connecting=false;myId=null;token=null;retry=0;
   try{sessionStorage.removeItem(sessionKey);}catch{}
   quickRequested=false;lastResult=null;rankSignature='';$('matchmaking').hidden=true;$('reactionStrip').hidden=true;$('rankChange').hidden=true;
-  latest=null;tanks=[];shells=[];tracks=[];pickups=[];beams=[];pickupFlashes=[];floaters=[];rings=[];hurt=0;$('killFeed').replaceChildren();$('streakBanner').hidden=true;resultsSignature='';$('leave').hidden=true;$('respawn').textContent='';$('latency').textContent='OFFLINE';$('roster').replaceChildren();
+  latest=null;mapLayout=null;tanks=[];shells=[];tracks=[];pickups=[];beams=[];pickupFlashes=[];floaters=[];rings=[];hurt=0;$('killFeed').replaceChildren();$('streakBanner').hidden=true;resultsSignature='';$('leave').hidden=true;$('respawn').textContent='';$('latency').textContent='OFFLINE';$('roster').replaceChildren();
   touchAim=null;updateTouchControls();
   roundAudioMap=null;resultAudioKey=null;countdownAudioKey=null;activePower=null;roomPhase=null;waitingSignature='';stopCueSounds();syncMusic();
   roomCode='';$('roomCode').textContent='—';$('roomCount').textContent='0 / 4 PLAYERS';$('powerStatus').hidden=true;history.replaceState(null,'',location.pathname);if(!keepFullscreen)leaveFullscreen();showLobby();status('READY TO CONNECT');
@@ -284,6 +284,7 @@ function leave({keepFullscreen=false}={}){
 function applySnapshot(data){
   if(spectating&&spectatorFinished)return;
   latest=data;lastSnapshot=performance.now();
+  if(data.map)mapLayout=typeof data.map.layout==='string'&&Object.prototype.hasOwnProperty.call(FIELD.mapLabels,data.map.layout)?data.map.layout:null;
   updateMatchSounds(data);
   pickups=data.pickups||[];
   if(data.map&&data.map.id!==mapId){mapId=data.map.id;walls=data.map.walls;spawns=data.map.spawns;tracks=[];particles=[];shells=[];beams=[];pickupFlashes=[];floaters=[];rings=[];hurt=0;}
@@ -336,7 +337,8 @@ function renderMatchmaking(data){
   $('matchmaking').classList.toggle('is-ready',!searching);
   $('matchmaking').classList.toggle('is-teams',data.settings?.mode==='teams');
   const humanCount=data.players.filter(p=>!p.bot&&p.connected).length;
-  $('matchmakingNote').textContent=searching?humanCount+'/4 players found · AI fills any open seats.':'Everyone ready? Enter the field for a 3-second countdown.';
+  const note=searching?humanCount+'/4 players found · AI fills any open seats.':'Everyone ready? Enter the field for a 3-second countdown.';
+  $('matchmakingNote').textContent=(FIELD.mapLabels[mapLayout]?FIELD.mapLabels[mapLayout]+' · ':'')+note;
   const seconds=Math.max(1,Math.ceil(searching?data.searchIn:data.readyIn));
   $('matchmakingTime').textContent=searching?'Finding a match · '+seconds+'s':String(seconds);
   $('matchmakingTime').setAttribute('aria-label',searching?'Finding a match':`Entering the field in ${seconds} seconds`);
@@ -390,7 +392,7 @@ function updateRoomPhase(data){
   $('resultsLobby').textContent=together?'Find match together':'Find new match';
   if(!results&&!postgame&&!waiting&&resultDetailsOpen)resetResultDamage();
   if(waiting&&resultDetailsOpen)$('matchDetailsNote').textContent='Round finished. Your group is back in the lobby; these are the previous battle statistics.';
-  if(countdown){const number=String(Math.max(1,Math.ceil(data.countdownIn)));if($('countdownNumber').textContent!==number)$('countdownNumber').textContent=number;}
+  if(countdown){const number=String(Math.max(1,Math.ceil(data.countdownIn)));if($('countdownNumber').textContent!==number)$('countdownNumber').textContent=number;$('countdownLabel').textContent='GET READY'+(FIELD.mapLabels[mapLayout]?' · '+FIELD.mapLabels[mapLayout].toUpperCase():'');}
   if(results||postgame){
     if(spectating)spectatorFinished=true;
     const won=data.settings?.mode==='teams'?data.players.find(p=>p.id===myId)?.team===data.winner.team:myId===data.winner.id;
@@ -461,7 +463,7 @@ function updateRoomPhase(data){
     const ruleSignature=JSON.stringify([data.settings,data.private]);if($('lobbyRules').signature!==ruleSignature){$('lobbyRules').signature=ruleSignature;$('lobbyMode').value=data.settings?.mode||'ffa';$('lobbyTarget').value=data.settings?.targetScore||10;$('lobbyBounce').checked=data.settings?.bouncing!==false;$('lobbyPowers').checked=data.settings?.powers!==false;$('lobbyPrivate').checked=data.private;}
     $('startGame').hidden=!mine;$('startGame').disabled=!mine;
     $('waitingTitle').textContent='Arena '+data.room+' · first to '+(data.settings?.targetScore||FIELD.targetScore);
-    $('waitingRewardNote').textContent=data.settings?.targetScore===FIELD.targetScore&&data.settings?.bouncing&&data.settings?.powers?'Standard match · Earn coins and daily rewards':'Practice match · No coins or daily rewards';
+    $('waitingRewardNote').textContent=(FIELD.mapLabels[mapLayout]?FIELD.mapLabels[mapLayout]+' · ':'')+(data.settings?.targetScore===FIELD.targetScore&&data.settings?.bouncing&&data.settings?.powers?'Standard match · Earn coins and daily rewards':'Practice match · No coins or daily rewards');
     const bots=data.players.filter(p=>p.bot).length,skill=data.botSkill||'normal';
     $('botControls').hidden=!mine;$('addBot').disabled=data.players.length>=FIELD.maxPlayers;$('removeBot').disabled=!bots;
     if($('botSkill').value!==skill)$('botSkill').value=skill;

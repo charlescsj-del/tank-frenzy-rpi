@@ -1,6 +1,7 @@
 (function(root) {
   const data = {
-    version:'3.6.0',maxHealth:10,laserDamage:4,laserRadius:6,barrelLength:40,doubleBarrelOffset:6,turretHeight:28,
+    version:'3.7.0',maxHealth:10,laserDamage:4,laserRadius:6,barrelLength:40,doubleBarrelOffset:6,turretHeight:28,
+    mapLabels:{quarry:'Quarry',crossroads:'Crossroads'},
     achievements:[
       {id:'first-win',name:'First victory',description:'Win your first standard match.'},
       {id:'sharpshooter',name:'Sharpshooter',description:'Land at least 10 hits with 50% accuracy in a standard match.'},

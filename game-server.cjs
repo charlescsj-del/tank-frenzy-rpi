@@ -32,7 +32,8 @@ class Room {
     this.groupIds??=new Set();if(msg.joined)this.groupIds.add(p.id);else this.groupIds.delete(p.id);return true;
   }
   resetRound(){
-    this.winner=null;this.recorded=false;this.lastResults=null;this.rematchUntil=0;this.rematchVotes.clear();this.groupIds?.clear();this.teamScores=[0,0];this.map=generateMap();this.matchPlayers=new Map();
+    const played=this.lastMapLayout||(this.winner?this.map.layout:null),layout=played?played==='crossroads'?'quarry':'crossroads':this.map.layout;
+    this.winner=null;this.recorded=false;this.lastResults=null;this.rematchUntil=0;this.rematchVotes.clear();this.groupIds?.clear();this.teamScores=[0,0];if(this.map.layout!==layout)this.map=generateMap(undefined,layout);this.matchPlayers=new Map();
     for(const p of this.players.values()){p.kills=0;p.deaths=0;p.damageDealt=0;p.shots=0;p.hits=0;p.ricochetHits=0;p.streak=0;p.reaction=null;p.activeSeconds=0;p.maxDeficit=0;}
   }
   lobby(p){
@@ -51,7 +52,7 @@ class Room {
     this.phase='ready';this.readyUntil=this.time+this.readySeconds;this.readyIds=new Set();
   }
   beginQuickBattle(){this.botSkill=this.chooseBotSkill?.(this.humans())||this.botSkill;this.resetRound();this.beginCountdown();}
-  beginPlaying(){this.phase='playing';for(const p of this.players.values()){p.input=neutral();p.pendingShot=false;p.lastInput=this.time;}this.emit('start',{});}
+  beginPlaying(){this.phase='playing';this.lastMapLayout=this.map.layout;for(const p of this.players.values()){p.input=neutral();p.pendingShot=false;p.lastInput=this.time;}this.emit('start',{});}
   roomCommand(p,msg){
     if(this.phase!=='waiting'||!p?.connected||p.id!==this.ownerId||this.players.get(p.id)!==p)return false;
     if(msg.action==='team'&&this.settings.mode==='teams'){

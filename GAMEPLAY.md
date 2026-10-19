@@ -8,7 +8,7 @@ A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarr
 
 On a phone, creating an arena and adding bots fit within the viewport. The map remains edge to edge during the countdown and on the result screen.
 
-Current release: **v3.6.0**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
+Current release: **v3.7.0**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
 
 The private admin page uses **system CPU and memory gauges**, with the game's share overlaid in orange from the zero end of each arc. CPU converts the game's one-core reading to a fraction of all cores; memory compares resident game memory with total RAM. Game percentages appear inside the gauges, with resident MiB in the memory gauge. Pi load shows 1-, 5- and 15-minute averages, values per CPU core and a 60-second history collected while the page is open. Core-count reference markers make load easier to interpret. Resource readings refresh once a second and are marked stale when disconnected; room views still refresh twice a second. See [DOCS.md](DOCS.md) for measurement details.
 
@@ -78,7 +78,9 @@ Players can open an invitation to join immediately or select a public arena. Eac
 
 On other devices, use the host's LAN address, not localhost. Both devices must be able to reach each other on the network. If Windows prompts for Node.js network access, allow it on your trusted private network. No firewall rules are changed by this project. For public Internet play, put the game behind an HTTPS tunnel or reverse proxy with WebSockets enabled (see DOCS.md).
 
-Maps are 1600 by 1040 world units (about 2.5 times the previous area). Each room gets a random map, regenerated for every new match. Clear spawn zones and connected lanes keep the arena traversable. All players receive the same map from the server.
+Maps are 1600 by 1040 world units (about 2.5 times the previous area). New rooms automatically choose between **Quarry**, the original seeded arrangement of scattered cover, and **Crossroads**, 16 cover islands mirrored across both axes around broad central lanes and an open perimeter. Crossroads gives every corner equivalent cover and flanking routes; normal tank, shell, laser and power rules are unchanged. Same-arena rematches alternate layouts. A friend-lobby return prepares the next layout without skipping it when Start is pressed. The selected geometry stays fixed from lineup through the match; everyone receives the same server-owned map. New group/solo searches may choose either layout again. No extra mode selection or click is required.
+
+The map name appears in matchmaking/waiting information and the field countdown, not as another combat HUD panel. Existing overview and follow-camera controls work on both layouts, on mobile and desktop. Spawn clearance and connected tank-sized lanes are checked automatically. Existing help screenshots still demonstrate Quarry; controls and combat rules apply equally to Crossroads. Geometric symmetry is not proof of equal real-player win rates; dev playtesting remains important.
 
 ## Controls and Rules
 

@@ -48,6 +48,10 @@ Weekly challenges added in v3.5.0 keep compact per-week counters and awarded-goa
 
 Group requeue (v3.6.0) is an in-memory postgame opt-in, not a permanent party or an extra service. A single server action reserves all consenting connected humans in one same-mode searching arena before moving any membership. AI-filled/ready/battle rooms are not queue destinations. Per-network and global room limits apply, allowing a fully departing source room to free its own capacity. Admission failures are non-fatal notices; no one is disconnected or moved. Existing WebSockets and owner-only credentials are reused, with one previous room alias for token reconnects after a missed transfer message. Disconnecting clears postgame consent; normal pregame removal and battle reconnect rules still apply. New snapshots include at most four consent IDs only during postgame, not in active battle updates. No new persistent data or polling timer is added. Hidden admin spectators retain their completed leaderboard and Quit-only flow.
 
+## Map rotation
+
+v3.7.0 adds one server-generated layout, Crossroads, beside the original seeded Quarry. Seed parity chooses the first layout, approximately equally across randomly seeded new rooms; rematches alternate after a played round. There is no additional matchmaking queue or HA option. Map IDs distinguish different layouts even with the same seed (treat IDs as opaque numbers or strings). Layout metadata travels only with existing full-map updates; clients cache the label for lean snapshots. Crossroads has 16 walls, below Quarry's 20-wall maximum, with no added per-tick generation, asset downloads or dependencies. Unit checks cover connectivity, safe spawns, symmetry, movement, shells, lasers, rotation and deterministic bot combat; browser checks cover both layouts on desktop and phone portrait/landscape. These are not real Pi hardware or long-term player-balance measurements. Scores, coins, owned skins and reward rules are unchanged.
+
 ## Reading the resource charts
 
 - **System CPU** is busy CPU time across all host cores over the latest sample interval. The orange game segment starts at 0% on the same arc and divides the game's one-core CPU reading by the number of cores. For example, 20% of one core on a four-core Pi covers 5% of the total gauge. The exact one-core reading remains in the gauge’s accessible description; the visible game percentage uses the total host CPU scale: **100% core means one full core**, so it can exceed 100% when the process uses multiple cores.
@@ -61,7 +65,7 @@ Group requeue (v3.6.0) is an in-memory postgame opt-in, not a permanent party or
 1. The app log should show listeners on game port `8765` and internal ingress port `8099`.
 2. Open **Web UI**: the lobby, banner and room list should load.
 3. Open `http://YOUR_PI_IP:8765` on two devices. Create and join one arena, set a win count between 5 and 50 (default 10), start a round, move, shoot, and confirm sound after interacting.
-4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `3.6.0`.
+4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `3.7.0`.
 5. Test an invitation generated from the sidebar after setting `public_url`.
 
 ## Updates

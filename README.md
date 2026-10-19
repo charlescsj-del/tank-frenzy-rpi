@@ -4,7 +4,7 @@ This `dev` branch is the test installation. Add `https://github.com/charlescsj-d
 
 Install Tank Frenzy as a Home Assistant app (formerly called an add-on). The Pi hosts the multiplayer game; players use Safari, Edge, Chrome, or another modern browser on their phones, tablets, or computers. Rendering and sound run on each player's device.
 
-**Tank Frenzy v3.6.0** adds opt-in group matchmaking after the rematch timer closes. Stay on the finished leaderboard, choose **Stay together**, then find the next match with consenting players. Solo search, weekly challenges, cosmetic skins and daily rewards remain available. See [PROGRESSION_PLAN.md](PROGRESSION_PLAN.md) for the staged rollout.
+**Tank Frenzy v3.7.0** adds Crossroads, a mirrored arena with central lanes and flanking cover, alongside the original procedural Quarry. New arenas choose a layout automatically, rematches alternate, and the map name appears before battle. Group matchmaking, cosmetic skins and daily/weekly rewards remain available. See [PROGRESSION_PLAN.md](PROGRESSION_PLAN.md) for the staged rollout.
 
 On phones, the create form and waiting-room controls fit in one viewport; the map keeps its full-screen layout through countdown and results.
 
@@ -60,6 +60,6 @@ docker run --rm -p 8765:8765 tank-frenzy-rpi
 
 Run the build on the intended architecture (or use Docker Buildx with `--platform linux/arm64`). The repository includes CI for tests and ARM64/AMD64 container builds. A physical Pi/Home Assistant installation and mobile play must still be checked on the target device; automated tests do not establish Pi performance under load.
 
-App package version: **3.6.0**. Game version: **3.6.0**. The dev Home Assistant app keeps its own slug; releases bump the numeric version in several files at once. See the release checklist in [AGENTS.md](AGENTS.md).
+App package version: **3.7.0**. Game version: **3.7.0**. The dev Home Assistant app keeps its own slug; releases bump the numeric version in several files at once. See the release checklist in [AGENTS.md](AGENTS.md).
 
 The How to Play screenshots in `tutorial/` are rendered by the game itself. After a visual change, run `npm start` and then `npx -y -p playwright node tools/tutorial-screenshots.cjs` to regenerate them (set `ONLY=win.webp` for one image).

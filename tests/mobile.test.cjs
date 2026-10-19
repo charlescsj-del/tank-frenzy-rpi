@@ -25,6 +25,14 @@ function client(mobile=true,url='http://localhost:8765'){
   return {elements,windowEvents,documentEvents,media,sent,intervals,setTime:ms=>{clock=ms;},run,event,sandbox};
 }
 
+test('map names survive lean snapshots, appear before battle and clear for the next arena',()=>{
+  const c=client();c.run("const data={phase:'ready',map:{id:'crossroads-42',layout:'crossroads',walls:[],spawns:FIELD.spawns},players:[{id:'me',name:'Me',slot:0,x:90,y:90,hp:10,connected:true,shots:0,hits:0}],shells:[],events:[],settings:{mode:'ffa'},time:0,readyIn:5,readyIds:[]};applySnapshot(data)");assert.match(c.elements.get('matchmakingNote').textContent,/^Crossroads/);
+  c.run("data.map=undefined;data.phase='countdown';data.countdownIn=3;applySnapshot(data)");assert.equal(c.elements.get('countdownLabel').textContent,'GET READY · CROSSROADS');assert.equal(c.elements.get('countdownNumber').textContent,'3');
+  c.run("data.phase='playing';applySnapshot(data)");assert.equal(c.elements.get('countdown').hidden,true);assert.equal(c.run('mapLayout'),'crossroads');
+  c.run("data.phase='waiting';data.map={id:42,layout:'quarry',walls:[],spawns:FIELD.spawns};data.settings={mode:'ffa',targetScore:10,bouncing:true,powers:true};applySnapshot(data)");assert.match(c.elements.get('waitingRewardNote').textContent,/^Quarry/);
+  c.run("data.map={id:43,layout:'__proto__',walls:[],spawns:FIELD.spawns};applySnapshot(data)");assert.equal(c.run('mapLayout'),null);assert.doesNotMatch(c.elements.get('waitingRewardNote').textContent,/object/);c.run('mapLayout="crossroads";resetForRequeue()');assert.equal(c.run('mapLayout'),null);
+});
+
 test('postgame group controls are opt-in, reversible, distinct from solo search and hidden for spectators',()=>{
   const c=client();c.run("latest={room:'OLD',roundId:'round-one',phase:'postgame',winner:{id:'me',name:'Me'},settings:{mode:'ffa'},players:[{id:'me',name:'Me',slot:0,connected:true},{id:'friend',name:'Friend',slot:1,connected:true},{id:'ai',bot:true,name:'AI',slot:2,connected:true}],groupIds:[],rematchVotes:[]};updateRoomPhase(latest)");
   assert.equal(c.elements.get('groupRequeue').hidden,false);assert.equal(c.elements.get('resultsLobby').textContent,'Find new match');assert.equal(c.elements.get('groupConsent').attributes['aria-pressed'],'false');

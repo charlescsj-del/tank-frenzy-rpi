@@ -4,6 +4,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {once}=require('node:events'),{chromium}=require('playwright');
 const {createGameServer}=require('../server.cjs');
+const {generateMap}=require('../map-generator.cjs');
 const output=process.env.ARTIFACT_DIR||path.join(__dirname,'../artifacts');
 fs.mkdirSync(output,{recursive:true});
 (async()=>{
@@ -30,22 +31,26 @@ fs.mkdirSync(output,{recursive:true});
       await p.reload();assert.equal(await p.evaluate(()=>document.getElementById('callsign').value),name,'name persists after reload');
       await p.locator('#joinCodeButton').click();assert.equal(await p.locator('#browseRooms').textContent(),'Back');await p.locator('#roomInput').fill('FRIENDS');await p.locator('#browseRooms').click();
     }
-    await pc.locator('#quickPlay').click();await pc.waitForFunction(()=>joined);await phone.locator('#quickPlay').click();
+    await pc.locator('#quickPlay').click();await pc.waitForFunction(()=>joined);game.rooms.get(await pc.evaluate(()=>roomCode)).map=generateMap(3701,'crossroads');await phone.locator('#quickPlay').click();
     await Promise.all([pc.waitForFunction(()=>latest?.phase==='ready'),phone.waitForFunction(()=>latest?.phase==='ready')]);
     assert.equal(await pc.evaluate(()=>roomCode),await phone.evaluate(()=>roomCode));
     assert.equal(await pc.evaluate(()=>latest.players.filter(p=>p.bot).length),2);
+    for(const p of [pc,phone]){await p.waitForFunction(()=>mapLayout==='crossroads');assert.match(await p.locator('#matchmakingNote').textContent(),/^Crossroads/);}
     await fits(pc,'.matchmaking-card');await fits(phone,'.matchmaking-card');
     await screenshot(pc,'matchmaking-desktop');await screenshot(phone,'matchmaking-phone');
     await Promise.all([pc.locator('#readyButton').click(),phone.locator('#readyButton').click()]);
     await Promise.all([pc.waitForFunction(()=>latest?.phase==='countdown'),phone.waitForFunction(()=>latest?.phase==='countdown')]);
-    for(const p of [pc,phone]){assert.equal(await p.locator('#matchmaking').isVisible(),false);assert(await p.locator('#countdown').isVisible());await fits(p,'#countdownNumber');assert.match(await p.locator('#countdownNumber').textContent(),/^[123]$/);assert.equal(await p.evaluate(()=>musicPlayer?.mode),'battle');await screenshot(p,p===phone?'field-countdown-phone':'field-countdown-desktop');}
+    for(const p of [pc,phone]){assert.equal(await p.locator('#matchmaking').isVisible(),false);assert(await p.locator('#countdown').isVisible());await fits(p,'#countdownNumber');await fits(p,'#countdownLabel');assert.match(await p.locator('#countdownLabel').textContent(),/CROSSROADS/);assert.match(await p.locator('#countdownNumber').textContent(),/^[123]$/);assert.equal(await p.evaluate(()=>musicPlayer?.mode),'battle');await screenshot(p,p===phone?'field-countdown-phone':'field-countdown-desktop');}
     await Promise.all([pc.waitForFunction(()=>latest?.phase==='playing'),phone.waitForFunction(()=>latest?.phase==='playing')]);
+    for(const p of [pc,phone])assert.equal(await p.evaluate(()=>JSON.stringify(walls)),JSON.stringify(generateMap(3701,'crossroads').walls),'browser geometry matches the authoritative Crossroads layout');
     for(const p of [pc,phone]){
       assert.equal(await p.locator('#pingIndicator').isVisible(),false);await p.locator('#arenaMenu').click();await p.locator('#pingToggle').click();
       await p.waitForFunction(()=>/^\d+ ms$/.test(document.getElementById('pingIndicator').textContent));await fits(p,'#pingIndicator');assert.equal(await p.evaluate(()=>localStorage.getItem('tank-frenzy-ping')),'on');
     }
     assert.equal(await pc.evaluate(()=>mapOverview),true);assert.equal(await phone.evaluate(()=>mapOverview),false);
     await screenshot(pc,'default-map-desktop');await pc.locator('#arenaMenu').click();await pc.locator('#viewMode').click();
+    for(const [width,height]of [[390,844],[844,390]]){await phone.setViewportSize({width,height});await phone.locator('#arenaMenu').click();await phone.locator('#viewMode').click();await phone.waitForFunction(()=>mapOverview);await fits(phone,'#game');await screenshot(phone,'crossroads-map-'+width);await phone.locator('#arenaMenu').click();await phone.locator('#viewMode').click();}
+    await phone.setViewportSize({width:390,height:844});
     for(const p of [pc,phone]){
       assert(await p.evaluate(()=>{updateCamera();const me=tanks.find(t=>t.id===myId),point=project(me.x,me.y);return Math.abs(point.x*scale+offsetX-cssW/2)<1&&Math.abs(point.y*scale+offsetY-cssH/2)<1;}),'own tank stays centred at its corner spawn');
       assert.equal(await p.locator('#game').evaluate(el=>getComputedStyle(el).userSelect),'none');
@@ -88,7 +93,8 @@ fs.mkdirSync(output,{recursive:true});
     await Promise.all([pc.waitForFunction(old=>joined&&roomCode!==old,previousRoom),phone.waitForFunction(old=>joined&&roomCode!==old,previousRoom)]);
     const groupRoom=game.rooms.get(await pc.evaluate(()=>roomCode));assert.equal(await phone.evaluate(()=>roomCode),groupRoom.code);assert.equal(groupRoom.humans().length,2);assert.equal(game.rooms.has(previousRoom),false);assert.equal(groupRoom.settings.mode,previousMode);
     assert.deepEqual(await phone.evaluate(()=>({expanded,full:document.fullscreenElement?.id||null,profileId,token})),view,'group transfer preserves identity, token and fullscreen');for(const p of [pc,phone]){assert(await p.evaluate(()=>socket===window.testGroupSocket));assert.equal(await p.locator('#results').isVisible(),false);await p.evaluate(()=>delete window.testGroupSocket);}
-    await Promise.all([pc.waitForFunction(()=>latest.phase==='ready'),phone.waitForFunction(()=>latest.phase==='ready')]);await pc.locator('#readyButton').click();await phone.locator('#readyButton').tap();await pc.waitForFunction(()=>latest.phase==='playing');
+    groupRoom.map=generateMap(3700,'quarry');await Promise.all([pc.waitForFunction(()=>latest.phase==='ready'&&mapLayout==='quarry'),phone.waitForFunction(()=>latest.phase==='ready'&&mapLayout==='quarry')]);assert.match(await phone.locator('#matchmakingNote').textContent(),/^Quarry/);await pc.locator('#readyButton').click();await phone.locator('#readyButton').tap();await pc.waitForFunction(()=>latest.phase==='playing');
+    for(const p of [pc,phone])assert.equal(await p.evaluate(()=>JSON.stringify(walls)),JSON.stringify(groupRoom.map.walls));await pc.locator('#arenaMenu').click();await pc.locator('#viewMode').click();await screenshot(pc,'quarry-map-desktop');await phone.locator('#arenaMenu').click();await phone.locator('#viewMode').click();for(const [width,height]of [[390,844],[844,390]]){await phone.setViewportSize({width,height});await fits(phone,'#game');await screenshot(phone,'quarry-map-'+width);}await phone.locator('#arenaMenu').click();await phone.locator('#viewMode').click();await phone.setViewportSize({width:390,height:844});
     const nextHuman=groupRoom.humans()[0],nextBot=[...groupRoom.players.values()].find(p=>p.bot);for(const p of groupRoom.humans())p.activeSeconds=15;nextHuman.kills=9;nextBot.shieldUntil=0;groupRoom.damage(nextBot,nextHuman.id,10);groupRoom.rematchUntil=groupRoom.time;groupRoom.step(.01);
     await Promise.all([pc.waitForFunction(()=>latest.phase==='postgame'),phone.waitForFunction(()=>latest.phase==='postgame')]);assert.equal(await pc.locator('#groupConsent').getAttribute('aria-pressed'),'false');
     // A solo search still requires one click and never drags a non-consenting player away.

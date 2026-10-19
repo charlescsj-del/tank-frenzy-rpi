@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.7.0 [2026-10-19]
+
+- Add Crossroads alongside the original procedural Quarry: mirrored cover islands, broad central lanes and connected flanking/perimeter routes, with the same four safe corner spawn zones.
+- New arenas choose between the two layouts automatically. Same-arena rematches alternate; returning to a friend lobby cannot skip a layout, and starting preserves the prepared geometry. No extra selection screen or gameplay-rule change.
+- Identify the arena in existing matchmaking/waiting text and the field countdown. Cache labels from full-map updates without adding a combat HUD panel or metadata to lean battle snapshots.
+- Add map regressions for determinism, collision-safe spawns, connected routes, symmetry, rotation, wall/laser/shell behaviour and bounded bot simulation in both modes. Browser checks inspect authoritative geometry and mobile/desktop views of both layouts.
+
 ## v3.6.0 [2026-10-18]
 
 - After the rematch timer closes, opt into Stay together on the finished leaderboard. When two or more humans opt in, any member can choose Find match together. Consent alone never starts a search, and players who do not opt in stay on their result screen.
