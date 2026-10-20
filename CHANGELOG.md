@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.8.2 [2026-10-20]
+
+- Pin the Garage preview only in taller desktop windows. Short landscape screens keep normal scrolling so Buy/Equip remains fully reachable; preserve portrait preview reveal and the fixed Back button.
+
 ## v3.8.1 [2026-10-20]
 
 - Keep the selected tank preview, skin name and action visible together after choosing a skin on a portrait phone, with a stationary safe-area-aware Back header.
