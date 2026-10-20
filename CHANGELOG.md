@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.8.1 [2026-10-20]
+
+- Keep the selected tank preview, skin name and action visible together after choosing a skin on a portrait phone, with a stationary safe-area-aware Back header.
+- Pin the desktop preview beside the scrolling collection instead of stretching it to the full catalogue height. Landscape selection keeps its action reachable.
+- Check actual portrait preview bounds as well as card/action bounds, and capture both collection galleries and selected previews in browser verification.
+
 ## v3.8.0 [2026-10-20]
 
 - Add three permanent Showcase skins: Circuit Runner, Ember Forge and Royal Crest, each costing 1500 earned coins. Fixed-price individual purchases, with no real-money checkout, random paid packs, timed offers or combat benefits.

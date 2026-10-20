@@ -58,7 +58,7 @@ function renderGarage(){
     for(const option of options){
     const button=document.createElement('button');button.type='button';button.className='skin-choice';button.setAttribute('aria-pressed',String(option.id===skin.id));button.setAttribute('data-skin',option.id);
     const name=document.createElement('strong'),state=document.createElement('small');name.textContent=option.name;state.textContent=p?.equipped===option.id?'Equipped':p?.owned.includes(option.id)?'Owned':option.price+' coins';button.append(TankSkins.portrait(lastTankSlot,option.id),name,state);
-    button.addEventListener('click',()=>{garageSelected=option.id;$('garageMessage').textContent='';renderGarage();$('garageAction').scrollIntoView?.({block:'nearest'});});choices.append(button);
+    button.addEventListener('click',()=>{garageSelected=option.id;$('garageMessage').textContent='';renderGarage();if(innerWidth<=640)$('garageShowcase').scrollIntoView?.({block:'start'});else $('garageAction').scrollIntoView?.({block:'nearest'});});choices.append(button);
     }
     $('garageChoices').append(section);
   }
