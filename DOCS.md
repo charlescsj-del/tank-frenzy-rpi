@@ -44,6 +44,10 @@ The authenticated admin **Coins & Progress** panel loads aggregate statistics on
 
 Weekly challenges added in v3.5.0 keep compact per-week counters and awarded-goal IDs in that same progress file (schema 1, compatible with older wallets). Counters are capped at their targets. Older weeks are retained so an in-memory delayed-save retry can settle the match's original week without replacing current-week progress; only the current week is returned to its owner. Recovery restores this history too. No challenge counters or wallets are added to shared 30 Hz snapshots. The existing `rewards_enabled` switch pauses weekly progress and bonuses as well as daily/match coins. Admin aggregates include completed weekly goals and weekly bonus coins earned, without per-player challenge data. Initial weekly targets/rewards are provisional; review actual play and earning rates before repricing. A new week requires no server restart and preserves owned skins/coins.
 
+### Cosmetic collections
+
+v3.8.0 adds three server-catalogued Showcase skins at a provisional 1500 earned coins each. The Garage groups them separately from Originals. No payment service, new asset download, simulation modifier or snapshot field is added: the existing cosmetic ID and procedural renderer handle them. Purchases/equipping use the same atomic inventory and private recovery flow. Existing skin IDs/prices/ownership remain unchanged and need no data migration. An explicit `dailyReward: true` catalogue flag limits the random Day 7 award to the original six normal skins; the 200-coin full-normal-collection substitute does not require owning Showcase. Back up the same progress file and use the existing reward/purchase pause when needed. Review actual play and purchase feedback before repricing; never remove owned skins.
+
 ## Group matchmaking
 
 Group requeue (v3.6.0) is an in-memory postgame opt-in, not a permanent party or an extra service. A single server action reserves all consenting connected humans in one same-mode searching arena before moving any membership. AI-filled/ready/battle rooms are not queue destinations. Per-network and global room limits apply, allowing a fully departing source room to free its own capacity. Admission failures are non-fatal notices; no one is disconnected or moved. Existing WebSockets and owner-only credentials are reused, with one previous room alias for token reconnects after a missed transfer message. Disconnecting clears postgame consent; normal pregame removal and battle reconnect rules still apply. New snapshots include at most four consent IDs only during postgame, not in active battle updates. No new persistent data or polling timer is added. Hidden admin spectators retain their completed leaderboard and Quit-only flow.
@@ -65,7 +69,7 @@ v3.7.0 adds one server-generated layout, Crossroads, beside the original seeded 
 1. The app log should show listeners on game port `8765` and internal ingress port `8099`.
 2. Open **Web UI**: the lobby, banner and room list should load.
 3. Open `http://YOUR_PI_IP:8765` on two devices. Create and join one arena, set a win count between 5 and 50 (default 10), start a round, move, shoot, and confirm sound after interacting.
-4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `3.7.0`.
+4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `3.8.0`.
 5. Test an invitation generated from the sidebar after setting `public_url`.
 
 ## Updates
@@ -118,3 +122,4 @@ Fair-use limits protect the server from one visitor filling it: each address can
 | A finished solo match is missing from the leaderboard | Finish the round, then check the matching period and region. Unknown countries appear under All regions. Solo matches count from v2.0.0 onward; older solo matches cannot be reconstructed. |
 
 The container uses the maintained `node:22-alpine` tag; patch updates may change the underlying image on future rebuilds. ARM64 build success and real-device performance are separate checks.
+

@@ -1,5 +1,13 @@
 # Changelog
 
+## v3.8.0 [2026-10-20]
+
+- Add three permanent Showcase skins: Circuit Runner, Ember Forge and Royal Crest, each costing 1500 earned coins. Fixed-price individual purchases, with no real-money checkout, random paid packs, timed offers or combat benefits.
+- Organize the Garage into Originals and Showcase with owned counts, shared previews and a clear same-battle-stats label. Selecting a skin brings its action into view without another menu; keep the fixed, safe-area-aware Back button.
+- Keep the six existing normal skins explicitly eligible for the permanent Day 7 reward. Owning all six still grants the 200-coin substitute even when Showcase skins remain unowned. Preserve existing inventory, prices, coins and daily/weekly progress.
+- Use bounded static circuit, chevron and diamond paintwork in the existing preview/combat renderer. Preserve tank size, slot bands, team markers, own-player halo and effects; add no per-tick simulation, downloads or snapshot fields.
+- Add purchase/recovery, rollback, Day 7 pool, combat parity and mobile/desktop collection browser regressions. Catalogue/prices are provisional dev choices pending real-player feedback, not a claim that retention or economy observations are complete.
+
 ## v3.7.0 [2026-10-19]
 
 - Add Crossroads alongside the original procedural Quarry: mirrored cover islands, broad central lanes and connected flanking/perimeter routes, with the same four safe corner spawn zones.
@@ -494,3 +502,4 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - Free-for-All and 2 vs 2 rooms, room discovery, player previews, and optional bouncing bullets and powers.
 - Laser, double gun, speed and machine gun pickups.
 - Enemy bullet interception, leave confirmation, and a compact mobile HUD with a following camera and twin-stick controls.
+

@@ -1,6 +1,6 @@
 (function(root) {
   const data = {
-    version:'3.7.0',maxHealth:10,laserDamage:4,laserRadius:6,barrelLength:40,doubleBarrelOffset:6,turretHeight:28,
+    version:'3.8.0',maxHealth:10,laserDamage:4,laserRadius:6,barrelLength:40,doubleBarrelOffset:6,turretHeight:28,
     mapLabels:{quarry:'Quarry',crossroads:'Crossroads'},
     achievements:[
       {id:'first-win',name:'First victory',description:'Win your first standard match.'},
@@ -13,14 +13,21 @@
       {id:'wins',name:'Victory lap',description:'Win 3 standard matches.',target:3,coins:100},
       {id:'ricochetHits',name:'Around the corner',description:'Land 10 bounced-shell hits on opponents.',target:10,coins:125}
     ],
+    skinCollections:[
+      {id:'originals',name:'Originals',description:'Six normal skins can unlock on Day 7. Classic is always free.'},
+      {id:'showcase',name:'Showcase',description:'Special paintwork. Earned coins only. Same battle stats.'}
+    ],
     skins:[
-      {id:'classic',name:'Classic',price:0,pattern:'none',description:'Your original colours. Ready for anything.'},
-      {id:'desert',name:'Desert Scout',price:200,pattern:'camo',body:'#dfb56c',accent:'#8c673e',description:'Sun-baked armour and desert camouflage.'},
-      {id:'arctic',name:'Arctic Ghost',price:200,pattern:'camo',body:'#dbe9ee',accent:'#7c9faa',description:'Ice-white camouflage with cool steel details.'},
-      {id:'forest',name:'Forest Ranger',price:500,pattern:'camo',body:'#87a76a',accent:'#365c43',description:'Woodland armour for a quarry explorer.'},
-      {id:'sunset',name:'Sunset Racer',price:500,pattern:'stripe',body:'#db765e',accent:'#ffe4a0',description:'Bold racing stripes in warm sunset colours.'},
-      {id:'carbon',name:'Carbon Night',price:1000,pattern:'grid',body:'#596674',accent:'#a0bdc1',description:'Dark woven armour with polished steel trim.'},
-      {id:'gold',name:'Golden Ace',price:1000,pattern:'stripe',body:'#e6bc54',accent:'#fff0a3',description:'Golden armour for a tank worth remembering.'}
+      {id:'classic',name:'Classic',collection:'originals',price:0,pattern:'none',description:'Your original colours. Ready for anything.'},
+      {id:'desert',name:'Desert Scout',collection:'originals',dailyReward:true,price:200,pattern:'camo',body:'#dfb56c',accent:'#8c673e',description:'Sun-baked armour and desert camouflage.'},
+      {id:'arctic',name:'Arctic Ghost',collection:'originals',dailyReward:true,price:200,pattern:'camo',body:'#dbe9ee',accent:'#7c9faa',description:'Ice-white camouflage with cool steel details.'},
+      {id:'forest',name:'Forest Ranger',collection:'originals',dailyReward:true,price:500,pattern:'camo',body:'#87a76a',accent:'#365c43',description:'Woodland armour for a quarry explorer.'},
+      {id:'sunset',name:'Sunset Racer',collection:'originals',dailyReward:true,price:500,pattern:'stripe',body:'#db765e',accent:'#ffe4a0',description:'Bold racing stripes in warm sunset colours.'},
+      {id:'carbon',name:'Carbon Night',collection:'originals',dailyReward:true,price:1000,pattern:'grid',body:'#596674',accent:'#a0bdc1',description:'Dark woven armour with polished steel trim.'},
+      {id:'gold',name:'Golden Ace',collection:'originals',dailyReward:true,price:1000,pattern:'stripe',body:'#e6bc54',accent:'#fff0a3',description:'Golden armour for a tank worth remembering.'},
+      {id:'circuit',name:'Circuit Runner',collection:'showcase',price:1500,pattern:'circuit',body:'#52bfc2',accent:'#fff3ad',description:'Turquoise paint with crisp circuit-board lines. No glow or battle advantage.'},
+      {id:'forge',name:'Ember Forge',collection:'showcase',price:1500,pattern:'chevron',body:'#e48662',accent:'#ffe6a5',description:'Copper-orange armour with bold workshop chevrons.'},
+      {id:'royal',name:'Royal Crest',collection:'showcase',price:1500,pattern:'diamond',body:'#ab83c9',accent:'#ffdf86',description:'Royal purple paint finished with golden diamond crests.'}
     ],
     width: 1600, height: 1040, maxPlayers: 4, targetScore: 10, fireCooldown: .42, shellSpeed: 410,
     maxShells:144,maxShellsPerPlayer:36,powerDuration:10,pickupInterval:12,pickupLifetime:20,pickupRadius:60,
@@ -46,3 +53,4 @@
   if(typeof module !== 'undefined') module.exports=data;
   else root.FIELD=data;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
+

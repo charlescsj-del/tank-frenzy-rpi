@@ -8,7 +8,7 @@ A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarr
 
 On a phone, creating an arena and adding bots fit within the viewport. The map remains edge to edge during the countdown and on the result screen.
 
-Current release: **v3.7.0**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
+Current release: **v3.8.0**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
 
 The private admin page uses **system CPU and memory gauges**, with the game's share overlaid in orange from the zero end of each arc. CPU converts the game's one-core reading to a fraction of all cores; memory compares resident game memory with total RAM. Game percentages appear inside the gauges, with resident MiB in the memory gauge. Pi load shows 1-, 5- and 15-minute averages, values per CPU core and a 60-second history collected while the page is open. Core-count reference markers make load easier to interpret. Resource readings refresh once a second and are marked stale when disconnected; room views still refresh twice a second. See [DOCS.md](DOCS.md) for measurement details.
 
@@ -33,6 +33,10 @@ The first eligible match each Malaysia day earns 20, 25, 30, 40, 50, 65 and 100 
 Open **Weekly challenges** from home, or scroll down in the Garage, for three optional goals: finish 5 standard matches (+75 coins), win 3 (+100), and land 10 bounced-shell hits on opponents (+125). Solo vs AI counts, and both winning teammates progress the win goal. Hits must actually damage an opponent; shields, friendly fire, lasers and shell clashes do not count. Multiple bounces on one hit still count once. Progress saves only when you participate through an eligible match completion. Each goal pays automatically once per week; the result breakdown includes its bonus. No extra claim button or mandatory extra matches. Goals reset Monday 00:00 Malaysia (UTC+8), based on match completion, not the time a delayed reward is saved. Earned coins remain yours. Older matches are not retroactively credited.
 
 Under the profile icon, expand **Protect or restore progress** and save your private recovery code. Enter it on another device on the same server to restore that profile's coins, skins and retained leaderboard scores. Leave any arena on the other device first. Anyone possessing the code can access the profile; do not share it with other players. Admin leaderboard resets do not remove wallets or skins. Progress starts with future matches; earlier leaderboard results are not retroactively credited.
+
+### Cosmetic collections
+
+The **Originals** section keeps Classic and the six normal skins at their existing prices. **Showcase** adds Circuit Runner (turquoise circuit lines), Ember Forge (copper chevrons) and Royal Crest (purple with golden diamonds), each for 1500 earned coins. Preview before buying; purchases are permanent and equipping is your choice. Both sections show how many you own. All have the same health, damage, movement, firing and collision size. There are no armour bonuses, real-money payments or limited-time offers. Showcase skins do not enter the random Day 7 normal-skin pool and do not prevent its 200-coin substitute when all six normal skins are owned.
 
 ## Rooms and invitations
 
@@ -147,3 +151,4 @@ Friend-arena setup uses the forest-green background and cream cards. Its arena m
 The home screen renders its dark theme before JavaScript loads. Connecting and reconnecting retain the forest background; the battlefield appears only after its state arrives.
 
 Active power-ups show their icon, seconds remaining and duration bar in a dedicated row beneath the battle score indicators on desktop and mobile.
+

@@ -40,7 +40,7 @@ test('one missed day is protected per cycle; a second or longer absence resets i
   now+=3*864e5;f.room.roundId=randomUUID();assert.equal(f.award().reward.daily.day,1);
 });
 test('full collections receive the coin substitute instead of a duplicate skin',()=>{
-  const f=fixture({now:()=>0});const p=f.store.players.get(f.profile.id);p.owned=F.skins.map(s=>s.id);p.daily={step:6,lastDay:-1,graceUsed:false,longest:6,streak:6};
+  const f=fixture({now:()=>0});const p=f.store.players.get(f.profile.id);p.owned=F.skins.filter(s=>s.id==='classic'||s.dailyReward).map(s=>s.id);p.daily={step:6,lastDay:-1,graceUsed:false,longest:6,streak:6};
   const r=f.award();assert.equal(r.reward.skin,null);assert.equal(r.reward.daily.collectionBonus,200);assert.equal(r.reward.total,380);assert.equal(r.progress.owned.length,7);
 });
 test('purchases and equipping validate ownership; repeated buying cannot charge twice',()=>{
@@ -93,3 +93,4 @@ test('comeback deficit follows real kill events in both modes, resets per round 
     room.resetRound();assert.equal(b.maxDeficit,0);
   }
 });
+

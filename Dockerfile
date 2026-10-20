@@ -1,6 +1,6 @@
 # Multi-architecture image: Docker selects ARM64 on a 64-bit Raspberry Pi.
 FROM node:22-alpine
-ARG BUILD_VERSION=3.7.0
+ARG BUILD_VERSION=3.8.0
 ARG BUILD_ARCH
 LABEL io.hass.name="Tank Frenzy" \
       io.hass.description="Multiplayer tank battles for Home Assistant" \
@@ -23,3 +23,4 @@ EXPOSE 8765 8099
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
   CMD node -e "fetch('http://127.0.0.1:8765/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "addon.cjs"]
+

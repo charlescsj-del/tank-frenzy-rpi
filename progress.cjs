@@ -87,7 +87,7 @@ class Progress {
             if(d.step===7){d.step=0;d.graceUsed=false;}
             d.step++;d.streak++;d.longest=Math.max(d.longest,d.streak);d.lastDay=today;
             reward.daily={day:d.step,coins:F.economy.daily[d.step-1],collectionBonus:0};
-            if(d.step===7){const available=F.skins.filter(s=>s.id!=='classic'&&!p.owned.includes(s.id));if(available.length){reward.skin=available[this.random(available.length)].id;p.owned.push(reward.skin);}else reward.daily.collectionBonus=F.economy.collectionBonus;}
+            if(d.step===7){const available=F.skins.filter(s=>s.dailyReward===true&&!p.owned.includes(s.id));if(available.length){reward.skin=available[this.random(available.length)].id;p.owned.push(reward.skin);}else reward.daily.collectionBonus=F.economy.collectionBonus;}
           }
           p.stats.firstDay??=today;p.stats.nextDayReturn||=today===p.stats.firstDay+1;p.stats.day7Return||=today===p.stats.firstDay+7;
           p.stats.matches++;p.stats.wins+=won?1:0;p.stats.kills+=Math.max(0,Math.floor(player.kills)||0);p.stats.bestKills=Math.max(p.stats.bestKills,player.kills||0);
@@ -112,3 +112,4 @@ class Progress {
   }
 }
 module.exports={Progress,dayNumber,weekNumber};
+

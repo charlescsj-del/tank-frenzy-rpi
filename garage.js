@@ -32,7 +32,7 @@ function renderDaily(){
   }
   const reset=new Date(p.daily.resetAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   $('dailyNote').textContent=(p.enabled===false?'Daily rewards are temporarily paused by the host.':p.daily.qualified?'Today’s reward earned.':'Complete one standard match to earn today’s reward.')+' Resets at '+reset+' your time (midnight Malaysia). '+(p.daily.graceAvailable?'One missed day is protected this cycle.':'Missed-day protection used this cycle.');
-  $('dailyCollection').textContent='Day 7: a random unowned normal skin, yours permanently. Full collection? +'+FIELD.economy.collectionBonus+' bonus coins. All skins are cosmetic.';
+  $('dailyCollection').textContent='Day 7: a random unowned normal skin, yours permanently. All six normal skins owned? +'+FIELD.economy.collectionBonus+' bonus coins. Showcase skins are purchased separately. All skins are cosmetic.';
 }
 function renderWeekly(){
   const p=playerProgress;$('weeklyChallenges').replaceChildren();if(!p?.weekly)return;
@@ -49,12 +49,18 @@ function renderWeekly(){
 function renderGarage(){
   const p=playerProgress,skin=FIELD.skins.find(s=>s.id===garageSelected)||FIELD.skins[0];
   $('garageBalance').textContent=p?p.coins.toLocaleString()+' coins':'Loading…';$('garageSkinName').textContent=skin.name;$('garageSkinDescription').textContent=skin.description;
+  $('garageSkinCollection').textContent=(FIELD.skinCollections.find(c=>c.id===skin.collection)?.name||'Originals')+' · Cosmetic · Same battle stats';
   TankSkins.draw($('garagePreview'),skin.id,lastTankSlot);$('garagePreview').setAttribute('aria-label',skin.name+' tank preview');
   $('garageChoices').replaceChildren();
-  for(const option of FIELD.skins){
+  for(const collection of FIELD.skinCollections){
+    const options=FIELD.skins.filter(s=>s.collection===collection.id),section=document.createElement('section'),heading=document.createElement('div'),title=document.createElement('h4'),count=document.createElement('span'),note=document.createElement('p'),choices=document.createElement('div');
+    section.className='skin-collection';section.setAttribute('data-collection',collection.id);heading.className='skin-collection-heading';title.textContent=collection.name;count.textContent=options.filter(s=>p?.owned.includes(s.id)).length+' / '+options.length+' owned';note.textContent=collection.description;choices.className='garage-choices';heading.append(title,count);section.append(heading,note,choices);
+    for(const option of options){
     const button=document.createElement('button');button.type='button';button.className='skin-choice';button.setAttribute('aria-pressed',String(option.id===skin.id));button.setAttribute('data-skin',option.id);
     const name=document.createElement('strong'),state=document.createElement('small');name.textContent=option.name;state.textContent=p?.equipped===option.id?'Equipped':p?.owned.includes(option.id)?'Owned':option.price+' coins';button.append(TankSkins.portrait(lastTankSlot,option.id),name,state);
-    button.addEventListener('click',()=>{garageSelected=option.id;$('garageMessage').textContent='';renderGarage();});$('garageChoices').append(button);
+    button.addEventListener('click',()=>{garageSelected=option.id;$('garageMessage').textContent='';renderGarage();$('garageAction').scrollIntoView?.({block:'nearest'});});choices.append(button);
+    }
+    $('garageChoices').append(section);
   }
   const owned=p?.owned.includes(skin.id),equipped=p?.equipped===skin.id,need=skin.price-(p?.coins||0);
   $('garageAction').disabled=garageBusy||!p||equipped||!owned&&(need>0||p.enabled===false);
@@ -117,3 +123,4 @@ $('restorePlayer').addEventListener('click',async()=>{
   catch(error){$('recoveryMessage').textContent=error.message;}finally{button.disabled=false;}
 });
 if(!watchRoom)loadPlayerProgress().catch(()=>{});
+
