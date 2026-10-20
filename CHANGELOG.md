@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.8.3 [2026-10-20]
+
+- Compact the Garage showcase in short landscape windows and reveal the whole selected preview, so the tank, skin name and action remain visible together instead of revealing the action alone.
+- Require preview/name bounds at portrait and landscape sizes in browser verification, after the opening progress refresh finishes.
+
 ## v3.8.2 [2026-10-20]
 
 - Pin the Garage preview only in taller desktop windows. Short landscape screens keep normal scrolling so Buy/Equip remains fully reachable; preserve portrait preview reveal and the fixed Back button.
