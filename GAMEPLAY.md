@@ -8,7 +8,7 @@ A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarr
 
 On a phone, creating an arena and adding bots fit within the viewport. The map remains edge to edge during the countdown and on the result screen.
 
-Current release: **v3.8.3**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
+Current release: **v3.9.0**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
 
 The private admin page uses **system CPU and memory gauges**, with the game's share overlaid in orange from the zero end of each arc. CPU converts the game's one-core reading to a fraction of all cores; memory compares resident game memory with total RAM. Game percentages appear inside the gauges, with resident MiB in the memory gauge. Pi load shows 1-, 5- and 15-minute averages, values per CPU core and a 60-second history collected while the page is open. Core-count reference markers make load easier to interpret. Resource readings refresh once a second and are marked stale when disconnected; room views still refresh twice a second. See [DOCS.md](DOCS.md) for measurement details.
 
@@ -154,3 +154,19 @@ The home screen renders its dark theme before JavaScript loads. Connecting and r
 
 Active power-ups show their icon, seconds remaining and duration bar in a dedicated row beneath the battle score indicators on desktop and mobile.
 
+
+## Vehicle test: free classes (dev pilot)
+
+All classes are free and every skin works on every class. Coins purchase appearance only. Garage remembers your vehicle choice; ordinary matches and Quick Play use Standard during the pilot.
+
+| Vehicle | Health | Speed | Normal reload |
+| --- | ---: | ---: | ---: |
+| Standard | 10 | 170 | 0.42 s |
+| Scout | 8 | 204 (+20%) | 0.42 s |
+| Heavy | 12 | 145 (about 15% slower) | 0.48 s |
+
+When the host enables the pilot, Garage offers **Create vehicle test · Private practice**. Invite friends with the existing code/QR flow. These rooms show **Vehicle test · Practice · No coins or rankings**. The final scoreboard and admin history remain available. Test results do not change public boards, bot difficulty or progression.
+
+Class choice locks from joining until results. **Change tank · Next match** on results opens the Garage without leaving the scoreboard. A saved change applies at the next countdown; reconnects and respawns keep the actual class. Entering ordinary Quick Play uses Standard while remembering your preferred test class.
+
+Shell and laser damage remain 1 and 4. Speed multiplies each vehicle's speed by 1.6. Heavy's 8/7 reload multiplier also applies to Machine Gun and Laser. Restore fills the selected class's maximum health and keeps the active power; Shield and protection timings are unchanged. Health bars use the actual capacity (4, 5 or 6 two-health pips), and low-health effects start at 30%. Collision size, muzzle, projectile caps and scoring remain shared. Scout's two-laser death threshold needs human playtesting before a wider rollout.

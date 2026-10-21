@@ -45,7 +45,7 @@ test('ingress serves prefix-safe assets and shares live multiplayer rooms with L
   assert.equal((await fetch(ingress+'/',{headers:{'X-Ingress-Path':'//attacker.example/'}})).status,400);
   assert.equal((await fetch(ingress+'/',{headers:{'X-Ingress-Path':'/api/hassio_ingress/"bad'}})).status,400);
   const info=await fetch(ingress+'/network-info').then(r=>r.json());
-  assert.deepEqual(info,{urls:[],publicUrl:'http://pi.local:8765',ingress:true});
+  assert.deepEqual(info,{vehicleClassesEnabled:false,urls:[],publicUrl:'http://pi.local:8765',ingress:true});
   assert.equal((await fetch(base+'/health').then(r=>r.json())).status,'ok');
   assert.equal((await fetch(base+'/addon.cjs')).status,404);
   assert.equal((await fetch(base+'/config.yaml')).status,404);
@@ -67,7 +67,9 @@ test('ingress serves prefix-safe assets and shares live multiplayer rooms with L
 test('app options accept LAN and HTTPS addresses and reject unsafe or ambiguous invitations',()=>{
   const dir=fs.mkdtempSync(path.join(__dirname,'tank-options-')),file=path.join(dir,'options.json');
   try{
-    assert.deepEqual(readOptions(file),{ingress:true,publicUrl:'',notifyService:'',adminPassword:'',adminPath:'admin',rewardsEnabled:true});
+    assert.deepEqual(readOptions(file),{vehicleClassesEnabled:false,ingress:true,publicUrl:'',notifyService:'',adminPassword:'',adminPath:'admin',rewardsEnabled:true});
+    for(const value of [true,false]){fs.writeFileSync(file,JSON.stringify({vehicle_classes_enabled:value}));assert.equal(readOptions(file).vehicleClassesEnabled,value);}
+    for(const value of ['true',1,null,{}]){fs.writeFileSync(file,JSON.stringify({vehicle_classes_enabled:value}));assert.throws(()=>readOptions(file),/vehicle_classes_enabled/);}
     for(const value of ['http://192.168.1.50:8765/','https://game.example/']){
       fs.writeFileSync(file,JSON.stringify({public_url:value}));assert.equal(readOptions(file).publicUrl,value.slice(0,-1));
     }
@@ -117,4 +119,5 @@ test('admin_path accepts a private address and rejects unsafe or game addresses'
     for(const value of ['a','../etc','with space','rooms','tutorial','x'.repeat(65)]){fs.writeFileSync(file,JSON.stringify({admin_path:value}));assert.throws(()=>readOptions(file),value);}
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
 

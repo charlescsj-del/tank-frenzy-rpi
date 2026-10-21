@@ -29,3 +29,7 @@ configuration:
 network:
   8765/tcp: Game access for LAN players (no Home Assistant login)
 
+  vehicle_classes_enabled:
+    name: Private vehicle-class pilot
+    description: Enable optional private Vehicle test arenas. Standard, Scout and Heavy are free. Test matches award no coins or rankings. Restart required.
+

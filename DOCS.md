@@ -69,7 +69,7 @@ v3.7.0 adds one server-generated layout, Crossroads, beside the original seeded 
 1. The app log should show listeners on game port `8765` and internal ingress port `8099`.
 2. Open **Web UI**: the lobby, banner and room list should load.
 3. Open `http://YOUR_PI_IP:8765` on two devices. Create and join one arena, set a win count between 5 and 50 (default 10), start a round, move, shoot, and confirm sound after interacting.
-4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `3.8.3`.
+4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `3.9.0`.
 5. Test an invitation generated from the sidebar after setting `public_url`.
 
 ## Updates
@@ -123,3 +123,11 @@ Fair-use limits protect the server from one visitor filling it: each address can
 
 The container uses the maintained `node:22-alpine` tag; patch updates may change the underlying image on future rebuilds. ARM64 build success and real-device performance are separate checks.
 
+
+## Private vehicle-class pilot (v3.9.0)
+
+`vehicle_classes_enabled` is a boolean, false by default. Enable it in the dev app configuration and restart. Garage then offers **Create vehicle test · Private practice**. The room is always friends-only, omitted from public browsing and joinable by invite code. Guests must reload to a browser build supporting `vehicles-1`; unsupported joins are rejected before membership. The ordinary Create arena and Play buttons keep their existing behavior and Standard stats.
+
+The profile remembers a free vehicle preference independently of paint. Test rounds are tagged `vehicle-test` / `vehicles-1` in authenticated match history, with map layout and actual participant classes. They award no rankings, difficulty progress, coins, daily/weekly progress or achievements. Regular solo-vs-AI rounds still qualify normally. Do not use test history as evidence of human balance without controlled playtesting.
+
+Disable the option and restart to stop creating vehicle tests. Existing coins, skins and vehicle preferences are retained. Restart closes active rooms as usual; active test battles are not converted in place. The dev slug and host port remain separate from production. No new runtime dependency is added.

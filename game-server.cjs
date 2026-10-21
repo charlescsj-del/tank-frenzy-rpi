@@ -24,7 +24,7 @@ function rayBox(x,y,dx,dy,w){
   return near;
 }
 class Room {
-  constructor(code,options={}){this.code=code;this.settings=Object.freeze({mode:options?.mode==='teams'?'teams':'ffa',bouncing:options?.bouncing!==false,powers:options?.powers!==false,targetScore:Number.isInteger(options?.targetScore)&&options.targetScore>=5&&options.targetScore<=50?options.targetScore:F.targetScore});this.phase='waiting';this.countdownUntil=0;this.ownerId=null;this.teamScores=[0,0];this.pickups=[];this.pickupId=0;this.nextPickup=6;this.map=generateMap();this.players=new Map();this.shells=[];this.events=[];this.time=0;this.eventId=0;this.shellId=0;this.winner=null;this.botSkill='normal';this.rematchUntil=0;this.rematchVotes=new Set();}
+  constructor(code,options={}){this.code=code;this.ruleset=options.vehicleTest===true?'vehicle-test':'standard';this.balanceRevision=this.ruleset==='vehicle-test'?F.vehicleRevision:null;this.settings=Object.freeze({mode:options?.mode==='teams'?'teams':'ffa',bouncing:options?.bouncing!==false,powers:options?.powers!==false,targetScore:Number.isInteger(options?.targetScore)&&options.targetScore>=5&&options.targetScore<=50?options.targetScore:F.targetScore});this.phase='waiting';this.countdownUntil=0;this.ownerId=null;this.teamScores=[0,0];this.pickups=[];this.pickupId=0;this.nextPickup=6;this.map=generateMap();this.players=new Map();this.shells=[];this.events=[];this.time=0;this.eventId=0;this.shellId=0;this.winner=null;this.botSkill='normal';this.rematchUntil=0;this.rematchVotes=new Set();}
   emit(type,data){this.events.push({id:++this.eventId,type,...data});}
   configureQuick(searchSeconds=12,readySeconds=5){this.quick=true;this.phase='searching';this.searchUntil=this.time+searchSeconds;this.readySeconds=readySeconds;this.readyIds=new Set();}
   groupConsent(p,msg){
@@ -64,7 +64,7 @@ class Room {
       const s=msg.settings;if(!s||typeof s!=='object')return false;
       this.settings=Object.freeze({mode:s.mode==='teams'?'teams':'ffa',bouncing:s.bouncing!==false,powers:s.powers!==false,targetScore:Number.isInteger(s.targetScore)&&s.targetScore>=5&&s.targetScore<=50?s.targetScore:10});
       [...this.players.values()].forEach((t,i)=>t.team=this.settings.mode==='teams'?i%2:null);
-      if(typeof msg.private==='boolean')this.private=msg.private;
+      if(typeof msg.private==='boolean')this.private=this.ruleset==='vehicle-test'||msg.private;
     }else return false;
     this.readyIds=new Set();return true;
   }
@@ -74,12 +74,13 @@ class Room {
     p.nextReaction=this.time+1.5;p.reaction={value:reaction,until:this.time+3};this.emit('reaction',{player:p.id,reaction});return true;
   }
   humans(){return [...this.players.values()].filter(p=>!p.bot);}
-  add(name,{bot=false}={}){
+  add(name,{bot=false,profileId,vehicle='standard'}={}){
     // AI and reconnecting humans own their seats just like connected humans.
     if(this.players.size>=F.maxPlayers)return null;
     const slot=Array.from({length:F.maxPlayers},(_,i)=>i).find(i=>![...this.players.values()].some(p=>p.slot===i));
     const used=new Set([...this.players.values()].map(t=>t.name));const botName=Bots.botNames.find(n=>!used.has(n))||'Nova';
     const p={id:randomUUID(),slot,bot,name:bot?botName:name||F.palette[slot].name,x:0,y:0,a:0,aim:0,hp:F.maxHealth,kills:0,deaths:0,damageDealt:0,shots:0,hits:0,ricochetHits:0,streak:0,cool:0,respawnAt:0,shieldUntil:0,connected:true,disconnectedAt:0,input:neutral(),lastInput:this.time,seq:-1,life:0};
+    p.profileId=profileId;this.resolveVehicle(p,vehicle);
     const teams=[0,1].map(team=>[...this.players.values()].filter(t=>t.team===team).length);
     p.team=this.settings.mode==='teams'?(teams[0]<=teams[1]?0:1):null;
     if(this.phase==='waiting'&&!bot)this.ownerId??=p.id;
@@ -129,7 +130,10 @@ class Room {
   beginCountdown(seconds=3){
     this.phase='countdown';this.ownerId=null;this.countdownUntil=this.time+seconds;this.roundId=randomUUID();this.matchPlayers=new Map(this.humans().map(p=>[p.id,p]));this.roundStarted=this.countdownUntil;
     this.shells=[];this.pickups=[];this.nextPickup=this.countdownUntil+6;
-    for(const p of this.players.values()){p.disconnections=0;p.activeSeconds=0;p.joinedRoundAt=this.countdownUntil;this.spawn(p);}
+    for(const p of this.players.values()){this.resolveVehicle(p);p.disconnections=0;p.activeSeconds=0;p.joinedRoundAt=this.countdownUntil;this.spawn(p);}
+  }
+  resolveVehicle(p,preference){
+    p.vehicle=this.ruleset==='vehicle-test'?F.vehicleOf(p.bot?F.vehicles[p.slot%3].id:preference??this.vehiclePreference?.(p.profileId)??p.vehicle).id:'standard';p.vehicleStats=F.vehicleOf(p.vehicle);
   }
   spawn(p){
     p.power=null;p.powerUntil=0;
@@ -137,7 +141,7 @@ class Room {
     const choices=this.map.spawns.map((xy,i)=>({xy,score:others.length?Math.min(...others.map(t=>Math.hypot(t.x-xy[0],t.y-xy[1]))):i===p.slot?1:0})).sort((a,b)=>b.score-a.score);
     const free=choices.find(c=>!others.some(t=>Math.hypot(t.x-c.xy[0],t.y-c.xy[1])<55));
     if(!free){p.hp=0;p.respawnAt=this.time+.5;return;}
-    [p.x,p.y]=free.xy;p.hp=F.maxHealth;p.life++;p.respawnAt=0;p.cool=.3;p.shieldUntil=this.phase==='playing'?this.time+3:0;p.input=neutral();p.pendingShot=false;p.a=p.x<F.width/2?0:Math.PI;p.aim=p.a;
+    [p.x,p.y]=free.xy;p.hp=(p.vehicleStats||F.vehicleOf(p.vehicle)).health;p.life++;p.respawnAt=0;p.cool=.3;p.shieldUntil=this.phase==='playing'?this.time+3:0;p.input=neutral();p.pendingShot=false;p.a=p.x<F.width/2?0:Math.PI;p.aim=p.a;
   }
   setInput(p,m){
     if(!Number.isSafeInteger(m.seq)||m.seq<=p.seq||!Number.isFinite(m.x)||!Number.isFinite(m.y)||!Number.isFinite(m.aimX)||!Number.isFinite(m.aimY)||typeof m.fire!=='boolean')return;
@@ -209,7 +213,7 @@ class Room {
     const power=this.settings.powers&&p.powerUntil>this.time?p.power:null;
     const count=power==='double'?2:1;
     if(power!=='laser'&&(this.shells.length+count>F.maxShells||this.shells.filter(s=>s.owner===p.id).length+count>F.maxShellsPerPlayer))return;
-    p.cool=power==='machine'?.12:power==='laser'?.8:F.fireCooldown;
+    p.cool=(power==='machine'?.12:power==='laser'?.8:F.fireCooldown)*((p.vehicleStats||F.vehicleOf(p.vehicle)).reload/F.fireCooldown);
     p.shots+=count;
     if(power==='laser'){this.fireLaser(p);return;}
     const dx=Math.cos(p.aim),dy=Math.sin(p.aim);
@@ -259,14 +263,14 @@ class Room {
       if(!p.bot&&(input.x||input.y||input.fire||p.pendingShot))p.activeSeconds=(p.activeSeconds||0)+dt;
       let dx=input.x,dy=input.y;
       const length=Math.hypot(dx,dy);
-      const speed=this.settings.powers&&p.power==='speed'?272:170;
+      const speed=(p.vehicleStats||F.vehicleOf(p.vehicle)).speed*(this.settings.powers&&p.power==='speed'?1.6:1);
       if(length){dx=dx/length*speed*dt;dy=dy/length*speed*dt;p.a=Math.atan2(dy,dx);if(!this.blocked(p.x+dx,p.y,p))p.x+=dx;if(!this.blocked(p.x,p.y+dy,p))p.y+=dy;}
       if(this.settings.powers){
         const index=this.pickups.findIndex(drop=>Math.hypot(drop.x-p.x,drop.y-p.y)<=F.pickupRadius&&
           !this.map.walls.some(w=>rayBox(p.x,p.y,drop.x-p.x,drop.y-p.y,w)!==null));
         if(index>=0){
           const [drop]=this.pickups.splice(index,1);
-          if(drop.type==='restore')p.hp=F.maxHealth;
+          if(drop.type==='restore')p.hp=(p.vehicleStats||F.vehicleOf(p.vehicle)).health;
           else{p.power=drop.type;p.powerUntil=this.time+F.powerDuration;}
           this.emit('pickup',{x:p.x,y:p.y,slot:p.slot,player:p.id,power:drop.type});
         }
@@ -319,10 +323,11 @@ class Room {
   snapshot({withMap=true}={}){
     const matchEnded=this.phase==='results'||this.phase==='postgame';
     const pregame=['searching','ready','waiting'].includes(this.phase);
-    return {type:'state',room:this.code,settings:this.settings,phase:this.phase,quick:!!this.quick,private:!!this.private,roundId:this.roundId,...(this.phase==='postgame'?{groupIds:[...(this.groupIds||[])].filter(id=>this.players.get(id)?.connected)}:{}),...(pregame?{readyIds:[...(this.readyIds||[])],searchIn:Math.max(0,(this.searchUntil||0)-this.time),readyIn:Math.max(0,(this.readyUntil||0)-this.time)}:{}),countdownIn:this.phase==='countdown'?Math.max(0,this.countdownUntil-this.time):0,ownerId:this.ownerId,teamScores:this.teamScores,pickups:this.pickups,map:withMap?this.map:undefined,mapId:this.map.id,time:this.time,winner:this.winner,rematchIn:this.phase==='results'?Math.max(0,this.rematchUntil-this.time):0,rematchVotes:[...this.rematchVotes],botSkill:this.botSkill,rematchNeeded:this.phase==='results'?this.rematchNeeded():0,players:[...this.players.values()].map(({id,slot,skin,bot,name,x,y,a,aim,hp,kills,deaths,damageDealt,shots,hits,streak,connected,respawnAt,shieldUntil,life,team,power,powerUntil,reaction})=>({id,slot,...(skin&&skin!=='classic'?{skin}:{}),bot,name,x,y,a,aim,hp,kills,deaths,...(matchEnded?{damageDealt,reaction:reaction?.until>this.time?reaction.value:null}:{}),shots,hits,streak,connected,respawnIn:Math.max(0,respawnAt-this.time),shield:shieldUntil>this.time,life,team,power,powerRemaining:Math.max(0,powerUntil-this.time)})),shells:this.shells.map(({id,x,y,slot})=>({id,x,y,slot})),events:this.events};
+    return {type:'state',room:this.code,...(this.ruleset==='vehicle-test'?{ruleset:this.ruleset,balanceRevision:this.balanceRevision}:{}),settings:this.settings,phase:this.phase,quick:!!this.quick,private:!!this.private,roundId:this.roundId,...(this.phase==='postgame'?{groupIds:[...(this.groupIds||[])].filter(id=>this.players.get(id)?.connected)}:{}),...(pregame?{readyIds:[...(this.readyIds||[])],searchIn:Math.max(0,(this.searchUntil||0)-this.time),readyIn:Math.max(0,(this.readyUntil||0)-this.time)}:{}),countdownIn:this.phase==='countdown'?Math.max(0,this.countdownUntil-this.time):0,ownerId:this.ownerId,teamScores:this.teamScores,pickups:this.pickups,map:withMap?this.map:undefined,mapId:this.map.id,time:this.time,winner:this.winner,rematchIn:this.phase==='results'?Math.max(0,this.rematchUntil-this.time):0,rematchVotes:[...this.rematchVotes],botSkill:this.botSkill,rematchNeeded:this.phase==='results'?this.rematchNeeded():0,players:[...this.players.values()].map(({id,slot,skin,vehicle,bot,name,x,y,a,aim,hp,kills,deaths,damageDealt,shots,hits,streak,connected,respawnAt,shieldUntil,life,team,power,powerUntil,reaction})=>({id,slot,...(vehicle&&vehicle!=='standard'?{vehicle}:{}),...(skin&&skin!=='classic'?{skin}:{}),bot,name,x,y,a,aim,hp,kills,deaths,...(matchEnded?{damageDealt,reaction:reaction?.until>this.time?reaction.value:null}:{}),shots,hits,streak,connected,respawnIn:Math.max(0,respawnAt-this.time),shield:shieldUntil>this.time,life,team,power,powerRemaining:Math.max(0,powerUntil-this.time)})),shells:this.shells.map(({id,x,y,slot})=>({id,x,y,slot})),events:this.events};
   }
 }
 // Snapshots go out 30 times a second; tenths of a unit (hundredths of a radian for angles) look identical and are a quarter smaller.
 const precise=new Set(['a','aim']);
 function encodeState(state){return JSON.stringify(state,(key,value)=>typeof value==='number'&&!Number.isInteger(value)?Math.round(value*(precise.has(key)?100:10))/(precise.has(key)?100:10):value);}
 module.exports={Room,hitRect,encodeState};
+

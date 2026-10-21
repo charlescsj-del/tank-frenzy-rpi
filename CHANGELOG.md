@@ -1,5 +1,14 @@
 # Changelog
 
+## v3.9.0 [2026-10-21]
+
+- Adds the private vehicle-class pilot: free Standard (10 HP), Scout (8 HP, faster) and Heavy (12 HP, slower movement and reload). Normal matches and Quick Play retain Standard.
+- Garage selections save independently of skins and survive recovery. Enable `vehicle_classes_enabled` to create a private Vehicle test from the Garage; all test arenas are unlisted and require a compatible browser build.
+- Class capacity applies to spawn, Restore, health bars and low-health feedback; movement and every firing mode use authoritative class stats. Bot classes rotate independently of difficulty.
+- Results offer Change tank for the next match. Preferences lock during pregame and play; rematches resolve the new choice before the shared 3-2-1, closing the Garage automatically.
+- Test results remain in admin history with ruleset, balance revision, map and vehicle details. They do not affect rankings, adaptive difficulty, coins, daily/weekly progress or achievements.
+- Adds focused combat, persistence and lifecycle tests plus vehicle UI coverage at desktop, phone portrait and landscape sizes. Human balance and Raspberry Pi performance observations are still pending; this is an opt-in dev pilot.
+
 ## v3.8.3 [2026-10-20]
 
 - Compact the Garage showcase in short landscape windows and reveal the whole selected preview, so the tank, skin name and action remain visible together instead of revealing the action alone.

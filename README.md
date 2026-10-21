@@ -4,7 +4,7 @@ This `dev` branch is the test installation. Add `https://github.com/charlescsj-d
 
 Install Tank Frenzy as a Home Assistant app (formerly called an add-on). The Pi hosts the multiplayer game; players use Safari, Edge, Chrome, or another modern browser on their phones, tablets, or computers. Rendering and sound run on each player's device.
 
-**Tank Frenzy v3.8.3** adds the Showcase cosmetic collection: Circuit Runner, Ember Forge and Royal Crest, each permanently purchasable for 1500 earned coins. Preview the paintwork in the Garage alongside the Originals; every skin keeps identical battle stats. Day 7 still unlocks an unowned normal skin, or awards its full-normal-collection coin substitute. See [PROGRESSION_PLAN.md](PROGRESSION_PLAN.md) for the staged rollout.
+**Tank Frenzy v3.9.0** adds an optional private vehicle-class pilot. Standard, Scout and Heavy are free; skins remain cosmetic. Enable `vehicle_classes_enabled` in the dev app, then open Garage → Create vehicle test. Ordinary matches still use Standard. Test matches save admin history but award no coins or rankings. See [VEHICLE_CLASSES_PLAN.md](VEHICLE_CLASSES_PLAN.md) for the rules and remaining playtesting.
 
 On phones, the create form and waiting-room controls fit in one viewport; the map keeps its full-screen layout through countdown and results.
 
@@ -60,7 +60,7 @@ docker run --rm -p 8765:8765 tank-frenzy-rpi
 
 Run the build on the intended architecture (or use Docker Buildx with `--platform linux/arm64`). The repository includes CI for tests and ARM64/AMD64 container builds. A physical Pi/Home Assistant installation and mobile play must still be checked on the target device; automated tests do not establish Pi performance under load.
 
-App package version: **3.8.3**. Game version: **3.8.3**. The dev Home Assistant app keeps its own slug; releases bump the numeric version in several files at once. See the release checklist in [AGENTS.md](AGENTS.md).
+App package version: **3.9.0**. Game version: **3.9.0**. The dev Home Assistant app keeps its own slug; releases bump the numeric version in several files at once. See the release checklist in [AGENTS.md](AGENTS.md).
 
 The How to Play screenshots in `tutorial/` are rendered by the game itself. After a visual change, run `npm start` and then `npx -y -p playwright node tools/tutorial-screenshots.cjs` to regenerate them (set `ONLY=win.webp` for one image).
 

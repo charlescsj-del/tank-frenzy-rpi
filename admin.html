@@ -211,11 +211,11 @@ function render(state){
   for(const room of state.rooms){
     const {node,head,canvas,table}=card(room.code);
     const score=room.settings.mode==='teams'?' · Orange '+room.teamScores[0]+' – '+room.teamScores[1]+' Blue':'';
-    head.replaceChildren(el('strong',{textContent:room.code}),el('span',{className:'badge',textContent:room.settings.mode==='teams'?'2 vs 2':'Deathmatch'}),
+    head.replaceChildren(el('strong',{textContent:room.code+(room.ruleset==='vehicle-test'?' · Vehicle test':'')}),el('span',{className:'badge',textContent:room.settings.mode==='teams'?'2 vs 2':'Deathmatch'}),
       el('span',{className:'badge '+room.phase,textContent:(phaseNames[room.phase]||room.phase)+(room.winner?': '+room.winner.name+' won':'')+score}),el('span',{className:'badge',textContent:time(room.time)}));
     table.replaceChildren(...[...room.players].sort((a,b)=>b.kills-a.kills).map(p=>{
-      const hp=el('span',{className:'hp'},el('i',{style:'width:'+p.hp*10+'%'}));
-      return el('tr',{className:p.connected?'':'off'},el('td',{},el('span',{className:'dot',style:'background:'+state.palette[p.slot]}),p.name+(p.connected?'':' (away)'),flag(p.country)),
+      const hp=el('span',{className:'hp'},el('i',{style:'width:'+Math.max(0,Math.min(100,p.hp/(state.vehicleHealth?.[p.vehicle]||10)*100))+'%'}));
+      return el('tr',{className:p.connected?'':'off'},el('td',{},el('span',{className:'dot',style:'background:'+state.palette[p.slot]}),p.name+(room.ruleset==='vehicle-test'?' · '+p.vehicle:'')+(p.connected?'':' (away)'),flag(p.country)),
         el('td',{className:'num',textContent:p.kills+' / '+p.deaths}),el('td',{className:'num'},hp));
     }));
     draw(canvas,room,state);
@@ -277,8 +277,8 @@ async function loadMatchHistory(page=1){
     historyPage=data.page;$('historyRows').replaceChildren(...data.matches.map(m=>{
       const winners=m.players.filter(p=>p.won).map(p=>p.name).join(', ')||'Not recorded';
       const title=matchDate.format(new Date(m.t))+' · '+(m.mode==='teams'?'2 vs 2':'Deathmatch')+' · '+(m.duration===null?'Duration unavailable':time(Math.round(m.duration)));
-      const table=el('table',{},el('thead',{},el('tr',{},...['Player','Kills','Deaths','Damage','Status'].map(t=>el('th',{textContent:t})))),el('tbody',{},...m.players.map(p=>el('tr',{},el('td',{textContent:p.name+(p.bot?' · AI':'')+(p.team===null?'':p.team===0?' · Orange':' · Blue')+(p.won?' · Winner':'' )}),...['kills','deaths','damageDealt'].map(k=>el('td',{textContent:p[k]??'—'})),el('td',{textContent:p.status+(p.disconnections?' · '+p.disconnections+' disconnect(s)':'')})))));
-      return el('details',{className:'history-match'},el('summary',{textContent:title}),el('p',{textContent:'Winner: '+winners+(m.room?' · Arena '+m.room:'')}),el('div',{className:'history-table'},table),...(m.legacy?[el('p',{className:'note',textContent:'Older record: bot, team and connection details may be unavailable.'})]:[]));
+      const table=el('table',{},el('thead',{},el('tr',{},...['Player','Kills','Deaths','Damage','Status'].map(t=>el('th',{textContent:t})))),el('tbody',{},...m.players.map(p=>el('tr',{},el('td',{textContent:p.name+(m.ruleset==='vehicle-test'?' · '+p.vehicle:'')+(p.bot?' · AI':'')+(p.team===null?'':p.team===0?' · Orange':' · Blue')+(p.won?' · Winner':'' )}),...['kills','deaths','damageDealt'].map(k=>el('td',{textContent:p[k]??'—'})),el('td',{textContent:p.status+(p.disconnections?' · '+p.disconnections+' disconnect(s)':'')})))));
+      return el('details',{className:'history-match'},el('summary',{textContent:title}),el('p',{textContent:(m.ruleset==='vehicle-test'?'Vehicle test · No coins or rankings · '+m.balanceRevision+' · '+m.mapLayout+' · ':'')+'Winner: '+winners+(m.room?' · Arena '+m.room:'')}),el('div',{className:'history-table'},table),...(m.legacy?[el('p',{className:'note',textContent:'Older record: bot, team and connection details may be unavailable.'})]:[]));
     }));
     $('historyNote').textContent=data.total+' matching records from the latest 200 completed matches. Malaysia time (UTC+8). '+(data.persistent?'Saved across restarts.':'Memory only on this server.');
     $('historyPage').textContent=data.page+' / '+data.pages;$('historyPrev').disabled=data.page<=1;$('historyNext').disabled=data.page>=data.pages;
@@ -291,3 +291,4 @@ refresh();loadBoard();
 </script>
 </body>
 </html>
+

@@ -38,7 +38,7 @@ function securityHeaders(res,req,scriptHash=''){
   res.setHeader('Content-Security-Policy',`default-src 'self'; script-src 'self'${scriptHash?` '${scriptHash}'`:''}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors ${framing}`);
   res.setHeader('X-Frame-Options',req[ingressRequest]?'SAMEORIGIN':'DENY');res.setHeader('Referrer-Policy','no-referrer');
 }
-function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progressFile=leaderboardFile?path.join(path.dirname(leaderboardFile),'player-progress.json'):null,rewardsEnabled=true,onRoomCreated=null,adminPassword='',adminPath='admin',quickSearchSeconds=12,quickReadySeconds=5}={}){
+function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progressFile=leaderboardFile?path.join(path.dirname(leaderboardFile),'player-progress.json'):null,rewardsEnabled=true,vehicleClassesEnabled=false,onRoomCreated=null,adminPassword='',adminPath='admin',quickSearchSeconds=12,quickReadySeconds=5}={}){
   // The admin page lives at a private address of your choosing; nothing in the game links to it.
   const adminRoot='/'+(/^[A-Za-z0-9_-]{3,64}$/.test(adminPath)?adminPath:'admin');
   // Hidden spectators watch a room with a short-lived pass from the admin page. They are not
@@ -70,7 +70,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
     award(room);
     for(const s of sessions.values())if(s.room===room&&s.player.connected){const result=room.lastResults?.get(s.player.id);if(result)send(s.ws,result);}
   }
-  function prepare(room){room.onFinish=finish;room.chooseBotSkill=players=>leaderboard.skill(players);return room;}
+  function prepare(room){room.vehiclePreference=id=>progress.vehicleOf(id);room.onFinish=finish;room.chooseBotSkill=players=>leaderboard.skill(players);return room;}
   function requeueGroup(request,key,roundId){
     const source=request.room;
     if(source.phase!=='postgame'||typeof roundId!=='string'||roundId!==source.roundId||!request.player.connected||!source.groupIds?.has(request.player.id))return;
@@ -87,7 +87,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
     }
     finish(source);
     const arrivals=[];
-    try{for(const s of members){const p=target.add(s.player.name);if(!p)throw Error('No group space');p.profileId=s.profile.id;p.skin=progress.skinOf(s.profile.id);p.country=s.player.country;arrivals.push({session:s,player:p});}}
+    try{for(const s of members){const p=target.add(s.player.name,{profileId:s.profile.id});if(!p)throw Error('No group space');p.profileId=s.profile.id;p.skin=progress.skinOf(s.profile.id);p.country=s.player.country;arrivals.push({session:s,player:p});}}
     catch{for(const a of arrivals)target.remove(a.player);fail('Could not reserve the whole group. Everyone is still on the results screen; try again.');return;}
     if(created)rooms.set(target.code,target);
     for(const a of arrivals){const s=a.session;source.remove(s.player);s.previousRoom=source.code;s.room=target;s.player=a.player;}
@@ -121,11 +121,11 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
   }
   function adminState(){
     const system=readMetrics();
-    return {version:require('./package.json').version,board:{width:F.width,height:F.height},palette:F.palette.map(p=>p.body),skinColors:Object.fromEntries(F.skins.filter(s=>s.body).map(s=>[s.id,s.body])),uptime:Math.round((Date.now()-started)/1000),system,cpu:system.game.cpuPercent,
+    return {version:require('./package.json').version,board:{width:F.width,height:F.height},vehicleHealth:Object.fromEntries(F.vehicles.map(v=>[v.id,v.health])),palette:F.palette.map(p=>p.body),skinColors:Object.fromEntries(F.skins.filter(s=>s.body).map(s=>[s.id,s.body])),uptime:Math.round((Date.now()-started)/1000),system,cpu:system.game.cpuPercent,
       memory:system.game.rssBytes===null?null:Math.round(system.game.rssBytes/1048576),load:system.load,sessions:sessions.size,
-      rooms:[...rooms.values()].filter(room=>room.players.size).map(room=>({code:room.code,phase:room.phase,settings:room.settings,botSkill:room.botSkill,time:Math.round(room.time),
+      rooms:[...rooms.values()].filter(room=>room.players.size).map(room=>({code:room.code,ruleset:room.ruleset,balanceRevision:room.balanceRevision,phase:room.phase,settings:room.settings,botSkill:room.botSkill,time:Math.round(room.time),
         winner:room.winner,teamScores:room.teamScores,walls:room.map.walls,
-        players:[...room.players.values()].map(({id,name,slot,skin,team,bot,connected,hp,kills,deaths,x,y,aim,country,power})=>({id,name,slot,skin,team,bot:!!bot,connected,hp,kills,deaths,x:Math.round(x),y:Math.round(y),aim:Math.round(aim*100)/100,country:country||'',power:power||null}))}))};
+        players:[...room.players.values()].map(({id,name,slot,skin,vehicle,team,bot,connected,hp,kills,deaths,x,y,aim,country,power})=>({id,name,slot,skin,vehicle,team,bot:!!bot,connected,hp,kills,deaths,x:Math.round(x),y:Math.round(y),aim:Math.round(aim*100)/100,country:country||'',power:power||null}))}))};
   }
   // Slow down password guessing: 10 wrong passwords a minute per visitor (300 across everyone),
   // so a stranger guessing cannot lock you out of your own admin page.
@@ -195,7 +195,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
     if(url.pathname==='/network-info'){
       const port=server.address().port;
       const urls=ingress?[]:lanAddresses().map(address=>`http://${address}:${port}`);
-      res.setHeader('Content-Type','application/json');res.end(JSON.stringify({urls:ingress?[]:urls,publicUrl,ingress:!!req[ingressRequest]}));return;
+      res.setHeader('Content-Type','application/json');res.end(JSON.stringify({vehicleClassesEnabled,urls:ingress?[]:urls,publicUrl,ingress:!!req[ingressRequest]}));return;
     }
     const file=files[url.pathname];if(!file){res.writeHead(404);res.end('Not found');return;}
     if(req[ingressRequest]&&(url.pathname==='/'||url.pathname==='/index.html')){
@@ -225,7 +225,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
       if(ended)return;
       try{
         const msg=JSON.parse(raw);if(!msg||typeof msg!=='object')throw Error('Invalid player request.');
-        if(!['load','recover','buy','equip','ack'].includes(msg.action))throw Error('Unknown player action.');
+        if(!['load','recover','buy','equip','vehicle','ack'].includes(msg.action))throw Error('Unknown player action.');
         let credential=text(msg.profile);
         if(msg.action==='recover'){credential=text(msg.code).replace(/^TF-/i,'').replace(/[\s-]/g,'').toLowerCase();if(!/^[a-f0-9]{48}$/.test(credential))throw Error('Enter the full recovery code.');}
         if(!credential&&msg.action!=='load')throw Error('Load your player first.');
@@ -239,8 +239,12 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
           value=progress.equip(profile.id,text(msg.skin));
           for(const s of sessions.values())if(s.player.profileId===profile.id)s.player.skin=value.equipped;
         }
+        if(msg.action==='vehicle'){
+          if([...sessions.values()].some(s=>s.player.profileId===profile.id&&s.room.players.has(s.player.id)&&!['results','postgame'].includes(s.room.phase)))throw Error('Change vehicle after this match.');
+          value=progress.selectVehicle(profile.id,text(msg.vehicle));
+        }
         if(msg.action==='ack')value=progress.acknowledge(profile.id,text(msg.round));
-        res.end(JSON.stringify({profile,progress:{...value,enabled:rewardsEnabled}}));
+        res.end(JSON.stringify({profile,progress:{...value,enabled:rewardsEnabled,vehicleClassesEnabled}}));
       }catch(error){const storage=/could not be saved/.test(error.message);fail(storage?503:400,storage?'Progress could not be saved. Please try again.':error instanceof SyntaxError?'Invalid player request.':error.message);}
     });
   }
@@ -298,6 +302,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
         const existing=typeof msg.token==='string'?sessions.get(msg.token):null;
         if(msg.token&&(!existing||existing.room.code!==code&&existing.previousRoom!==code||!existing.room.players.has(existing.player.id))){send(ws,{type:'error',code:'session_expired',message:'Your arena reservation expired. Join a new match.'});ws.close();return;}
         if(existing&&existing.room.players.has(existing.player.id)){
+          if(existing.room.ruleset==='vehicle-test'&&msg.vehicleRevision!==F.vehicleRevision){send(ws,{type:'error',message:'Reload the game to rejoin this vehicle test.'});ws.close();return;}
           requeued=existing.room.code!==code;code=existing.room.code;
           session=existing;const previous=session.ws;session.ws=ws;
           if(previous!==ws)previous.terminate();
@@ -313,13 +318,14 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
           if(!rooms.has(code)){
             if(rooms.size>=32){send(ws,{type:'error',message:'Server is full. Try an existing room.'});ws.close();return;}
             if(key&&[...rooms.values()].filter(room=>room.creator===key).length>=limits.arenas){send(ws,{type:'error',title:'Too many arenas',message:'Your network already has '+limits.arenas+' open arenas. Join one of them, or wait for one to end.'});ws.close();return;}
-            const room=prepare(Object.assign(new Room(code,msg.settings),{creator:key,private:msg.private===true}));
+            const room=prepare(Object.assign(new Room(code,{...msg.settings,vehicleTest:vehicleClassesEnabled&&msg.mode==='create'&&msg.settings?.vehicleTest===true}),{creator:key,private:msg.private===true||vehicleClassesEnabled&&msg.mode==='create'&&msg.settings?.vehicleTest===true}));
             if(msg.type==='quick')room.configureQuick(quickSearchSeconds,quickReadySeconds);rooms.set(code,room);
           }
           const room=rooms.get(code);const name=typeof msg.name==='string'?msg.name.replace(/[\x00-\x1f<>]/g,'').trim().slice(0,16):'';
           if(room.quick&&msg.type!=='quick'&&(!['countdown','playing'].includes(room.phase)||room.players.size>=maxPlayers)){send(ws,{type:'error',message:'This Quick Play group has no open human seat. AI seats cannot be replaced. Use Quick Play to find a new match.'});ws.close();return;}
           if(room.phase==='postgame'){send(ws,{type:'error',message:'This match has ended and its rematch window closed. Choose another arena or create a new one.'});ws.close();return;}
-          const player=room.add(name);if(!player){send(ws,{type:'error',message:'Arena full (4 players). AI seats cannot be replaced. Join when a human leaves or choose another arena.'});ws.close();return;}
+          if(room.ruleset==='vehicle-test'&&msg.vehicleRevision!==F.vehicleRevision){if(created)rooms.delete(code);send(ws,{type:'error',message:'Reload the game to join this vehicle test.'});ws.close();return;}
+          const player=room.add(name,{profileId:profile.id,vehicle:progress.vehicleOf(profile.id)});if(!player){send(ws,{type:'error',message:'Arena full (4 players). AI seats cannot be replaced. Join when a human leaves or choose another arena.'});ws.close();return;}
           player.profileId=profile.id;player.skin=progress.skinOf(profile.id);player.country=country;session={room,player,profile,token:randomBytes(24).toString('hex'),ws};sessions.set(session.token,session);
           if(created)try{onRoomCreated?.({code,name:player.name,mode:room.settings.mode,url:publicUrl?publicUrl+'/?room='+encodeURIComponent(code):''});}catch{/* Notifications never block play. */}
         }
@@ -378,3 +384,4 @@ if(require.main===module){
   for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>game.close().then(()=>process.exit(0)));
 }
 module.exports={createGameServer,countryOf,visitorOf};
+

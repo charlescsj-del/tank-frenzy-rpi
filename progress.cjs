@@ -28,6 +28,13 @@ class Progress {
   edit(id){const p=JSON.parse(JSON.stringify(this.players.get(id)||blank()));this.players.set(id,p);return p;}
   ensure(id){if(!this.players.has(id))this.commit(()=>this.players.set(id,blank()));return this.view(id);}
   skinOf(id){return this.players.get(id)?.equipped||'classic';}
+  vehicleOf(id){return F.vehicleOf(this.players.get(id)?.selectedVehicle).id;}
+  selectVehicle(id,vehicle){
+    if(!F.vehicles.some(v=>v.id===vehicle))throw Error('Unknown vehicle.');
+    if(!this.players.has(id))throw Error('Load your player first.');
+    if(this.vehicleOf(id)===vehicle)return this.view(id);
+    return this.commit(()=>{this.edit(id).selectedVehicle=vehicle;return this.view(id);});
+  }
   dailyState(p){
     const d=p.daily,today=dayNumber(this.now()),gap=d.lastDay===null?0:today-d.lastDay;
     const reset=gap>1&&(gap!==2||d.graceUsed),nextCycle=d.step===7&&gap>0,step=reset||nextCycle?0:d.step;
@@ -37,7 +44,7 @@ class Progress {
     const week=weekNumber(this.now()),value=p.weekly[week];
     return {week,resetAt:(week+7)*day-8*3600e3,timezone:F.economy.timezone,challenges:F.weeklyChallenges.map(c=>({...c,progress:Math.min(c.target,value?.[c.id]||0),completed:value?.completed.includes(c.id)||false}))};
   }
-  view(id){const p=this.players.get(id)||blank();return {coins:p.coins,owned:p.owned,equipped:p.equipped,achievements:{...(p.stats.wins>0?{'first-win':{t:null}}:{}),...p.achievements},weekly:this.weeklyState(p),daily:this.dailyState(p),pending:p.pending,stats:p.stats,persistent:!!this.file};}
+  view(id){const p=this.players.get(id)||blank();return {selectedVehicle:this.vehicleOf(id),coins:p.coins,owned:p.owned,equipped:p.equipped,achievements:{...(p.stats.wins>0?{'first-win':{t:null}}:{}),...p.achievements},weekly:this.weeklyState(p),daily:this.dailyState(p),pending:p.pending,stats:p.stats,persistent:!!this.file};}
   transaction(p,type,coins,extra={}){p.transactions.push({t:this.now(),type,coins,...extra});p.transactions=p.transactions.slice(-100);}
   buy(id,skinId){
     const skin=F.skins.find(s=>s.id===skinId);if(!skin)throw Error('Unknown skin.');
@@ -64,7 +71,7 @@ class Progress {
       const rewards=new Map(),seen=new Set();
       for(const player of candidates){
         if(seen.has(player.profileId))continue;seen.add(player.profileId);
-        const p=this.edit(player.profileId),eligible=room.settings.targetScore===F.targetScore&&room.settings.bouncing&&room.settings.powers;
+        const p=this.edit(player.profileId),eligible=room.ruleset!=='vehicle-test'&&room.settings.targetScore===F.targetScore&&room.settings.bouncing&&room.settings.powers;
         const participated=(player.activeSeconds||0)>=Math.min(10,Math.max(2,(room.time-(player.joinedRoundAt??room.roundStarted??room.time))*.1));
         const reason=!eligible?'Practice match · Standard rules earn coins':player.left?'Left early · Finish the match to earn coins':!player.connected?'Disconnected at match end':!participated?'No coins · Participate in the battle':'';
         const won=!reason&&(room.settings.mode==='teams'?player.team!=null&&player.team===room.winner.team:player.id===room.winner.id);

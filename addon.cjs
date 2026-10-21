@@ -21,7 +21,8 @@ function readOptions(file='/data/options.json'){
   if(!/^[A-Za-z0-9_-]{3,64}$/.test(adminPath))throw Error('admin_path must be 3-64 letters, digits, - or _ (for example hq-7f3k)');
   if(['audio','icons','tutorial','rooms','ws','health','leaderboard','network-info','progress'].includes(adminPath.toLowerCase()))throw Error('admin_path must not reuse a game address');
   if(options.rewards_enabled!==undefined&&typeof options.rewards_enabled!=='boolean')throw Error('rewards_enabled must be true or false');
-  return {ingress:true,publicUrl,notifyService,adminPassword,adminPath,rewardsEnabled:options.rewards_enabled!==false};
+  if(options.vehicle_classes_enabled!==undefined&&typeof options.vehicle_classes_enabled!=='boolean')throw Error('vehicle_classes_enabled must be true or false');
+  return {vehicleClassesEnabled:options.vehicle_classes_enabled===true,ingress:true,publicUrl,notifyService,adminPassword,adminPath,rewardsEnabled:options.rewards_enabled!==false};
 }
 // Sends "room opened" notifications through the Supervisor's Home Assistant API,
 // at most one a minute so a busy evening does not flood phones.
@@ -53,4 +54,5 @@ if(require.main===module){
   }catch(error){console.error('Tank Frenzy configuration error:',error.message);process.exit(1);}
 }
 module.exports={readOptions,homeAssistantNotifier};
+
 

@@ -34,7 +34,7 @@ class Leaderboard {
   }
   skill(players){
     const scores=players.map(p=>{
-      const games=this.matches.filter(m=>m.players.some(t=>keyOf(t)===p.profileId&&t.completed!==false)).slice(-10);
+      const games=this.matches.filter(m=>m.ruleset!=='vehicle-test'&&m.players.some(t=>keyOf(t)===p.profileId&&t.completed!==false)).slice(-10);
       if(games.length<3)return 0;
       const stats=games.map(m=>({stats:m.players.find(t=>keyOf(t)===p.profileId),weight:m.humans>1?1:m.botSkill==='hard'?1:m.botSkill==='normal'?.85:.65}));
       const total=stats.reduce((n,t)=>n+t.weight,0),wins=stats.reduce((n,t)=>n+(t.stats.won?t.weight:0),0)/stats.length,kills=stats.reduce((n,t)=>n+t.stats.kills*t.weight,0),deaths=stats.reduce((n,t)=>n+t.stats.deaths*t.weight,0);
@@ -54,22 +54,24 @@ class Leaderboard {
     if(!winner||this.recorded.get(room)===round)return null;
     this.recorded.set(room,round);
     const participants=room.matchPlayers?.size?[...room.matchPlayers.values()]:[...room.players.values()];
+    const ranked=room.ruleset!=='vehicle-test';
     const beforeRows=this.top({period:'week',count:Infinity});
     const before=new Map(participants.filter(p=>p.profileId).map(p=>[p.id,positionIn(beforeRows,p.profileId)]));
     for(const p of participants){
       const name=String(p.name||'').trim();if(p.bot||!name)continue;
       const key=p.profileId||name.toLowerCase(),won=!p.left&&(room.settings.mode==='teams'?p.team!=null&&p.team===winner?.team:p.id===winner?.id);
-      const entry=this.entries.get(key)||blank(name),country=p.country||entry.country||'';
+      const entry={...(this.entries.get(key)||blank(name))},country=p.country||entry.country||'';
       const damageDealt=Number.isFinite(p.damageDealt)?p.damageDealt:0;
       Object.assign(entry,{name,country,...(p.profileId?{profileId:p.profileId,slot:p.slot}:{}),matches:entry.matches+(p.left?0:1),wins:entry.wins+(won?1:0),kills:entry.kills+p.kills,deaths:entry.deaths+p.deaths,damageDealt:entry.damageDealt+damageDealt,lastPlayed:now});
-      this.entries.set(key,entry);players.push({name,country,...(p.profileId?{profileId:p.profileId,slot:p.slot}:{}),completed:!p.left,won,kills:p.kills,deaths:p.deaths,damageDealt});
+      if(ranked)this.entries.set(key,entry);players.push({name,country,...(p.profileId?{profileId:p.profileId,slot:p.slot}:{}),completed:!p.left,won,kills:p.kills,deaths:p.deaths,damageDealt});
     }
     if(players.length){
       const all=[...new Map([...participants,...room.players.values()].map(p=>[p.id,p])).values()];
-      const details={room:room.code,players:all.map(p=>({name:p.name,bot:!!p.bot,slot:p.slot,team:p.team??null,kills:p.kills,deaths:p.deaths,damageDealt:p.damageDealt||0,won:!p.left&&(room.settings.mode==='teams'?p.team===winner.team:p.id===winner.id),status:p.left?'Left early':p.connected===false?'Disconnected':'Finished',disconnections:p.disconnections||0}))};
-      this.matches.push({t:now,round,mode:room.settings.mode,settings:room.settings,botSkill:room.botSkill,humans:participants.filter(p=>!p.bot).length,duration:Math.max(0,room.time-(room.roundStarted||0)),players,details});
+      const details={room:room.code,players:all.map(p=>({name:p.name,vehicle:p.vehicle||'standard',bot:!!p.bot,slot:p.slot,team:p.team??null,kills:p.kills,deaths:p.deaths,damageDealt:p.damageDealt||0,won:!p.left&&(room.settings.mode==='teams'?p.team===winner.team:p.id===winner.id),status:p.left?'Left early':p.connected===false?'Disconnected':'Finished',disconnections:p.disconnections||0}))};
+      this.matches.push({t:now,round,ruleset:room.ruleset||'standard',balanceRevision:room.balanceRevision||null,mapLayout:room.map?.layout||null,mode:room.settings.mode,settings:room.settings,botSkill:room.botSkill,humans:participants.filter(p=>!p.bot).length,duration:Math.max(0,room.time-(room.roundStarted||0)),players,details});
     }
     this.prune(now);this.scheduleSave();
+    if(!ranked)return new Map(participants.filter(p=>p.profileId&&!p.bot).map(p=>[p.id,{type:'result',roundId:round,saved:true,ruleset:'vehicle-test',before:null,after:null,nearby:[]}]));
     const afterRows=this.top({period:'week',count:Infinity});
     return new Map(participants.filter(p=>p.profileId&&!p.bot).map(p=>{
       const index=afterRows.findIndex(t=>t.profileId===p.profileId),nearby=index<0?[]:afterRows.slice(Math.max(0,index-1),index+2).map(t=>({...t,rank:afterRows.indexOf(t)+1,beforeRank:beforeRows.findIndex(v=>keyOf(v)===keyOf(t))+1||null}));
@@ -98,12 +100,12 @@ class Leaderboard {
     const start=date(from),end=date(to),size=20;
     const rows=this.matches.slice(-200).reverse().filter(m=>(!mode||m.mode===mode)&&(!Number.isFinite(start)||m.t>=start)&&(!Number.isFinite(end)||m.t<end+day)&&(!query||(m.details?.players||m.players).some(p=>p.name.toLowerCase().includes(query))));
     const pages=Math.max(1,Math.ceil(rows.length/size)),current=Math.min(pages,Math.max(1,Math.floor(Number(page))||1));
-    return {total:rows.length,page:current,pages,persistent:!!this.file,matches:rows.slice((current-1)*size,current*size).map(m=>({t:m.t,mode:m.mode,duration:m.duration??null,room:m.details?.room||'',legacy:!m.details,players:(m.details?.players||m.players).map(p=>({name:p.name,bot:!!p.bot,team:p.team??null,kills:p.kills,deaths:p.deaths,damageDealt:p.damageDealt??null,won:!!p.won,status:p.status||(p.completed===false?'Left early':'Unknown'),disconnections:p.disconnections??null}))}))};
+    return {total:rows.length,page:current,pages,persistent:!!this.file,matches:rows.slice((current-1)*size,current*size).map(m=>({t:m.t,ruleset:m.ruleset||'standard',balanceRevision:m.balanceRevision||null,mapLayout:m.mapLayout||null,mode:m.mode,duration:m.duration??null,room:m.details?.room||'',legacy:!m.details,players:(m.details?.players||m.players).map(p=>({name:p.name,vehicle:p.vehicle||'standard',bot:!!p.bot,team:p.team??null,kills:p.kills,deaths:p.deaths,damageDealt:p.damageDealt??null,won:!!p.won,status:p.status||(p.completed===false?'Left early':'Unknown'),disconnections:p.disconnections??null}))}))};
   }
   rows(period){
     if(period==='all')return [...this.entries.values()];
     const since=periodStart(period,this.now()),totals=new Map();
-    for(const match of this.matches)if(match.t>=since)for(const p of match.players){
+    for(const match of this.matches)if(match.ruleset!=='vehicle-test'&&match.t>=since)for(const p of match.players){
       const key=keyOf(p),entry=totals.get(key)||blank(p.name);
       Object.assign(entry,{name:p.name,country:p.country||entry.country,...(p.profileId?{profileId:p.profileId,slot:p.slot}:{}),matches:entry.matches+(p.completed===false?0:1),wins:entry.wins+(p.won?1:0),kills:entry.kills+p.kills,deaths:entry.deaths+p.deaths,damageDealt:entry.damageDealt+(Number.isFinite(p.damageDealt)?p.damageDealt:0)});
       totals.set(key,entry);
@@ -138,3 +140,4 @@ class Leaderboard {
   }
 }
 module.exports={Leaderboard,periodStart};
+

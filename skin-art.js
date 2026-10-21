@@ -21,7 +21,14 @@
     }
     ctx.restore();
   }
-  function draw(canvas,id,slot=0,width=560){
+  function vehicleDetail(c,id,x=0,y=0){
+    if(id!=='scout'&&id!=='heavy')return;
+    c.save();c.translate(x,y);c.strokeStyle='#243d38';c.lineWidth=2;
+    if(id==='scout'){c.beginPath();c.moveTo(-8,-5);c.lineTo(-15,-18);c.stroke();c.beginPath();c.arc(-15,-18,2,0,Math.PI*2);c.fillStyle='#fff1b0';c.fill();}
+    else{c.fillStyle='#28483e';for(const y of [-10,8]){c.beginPath();c.roundRect(-10,y,23,4,2);c.fill();}}
+    c.restore();
+  }
+  function draw(canvas,id,slot=0,width=560,vehicle='standard'){
     const c=canvas.getContext('2d'),skin=skinOf(id),body=skin.body||FIELD.palette[slot%4].body,ink='#253f39';
     canvas.width=width;canvas.height=Math.round(width*360/560);c.clearRect(0,0,canvas.width,canvas.height);c.scale(width/560,width/560);
     c.save();c.translate(265,190);c.scale(3.3,2.7);c.rotate(-.28);
@@ -34,9 +41,9 @@
     box(-14,-22,33,30,8,'#26473b');box(6,-12,43,10,3,body);box(40,-15,10,16,3,'#263f3a');box(46,-11,4,8,1,'#728e81');
     box(-17,-27,34,31,8,body);plate(c,id,-16,-26,32,29);box(-11,-24,17,3,1,'#ffffff80',null);
     c.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?3:7;c.lineTo(Math.cos(a)*r,Math.sin(a)*r-9);}c.closePath();c.fillStyle='#fff4cd';c.fill();
-    c.restore();
+    vehicleDetail(c,vehicle,0,-9);c.restore();
   }
-  function portrait(slot,id){const art=document.createElement('span');art.className='tank-portrait skin-portrait';art.setAttribute('aria-hidden','true');art.setAttribute('data-skin',id);const canvas=document.createElement('canvas');draw(canvas,id,slot,160);art.append(canvas);return art;}
-  root.TankSkins={skinOf,plate,draw,portrait};
+  function portrait(slot,id,vehicle='standard'){const art=document.createElement('span');art.className='tank-portrait skin-portrait';art.setAttribute('aria-hidden','true');art.setAttribute('data-skin',id);const canvas=document.createElement('canvas');draw(canvas,id,slot,160,vehicle);art.append(canvas);return art;}
+  root.TankSkins={skinOf,plate,draw,portrait,vehicleDetail};
 })(typeof globalThis!=='undefined'?globalThis:this);
 

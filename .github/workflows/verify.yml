@@ -67,3 +67,6 @@ jobs:
             sleep 1
           done
           exit 1
+
+      - run: node tools/vehicle-ui-check.cjs
+        if: ${{ !cancelled() }}

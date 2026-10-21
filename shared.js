@@ -1,6 +1,6 @@
 (function(root) {
   const data = {
-    version:'3.8.3',maxHealth:10,laserDamage:4,laserRadius:6,barrelLength:40,doubleBarrelOffset:6,turretHeight:28,
+    version:'3.9.0',maxHealth:10,laserDamage:4,laserRadius:6,barrelLength:40,doubleBarrelOffset:6,turretHeight:28,
     mapLabels:{quarry:'Quarry',crossroads:'Crossroads'},
     achievements:[
       {id:'first-win',name:'First victory',description:'Win your first standard match.'},
@@ -47,6 +47,14 @@
     spawns: [[90,90],[1510,950],[1510,90],[90,950]]
   };
   data.viewScale=Math.min(1000/data.width,520/data.height);
+  data.vehicleRevision='vehicles-1';
+  data.vehicleNotice='Vehicle test · Practice · No coins or rankings';
+  data.vehicles=Object.freeze([
+    Object.freeze({id:'standard',name:'Standard',health:10,speed:170,reload:.42,description:'Balanced and easy to learn.'}),
+    Object.freeze({id:'scout',name:'Scout',health:8,speed:204,reload:.42,description:'Move fast. Stay out of the firing line.'}),
+    Object.freeze({id:'heavy',name:'Heavy',health:12,speed:145,reload:.48,description:'Take more hits. Choose your shots.'})
+  ]);
+  data.vehicleOf=id=>data.vehicles.find(v=>v.id===id)||data.vehicles[0];
   data.muzzle=(x,y,aim,distance=data.barrelLength)=>({x:x+Math.cos(aim)*distance,y:y+Math.sin(aim)*distance});
   data.project=(x,y,z=0)=>({x:560+(x-data.width/2)*data.viewScale,y:319+(y-data.height/2-z*.35)*data.viewScale});
   data.unproject=(x,y,z=0)=>({x:data.width/2+(x-560)/data.viewScale,y:data.height/2+(y-319)/data.viewScale+z*.35});

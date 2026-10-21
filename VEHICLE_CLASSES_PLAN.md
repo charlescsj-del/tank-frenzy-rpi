@@ -1,6 +1,6 @@
 # Vehicle classes: balancing and execution proposal
 
-Prepared 2026-10-21 (Malaysia), against dev v3.8.3 (`6be95012`). This document completes the design step for progression Phase 8, item 7. The values below are starting hypotheses for a dev pilot, not measured balance results. Gameplay implementation and the production release are subsequent steps.
+Prepared 2026-10-21 (Malaysia), against dev v3.8.3 (`6be95012`). This document completes the design step for progression Phase 8, item 7. The values below are starting hypotheses for a dev pilot, not measured balance results. The user accepted implementation on 2026-10-21. v3.9.0 implements the private pilot; production remains a separate reviewed release.
 
 ## 1. Player experience and starting values
 
@@ -105,7 +105,7 @@ Turning the pilot option off requires a restart: new arenas use Standard, and th
 | E — automated verification | Focused regressions plus existing full tests, four browser suites and amd64/aarch64 startup | Keep the current 246-test baseline green. Add behavioral coverage for new mechanics and persistence/eligibility risks. Inspect captured class selection, both maps, actual health, results and all phone orientations. Keep tutorial screenshots current. |
 | F — pilot observation | Controlled human sessions, bot stress report, real mobile/Pi measurements and a tuning decision | Review the evidence below; record revisions and unresolved problems before enabling normal matchmaking or preparing production promotion. |
 
-Batches are implementation order, not separate mandatory releases. A documentation-only plan update retains v3.8.3. Feature code begins only after this proposal is accepted; then implement the private dev pilot through batch E as one reviewable feature, followed by observation.
+Batches are implementation order, not separate mandatory releases. A documentation-only plan update retains v3.8.3. The proposal was accepted; v3.9.0 implements batches A–E. Batch F remains open for human/device/Pi observations and a rollout decision.
 
 ## 8. How to judge the pilot
 
@@ -121,3 +121,9 @@ Batches are implementation order, not separate mandatory releases. A documentati
 Baseline mechanics were checked in `shared.js`, `game-server.cjs`, `bots.cjs`, `client.js`, `index.html`, `progress.cjs`, `server.cjs`, `leaderboard.cjs`, `addon.cjs` and `config.yaml`. In particular, current Machine Gun/Laser intervals bypass the normal `FIELD.fireCooldown`; Restore/spawn/client health assume `FIELD.maxHealth`; timed leaderboard rows and adaptive difficulty currently share match history. Those are implementation requirements, not optional visual polish.
 
 The tables above were calculated from those source values. No vehicle-class simulation, human balance study or Pi class-performance test has been performed by this planning change. Existing v3.8.3 verification applies to the shipped cosmetic game, not to these proposed classes.
+
+## Implementation notes (v3.9.0)
+
+The optional test-room creation action lives in Garage beside the free vehicle cards, leaving ordinary Create/Join/Play clicks unchanged. Vehicle test privacy cannot be switched off in room rules. The protocol declares `vehicleRevision: vehicles-1`; private profiles save `selectedVehicle`, snapshots send only non-Standard `vehicle` IDs. Server class definitions are immutable and per-player stats resolve at admission and round boundaries.
+
+Automated coverage includes authoritative powers/health/reload, both maps and modes with rotating AI classes, storage rollback/reload, private/revision boundaries, phase locks/reconnect/rematch and Standard group requeue. Browser coverage captures selection and health at 320/390/844/1440 widths, both map layouts, results and next-round countdown. These checks do not certify human balance or Pi performance. No public-class rollout is enabled by this release.

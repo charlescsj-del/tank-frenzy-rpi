@@ -50,14 +50,14 @@ function renderGarage(){
   const p=playerProgress,skin=FIELD.skins.find(s=>s.id===garageSelected)||FIELD.skins[0];
   $('garageBalance').textContent=p?p.coins.toLocaleString()+' coins':'Loading…';$('garageSkinName').textContent=skin.name;$('garageSkinDescription').textContent=skin.description;
   $('garageSkinCollection').textContent=(FIELD.skinCollections.find(c=>c.id===skin.collection)?.name||'Originals')+' · Cosmetic · Same battle stats';
-  TankSkins.draw($('garagePreview'),skin.id,lastTankSlot);$('garagePreview').setAttribute('aria-label',skin.name+' tank preview');
+  TankSkins.draw($('garagePreview'),skin.id,lastTankSlot,560,p?.selectedVehicle);$('garagePreview').setAttribute('aria-label',skin.name+' tank preview');
   $('garageChoices').replaceChildren();
   for(const collection of FIELD.skinCollections){
     const options=FIELD.skins.filter(s=>s.collection===collection.id),section=document.createElement('section'),heading=document.createElement('div'),title=document.createElement('h4'),count=document.createElement('span'),note=document.createElement('p'),choices=document.createElement('div');
     section.className='skin-collection';section.setAttribute('data-collection',collection.id);heading.className='skin-collection-heading';title.textContent=collection.name;count.textContent=options.filter(s=>p?.owned.includes(s.id)).length+' / '+options.length+' owned';note.textContent=collection.description;choices.className='garage-choices';heading.append(title,count);section.append(heading,note,choices);
     for(const option of options){
     const button=document.createElement('button');button.type='button';button.className='skin-choice';button.setAttribute('aria-pressed',String(option.id===skin.id));button.setAttribute('data-skin',option.id);
-    const name=document.createElement('strong'),state=document.createElement('small');name.textContent=option.name;state.textContent=p?.equipped===option.id?'Equipped':p?.owned.includes(option.id)?'Owned':option.price+' coins';button.append(TankSkins.portrait(lastTankSlot,option.id),name,state);
+    const name=document.createElement('strong'),state=document.createElement('small');name.textContent=option.name;state.textContent=p?.equipped===option.id?'Equipped':p?.owned.includes(option.id)?'Owned':option.price+' coins';button.append(TankSkins.portrait(lastTankSlot,option.id,p?.selectedVehicle),name,state);
     button.addEventListener('click',()=>{garageSelected=option.id;$('garageMessage').textContent='';renderGarage();if(innerWidth<=640||innerHeight<700)$('garageShowcase').scrollIntoView?.({block:'start'});else $('garageAction').scrollIntoView?.({block:'nearest'});});choices.append(button);
     }
     $('garageChoices').append(section);
@@ -65,10 +65,28 @@ function renderGarage(){
   const owned=p?.owned.includes(skin.id),equipped=p?.equipped===skin.id,need=skin.price-(p?.coins||0);
   $('garageAction').disabled=garageBusy||!p||equipped||!owned&&(need>0||p.enabled===false);
   $('garageAction').textContent=garageBusy?'Saving…':equipped?'Equipped ✓':owned?'Equip':p?.enabled===false?'Purchases paused':need>0?'Need '+need+' more coins':'Buy · '+skin.price+' coins';
-  renderDaily();renderWeekly();
+  renderVehicles();renderDaily();renderWeekly();
   $('garageStats').textContent=p?p.stats.matches+' completed matches · '+p.stats.wins+' wins · Best: '+p.stats.bestKills+' kills · Longest streak: '+p.daily.longest+' days':'';
   renderAchievements();
 }
+function renderVehicles(){
+  const p=playerProgress,locked=joined&&!['results','postgame'].includes(latest?.phase);
+  $('vehicleChoices').replaceChildren();
+  $('vehicleNote').textContent=locked?'Change vehicle after this match.':(joined?'Next match · ':'')+'All vehicles are free. Ordinary matches use Standard; your choice applies in private Vehicle tests.';
+  $('createVehicleTest').hidden=!p?.vehicleClassesEnabled||joined||connecting;
+  for(const v of FIELD.vehicles){
+    const button=document.createElement('button'),name=document.createElement('strong'),stats=document.createElement('small'),description=document.createElement('span');
+    button.type='button';button.className='vehicle-choice';button.setAttribute('data-vehicle',v.id);button.setAttribute('aria-pressed',String((p?.selectedVehicle||'standard')===v.id));button.disabled=!p||garageBusy||locked;
+    name.textContent=v.name;stats.textContent=v.health+' HP · '+(v.id==='scout'?'+20% speed':v.id==='heavy'?'−15% speed':'Normal speed')+' · '+v.reload+'s reload';description.textContent=v.description;
+    button.append(TankSkins.portrait(lastTankSlot,p?.equipped||'classic',v.id),name,stats,description);
+    button.addEventListener('click',async()=>{
+      if(garageBusy)return;garageBusy=true;renderGarage();
+      try{await playerAction('vehicle',{vehicle:v.id});$('garageMessage').textContent=v.name+' saved'+(joined?' · Next match.':'.');}
+      catch(error){$('garageMessage').textContent=error.message;}finally{garageBusy=false;renderGarage();}
+    });$('vehicleChoices').append(button);
+  }
+}
+$('createVehicleTest').addEventListener('click',()=>{if(joined||connecting)return;closeGarage();vehicleTestRequested=true;joinRoomNow(newRoomCode(),'create');});
 function renderAchievements(){
   $('achievementList').replaceChildren();
   for(const badge of FIELD.achievements){
@@ -82,7 +100,8 @@ async function openGarage(){
   release();garageOpen=true;$('garageDialog').hidden=false;$('garageMessage').textContent=playerProgress?.pending?.skin?'Your Day 7 skin is permanently unlocked. Select Equip to use it.':'';garageSelected=playerProgress?.pending?.skin||playerProgress?.equipped||'classic';renderGarage();$('closeGarage').focus?.({preventScroll:true});
   try{await loadPlayerProgress();}catch(error){$('garageMessage').textContent=error.message;}
 }
-function closeGarage(){garageOpen=false;$('garageDialog').hidden=true;$('garageButton').focus?.({preventScroll:true});}
+function closeGarage(){garageOpen=false;$('garageDialog').hidden=true;(joined&&['results','postgame'].includes(latest?.phase)?$('changeTank'):joined?$('game'):$('garageButton')).focus?.({preventScroll:true});}
+$('changeTank').addEventListener('click',openGarage);
 $('garageButton').addEventListener('click',openGarage);$('dailyHome').addEventListener('click',async()=>{await openGarage();if(garageOpen)$('dailyTitle').scrollIntoView({block:'start'});});$('closeGarage').addEventListener('click',closeGarage);
 $('weeklyHome').addEventListener('click',async()=>{await openGarage();if(garageOpen)$('weeklyTitle').scrollIntoView({block:'start'});});
 $('garageDialog').addEventListener('click',e=>{if(e.target===$('garageDialog'))closeGarage();});
