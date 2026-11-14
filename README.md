@@ -2,7 +2,7 @@
 
 Install Tank Frenzy as a Home Assistant app (formerly called an add-on). The Pi hosts the multiplayer game; players use Safari, Edge, Chrome, or another modern browser on their phones, tablets, or computers. Rendering and sound run on each player's device.
 
-**Tank Frenzy v3.2.7** refreshes friend-arena setup, starts battle music during 3–2–1, defaults desktop to full-map view and improves leaderboard flags, columns and defaults. Players stay on the final scoreboard after the rematch timer ends. **Find new match** starts Quick Play in the same mode in one tap. Admin Watch live retains its separate Quit-only results view.
+**Tank Frenzy v3.9.1** keeps the v3.9.0 features and fixes a narrow-window layout overflow. v3.9.0 adds an optional private vehicle-class pilot. Standard, Scout and Heavy are free; skins remain cosmetic. Enable `vehicle_classes_enabled` in the app Configuration, then open Garage → Create vehicle test. Ordinary matches still use Standard. Test matches save admin history but award no coins or rankings. See [VEHICLE_CLASSES_PLAN.md](VEHICLE_CLASSES_PLAN.md) for the rules and remaining playtesting.
 
 On phones, the create form and waiting-room controls fit in one viewport; the map keeps its full-screen layout through countdown and results.
 
@@ -33,7 +33,7 @@ Set **Configuration → public_url** to your LAN address, for example `http://19
 
 Port `8765` is the game port and does not require a Home Assistant login. Change or disable its host mapping under **Network** if needed; update `public_url` to match. The internal ingress port `8099` is not published on the host. Disabling the game port still permits sidebar play.
 
-Music starts after the first tap/click, according to browser autoplay rules. Sound comes from the playing device. After a win, a rematch starts when a majority of connected humans (both, with two humans) vote within 20 seconds. Back to Lobby returns the group immediately; otherwise the group returns when the timer expires. Active rooms reset on restart; the 🏆 leaderboard is saved in the app’s `/data` folder. It defaults to This week and includes solo wins against AI. Its periods reset in Malaysia time (UTC+8). AI benchmark targets are labelled separately from real player rankings.
+Music starts after the first tap/click, according to browser autoplay rules. Sound comes from the playing device. After a win, a rematch starts when a majority of connected humans (both, with two humans) vote within 20 seconds. When the timer expires, the final scoreboard stays open; **Find new match** starts Quick Play in the same mode. Active rooms reset on restart. The leaderboard defaults to All time and includes solo wins against AI; periods reset in Malaysia time (UTC+8). AI benchmark targets are labelled separately from real player rankings. Scores and player progress are saved in the app’s `/data` folder.
 
 Set **Configuration → notify_service** (for example `notify.mobile_app_your_phone`) to get a Home Assistant notification whenever someone opens a room.
 
@@ -58,6 +58,7 @@ docker run --rm -p 8765:8765 tank-frenzy-rpi
 
 Run the build on the intended architecture (or use Docker Buildx with `--platform linux/arm64`). The repository includes CI for tests and ARM64/AMD64 container builds. A physical Pi/Home Assistant installation and mobile play must still be checked on the target device; automated tests do not establish Pi performance under load.
 
-App package version: **3.2.7**. Game version: **3.2.7**. Production retains the `tank_frenzy` slug, data and host port across upgrades; releases bump the numeric version in several files at once. See the release checklist in [AGENTS.md](AGENTS.md).
+App package version: **3.9.1**. Game version: **3.9.1**. Production retains the `tank_frenzy` slug, data and host port across upgrades; releases bump the numeric version in several files at once. See the release checklist in [AGENTS.md](AGENTS.md).
 
 The How to Play screenshots in `tutorial/` are rendered by the game itself. After a visual change, run `npm start` and then `npx -y -p playwright node tools/tutorial-screenshots.cjs` to regenerate them (set `ONLY=win.webp` for one image).
+

@@ -16,9 +16,12 @@ Multiplayer browser tank game packaged as a **Home Assistant app** (formerly add
 | `server.cjs` | `createGameServer(options)`: HTTP routes, static allowlist (`files` map), admin routes, WebSocket protocol, 120 Hz tick loop, snapshot broadcast. `npm start` runs it standalone on port 8765. Exports `{createGameServer,countryOf}`. |
 | `game-server.cjs` | `Room`: players, bots, phases, movement, shells, lasers, pickups, damage, scoring, rematch votes, `snapshot()`. Exports `{Room,hitRect,encodeState}`. |
 | `bots.cjs` | Bot brain: `think(room,p,rayBox)` writes normal player input. `skills` (easy/normal/hard), `botNames`. |
+| `progress.cjs` | Permanent wallets/inventory, atomic purchases, Malaysia daily/weekly rewards and aggregate metrics. Never prune/reset with leaderboard data. |
+| `garage.js`, `skin-art.js` | Garage/recovery/rewards UI and shared procedural cosmetic artwork. |
+| `onboarding.js` | Optional device-aware first-match tips, driven by snapshots; no input/network changes. |
 | `leaderboard.cjs` | Schema-2 guest-profile totals (≤200 profiles), 62-day history (≤20000 matches), adaptive difficulty, rank deltas, atomic saves and preserved legacy backup. |
 | `addon.cjs` | HA entry point (`CMD` in Dockerfile). `readOptions('/data/options.json')` validates options; `homeAssistantNotifier()` posts to `http://supervisor/core/api/services/notify/<service>` with `SUPERVISOR_TOKEN`, at most once a minute. Starts both listeners with `leaderboardFile:'/data/leaderboard.json'`. |
-| `map-generator.cjs` | Seeded random walls on a 5×4 grid of cells with connected lanes. |
+| `map-generator.cjs` | Seeded procedural Quarry and symmetric 16-wall Crossroads, both with connected lanes and safe corner spawns. Default seed parity selects the layout; explicit layout overrides are server/test-only. |
 | `shared.js` | `FIELD` constants shared by browser and server (version, sizes, limits, powers, palette, projection). UMD-style: `window.FIELD` / `require()`. |
 | `client.js` | Whole browser client (vanilla JS, canvas): lobby, tutorial pager, leaderboard modal, input, rendering, effects, fullscreen, spectating. |
 | `qr.js` | Vendored MIT QRCode encoder from Kazuhiko Arase / gtanner/qrcode-terminal; draws invite QR codes locally, no external service. |
@@ -52,6 +55,7 @@ Client → server (JSON, max 2048 bytes, max 150 messages/s):
 - `{type:'input',seq,x,y,aimX,aimY,fire}`. `seq` must increase; input is ignored outside the `playing` phase.
 - `{type:'start'}` (owner only, while waiting), `{type:'rematch'}`, `{type:'bot',action:'add'|'remove'|'skill',skill}` (owner, waiting), `{type:'ping',sent}`, `{type:'leave'}`.
 - `{type:'spectate',room,pass}`: hidden admin spectator; must be the first message.
+- `{type:'group',roundId,joined:boolean}` toggles only the caller's consent in `postgame`. `{type:'requeue',roundId}` from a consenting member reserves the entire consenting connected group in one searching Quick Play room. Capacity failures send non-fatal `queue-error`; successful transfers send owner-only `welcome {requeued:true,...}` over existing sockets. Keep the previous room alias on each moved session so its private token can recover a missed transfer welcome. Never move non-consenting humans or displace AI. Snapshot `groupIds` exists only in postgame (at most four IDs); consent clears on reset, disconnect or departure.
 
 Server → client: `welcome {id,token,profile:{secret,id},slot,room,seq}`, `state`, private `result {roundId,saved,period,country,before,after,nearby}` rank data, `spectating`, `error`, `pong`. The secret goes only to its owner; it is never included in snapshots or public rankings. Additional commands: `ready`, `lobby`, `room {action:rules|team,...}` (host/waiting only), `reaction {reaction}` (results only; fixed IDs, 1.5 s cooldown, 3 s bubble).
 
@@ -67,11 +71,15 @@ Phases: friend `waiting` → `countdown` (3 s) → `playing` → `results` (20 s
 
 ## Home Assistant options
 
-`public_url` (invite links), `notify_service` (`notify.xxx`, empty = off), `admin_password` (≥ 8 chars), `admin_path` (3–64 of `[A-Za-z0-9_-]`, must not reuse a game path such as `audio`, `icons`, `tutorial`, `rooms`, `ws`, `health`, `leaderboard`, `network-info`). An invalid value throws in `readOptions`, so the app fails to start and the reason is in its log. `public_url` must be http(s) with no credentials, query or fragment. `homeassistant_api: true` is only for notifications. `/data/leaderboard.json` is the only persistent state; active rooms are in memory; completed match summaries and the latest 200 detailed results are stored in that file.
+`public_url` (invite links), `notify_service` (`notify.xxx`, empty = off), `admin_password` (≥ 8 chars), `admin_path` (3–64 of `[A-Za-z0-9_-]`, must not reuse a game path such as `audio`, `icons`, `tutorial`, `rooms`, `ws`, `health`, `leaderboard`, `network-info`). An invalid value throws in `readOptions`, so the app fails to start and the reason is in its log. `public_url` must be http(s) with no credentials, query or fragment. `homeassistant_api: true` is only for notifications. `/data/leaderboard.json` stores statistics/history; `/data/player-progress.json` separately stores wallets, inventory, daily rewards and credited-round IDs. Active rooms and unsaved reward retries are in memory.
+
+## Cosmetic catalogue
+
+`shared.js` groups skins in `skinCollections`; IDs remain the permanent inventory keys. Only six normal skins with `dailyReward: true` enter Day 7's random unowned pool. Owning those six triggers the 200-coin substitute regardless of Showcase ownership. Never infer reward eligibility from price or all catalogue entries. Showcase skins cost earned coins only and use bounded static patterns in `skin-art.js`; no combat modifiers, extra network fields or assets. The Garage retains a fixed safe-area-aware Back header and both collection groups. `tests/collections.test.cjs` verifies catalogue/reward boundaries, permanent purchase/recovery, rollback, combat parity and bounded paint work; the progression browser check covers actual purchases and collection layouts.
 
 ## Tests
 
-`npm test` runs `node --test tests/*.test.cjs` (186 tests, about 10 seconds). CI also builds amd64/aarch64 containers and checks admin, hero and multiplayer UI. `tools/multiplayer-ui-check.cjs` exercises real HTTP/WebSocket grouping, Ready, results, shared reactions, ranks, privacy, QR invitations and direct invite joining at desktop, phone and landscape sizes. Playwright is a CI-only dependency. Browser check artifacts go under `artifacts/`; local tools may set `CHROMIUM_EXECUTABLE_PATH` and `ARTIFACT_DIR`.
+`npm test` runs `node --test tests/*.test.cjs` (260 tests, about 10 seconds). CI also builds amd64/aarch64 containers and checks admin, hero, multiplayer, progression and vehicle UI. `tools/progress-ui-check.cjs` covers purchasing, recovery, Day 7 rewards, weekly challenge progress/automatic bonuses and responsive Garage layouts, including Showcase purchases and cross-device recovery. `tests/maps.test.cjs` checks connectivity, spawn/cover safety, symmetry, rotation, combat and deterministic bot navigation on both layouts/modes. `tests/weekly.test.cjs` checks weekly thresholds, Malaysia reset/retry attribution, rollback, migration, private counters and actual ricochet hits. `tools/multiplayer-ui-check.cjs` exercises real HTTP/WebSocket grouping, Ready, results, opt-in postgame group requeue, solo search, shared reactions, ranks, privacy, QR invitations and direct invite joining at desktop, phone and landscape sizes. Playwright is a CI-only dependency. Browser check artifacts go under `artifacts/`; local tools may set `CHROMIUM_EXECUTABLE_PATH` and `ARTIFACT_DIR`.
 
 Harness quirks:
 - `client.js` and `server.cjs` are loaded into `vm` sandboxes with hand-made fake DOM elements (children, `append`, `prepend`, `replaceChildren`, `classList`, events, `setAttribute`). They have no `querySelector`, `closest` or `dataset`; if new client code uses a browser API, add it to the fake (or guard the call), or the sandbox throws.
@@ -109,3 +117,10 @@ npx -y -p playwright node tools/tutorial-screenshots.cjs [baseUrl] [outDir]   # 
 - Server is authoritative; the client only sends input and renders. Keep new per-tick work bounded and keep snapshots small (they are the main cost).
 - Verify UI changes in Chromium via Playwright (pre-installed; don't run `playwright install`) at desktop and phone sizes before pushing. When killing a local test server, use `pkill -f "^node server.cjs"` in its own command; a looser pattern also matches the shell running it.
 - Git workflow the owner uses: test changes on `dev` (or a short feature branch), open a production PR to `main` when ready, and let the owner review and merge on GitHub. Keep the dev app's separate Home Assistant identity, and sync shared release notes back to `dev` after the merge.
+
+
+## Vehicle-class pilot
+
+`vehicle_classes_enabled` defaults false. Garage offers private Vehicle test creation when enabled. Only server-admitted private friend rooms can use `ruleset: vehicle-test`, with `balanceRevision: vehicles-1`; public/ordinary/Quick Play remain Standard. Keep test rules immutable through room edits and always private. Check `vehicleRevision` before join/reconnect membership. Class preferences are permanent private `selectedVehicle` IDs; never trust client stats. Resolve/cache class stats at admission and round start, retain them through respawn/reconnect, reject preference changes outside results/postgame while a profile has membership.
+
+Test rounds are admin history only: exclude them from all-time entries, period rows, adaptive difficulty and every progression path including delayed retries. History carries actual classes and revision; results selection affects only the next round. Keep skin art/stats independent, Standard snapshots compact and shared collision/muzzle/power duration unchanged. The five browser checks include `tools/vehicle-ui-check.cjs`; its screenshots cover both maps and four viewport sizes. Human balance and real Pi performance remain observation work, not CI guarantees.

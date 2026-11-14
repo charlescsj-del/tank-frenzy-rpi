@@ -83,6 +83,7 @@ button.danger{border-color:#c46a4a;background:#ffe5da;color:#9b3b1d}
 <form id="historyFilters"><label>Player <input id="historyName" maxlength="64" placeholder="Search name"></label><label>Mode <select id="historyMode"><option value="">All modes</option><option value="ffa">Deathmatch</option><option value="teams">2 vs 2</option></select></label><label>From <input id="historyFrom" type="date"></label><label>To <input id="historyTo" type="date"></label><button type="submit">Apply / Refresh</button></form>
 <p id="historyNote" class="note" role="status">Open to load the latest 200 completed matches.</p><div id="historyRows"></div><div class="actions"><button id="historyPrev" type="button">Previous</button><span id="historyPage"></span><button id="historyNext" type="button">Next</button></div>
 </details>
+<details id="economyPanel" class="history-panel"><summary>Coins &amp; Progress</summary><button id="economyRefresh" type="button">Refresh progress</button><p id="economyNote" class="note" role="status">Open to load aggregate progression statistics.</p><div id="economyStats" class="stats"></div></details>
 <script>
 'use strict';
 // The admin page can live at any private address; the game itself is one level up.
@@ -191,7 +192,7 @@ function draw(canvas,room,state){
   ctx.font='900 11px ui-rounded,"Trebuchet MS",sans-serif';ctx.textAlign='center';
   for(const p of room.players){
     if(!p.connected)continue;const x=p.x*sx,y=p.y*sy;
-    ctx.globalAlpha=p.hp>0?1:.35;ctx.fillStyle=state.palette[p.slot];ctx.strokeStyle='#354e4b';ctx.lineWidth=2;
+    ctx.globalAlpha=p.hp>0?1:.35;ctx.fillStyle=state.skinColors?.[p.skin]||state.palette[p.slot];ctx.strokeStyle='#354e4b';ctx.lineWidth=2;
     ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill();ctx.stroke();
     ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(p.aim)*14,y+Math.sin(p.aim)*14);ctx.stroke();
     ctx.fillStyle='#fffbe6';ctx.strokeStyle='#354e4b';ctx.lineWidth=3;ctx.strokeText(p.name,x,y-12);ctx.fillText(p.name,x,y-12);ctx.globalAlpha=1;
@@ -210,11 +211,11 @@ function render(state){
   for(const room of state.rooms){
     const {node,head,canvas,table}=card(room.code);
     const score=room.settings.mode==='teams'?' · Orange '+room.teamScores[0]+' – '+room.teamScores[1]+' Blue':'';
-    head.replaceChildren(el('strong',{textContent:room.code}),el('span',{className:'badge',textContent:room.settings.mode==='teams'?'2 vs 2':'Deathmatch'}),
+    head.replaceChildren(el('strong',{textContent:room.code+(room.ruleset==='vehicle-test'?' · Vehicle test':'')}),el('span',{className:'badge',textContent:room.settings.mode==='teams'?'2 vs 2':'Deathmatch'}),
       el('span',{className:'badge '+room.phase,textContent:(phaseNames[room.phase]||room.phase)+(room.winner?': '+room.winner.name+' won':'')+score}),el('span',{className:'badge',textContent:time(room.time)}));
     table.replaceChildren(...[...room.players].sort((a,b)=>b.kills-a.kills).map(p=>{
-      const hp=el('span',{className:'hp'},el('i',{style:'width:'+p.hp*10+'%'}));
-      return el('tr',{className:p.connected?'':'off'},el('td',{},el('span',{className:'dot',style:'background:'+state.palette[p.slot]}),p.name+(p.connected?'':' (away)'),flag(p.country)),
+      const hp=el('span',{className:'hp'},el('i',{style:'width:'+Math.max(0,Math.min(100,p.hp/(state.vehicleHealth?.[p.vehicle]||10)*100))+'%'}));
+      return el('tr',{className:p.connected?'':'off'},el('td',{},el('span',{className:'dot',style:'background:'+state.palette[p.slot]}),p.name+(room.ruleset==='vehicle-test'?' · '+p.vehicle:'')+(p.connected?'':' (away)'),flag(p.country)),
         el('td',{className:'num',textContent:p.kills+' / '+p.deaths}),el('td',{className:'num'},hp));
     }));
     draw(canvas,room,state);
@@ -258,6 +259,15 @@ $('boardReset').addEventListener('click',async()=>{
 });
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
 let historyPage=1,historyRequest=0;
+async function loadEconomy(){
+  $('economyNote').textContent='Loading progress…';
+  try{
+    const response=await fetch(adminRoot+'/economy',{cache:'no-store'});if(!response.ok)throw Error();const d=await response.json(),rate=(n,total)=>total?Math.round(n/total*100)+'% ('+n+'/'+total+')':'Awaiting eligible players';
+    $('economyStats').replaceChildren(...[['Profiles',d.profiles],['Finished a standard match',rate(d.played,d.profiles)],['Played a second match',rate(d.secondMatch,d.played)],['Returned next day',rate(d.nextDay.returned,d.nextDay.eligible)],['Returned on day 7',rate(d.day7.returned,d.day7.eligible)],['Weekly goals completed',d.weeklyCompleted],['Weekly bonus coins earned',d.weeklyCoins],['Coins earned',d.earned],['Coins in wallets',d.coins],['Skins unlocked',d.skins],['Players who purchased',d.buyers],['Average matches to first purchase',d.firstPurchaseMatches===null?'—':d.firstPurchaseMatches.toFixed(1)],['Reward saves pending',d.pending]].map(([label,value])=>el('div',{className:'stat'},el('b',{textContent:value}),el('small',{textContent:label}))));
+    $('economyNote').textContent=(d.enabled?'Rewards enabled. ':'Rewards paused. ')+(d.persistent?'Progress survives restarts. ':'Session-only storage. ')+'Standard-match participation only; profiles may include unused guest players. Return rates use Malaysia dates and only include players old enough to qualify. No names, recovery codes or external tracking.';
+  }catch{$('economyNote').textContent='Cannot load progress statistics. Try Refresh.';}
+}
+$('economyPanel').addEventListener('toggle',()=>{if($('economyPanel').open)loadEconomy();});$('economyRefresh').addEventListener('click',loadEconomy);
 const matchDate=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kuala_Lumpur',dateStyle:'medium',timeStyle:'short'});
 async function loadMatchHistory(page=1){
   const request=++historyRequest;$('historyNote').textContent='Loading match history…';
@@ -267,8 +277,8 @@ async function loadMatchHistory(page=1){
     historyPage=data.page;$('historyRows').replaceChildren(...data.matches.map(m=>{
       const winners=m.players.filter(p=>p.won).map(p=>p.name).join(', ')||'Not recorded';
       const title=matchDate.format(new Date(m.t))+' · '+(m.mode==='teams'?'2 vs 2':'Deathmatch')+' · '+(m.duration===null?'Duration unavailable':time(Math.round(m.duration)));
-      const table=el('table',{},el('thead',{},el('tr',{},...['Player','Kills','Deaths','Damage','Status'].map(t=>el('th',{textContent:t})))),el('tbody',{},...m.players.map(p=>el('tr',{},el('td',{textContent:p.name+(p.bot?' · AI':'')+(p.team===null?'':p.team===0?' · Orange':' · Blue')+(p.won?' · Winner':'' )}),...['kills','deaths','damageDealt'].map(k=>el('td',{textContent:p[k]??'—'})),el('td',{textContent:p.status+(p.disconnections?' · '+p.disconnections+' disconnect(s)':'')})))));
-      return el('details',{className:'history-match'},el('summary',{textContent:title}),el('p',{textContent:'Winner: '+winners+(m.room?' · Arena '+m.room:'')}),el('div',{className:'history-table'},table),...(m.legacy?[el('p',{className:'note',textContent:'Older record: bot, team and connection details may be unavailable.'})]:[]));
+      const table=el('table',{},el('thead',{},el('tr',{},...['Player','Kills','Deaths','Damage','Status'].map(t=>el('th',{textContent:t})))),el('tbody',{},...m.players.map(p=>el('tr',{},el('td',{textContent:p.name+(m.ruleset==='vehicle-test'?' · '+p.vehicle:'')+(p.bot?' · AI':'')+(p.team===null?'':p.team===0?' · Orange':' · Blue')+(p.won?' · Winner':'' )}),...['kills','deaths','damageDealt'].map(k=>el('td',{textContent:p[k]??'—'})),el('td',{textContent:p.status+(p.disconnections?' · '+p.disconnections+' disconnect(s)':'')})))));
+      return el('details',{className:'history-match'},el('summary',{textContent:title}),el('p',{textContent:(m.ruleset==='vehicle-test'?'Vehicle test · No coins or rankings · '+m.balanceRevision+' · '+m.mapLayout+' · ':'')+'Winner: '+winners+(m.room?' · Arena '+m.room:'')}),el('div',{className:'history-table'},table),...(m.legacy?[el('p',{className:'note',textContent:'Older record: bot, team and connection details may be unavailable.'})]:[]));
     }));
     $('historyNote').textContent=data.total+' matching records from the latest 200 completed matches. Malaysia time (UTC+8). '+(data.persistent?'Saved across restarts.':'Memory only on this server.');
     $('historyPage').textContent=data.page+' / '+data.pages;$('historyPrev').disabled=data.page<=1;$('historyNext').disabled=data.page>=data.pages;
@@ -281,3 +291,4 @@ refresh();loadBoard();
 </script>
 </body>
 </html>
+

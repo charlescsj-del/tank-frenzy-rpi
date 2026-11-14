@@ -8,7 +8,7 @@ A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarr
 
 On a phone, creating an arena and adding bots fit within the viewport. The map remains edge to edge during the countdown and on the result screen.
 
-Current release: **v3.2.7**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
+Current release: **v3.9.1**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
 
 The private admin page uses **system CPU and memory gauges**, with the game's share overlaid in orange from the zero end of each arc. CPU converts the game's one-core reading to a fraction of all cores; memory compares resident game memory with total RAM. Game percentages appear inside the gauges, with resident MiB in the memory gauge. Pi load shows 1-, 5- and 15-minute averages, values per CPU core and a 60-second history collected while the page is open. Core-count reference markers make load easier to interpret. Resource readings refresh once a second and are marked stale when disconnected; room views still refresh twice a second. See [DOCS.md](DOCS.md) for measurement details.
 
@@ -16,7 +16,31 @@ See [SOUND_DESIGN.md](SOUND_DESIGN.md) for the approved cartoon arcade audio dir
 
 The main-screen illustration animates with tank recoil, brief muzzle flashes and slow flying shells between shots. Reduced-motion preferences keep the illustration still. Animation pauses when the lobby or browser tab is hidden.
 
-## Rooms
+## Coins, Garage and daily rewards
+
+The Garage header stays outside phone safe areas, so **Back** remains tappable below the status bar and after scrolling the collection. On desktop it remains in the fixed card header.
+
+New players see optional movement/fire tips during their first match. The text follows keyboard/mouse or touch controls; moving and firing advance it to brief ricochet and win-target tips. **Skip** dismisses guidance for this player on this browser. Tips never freeze combat and stay hidden for spectators, completed-match players, results and menus.
+
+Standard matches can earn permanent **First victory**, **Sharpshooter** (at least 10 hits from at least 10 shots, 50% accuracy or better) and **Comeback** (win after trailing by at least 3 points) badges. See earned/locked badges in the Garage. Results show up to two relevant first-win, comeback or improved-kill-record highlights, including records earned in a loss. Repeat performances do not replay first-win or accuracy unlocks. Existing recorded victories already qualify for the First victory badge. Badges add no coins or combat advantage.
+
+Complete a standard match (first to 10, bouncing and powers enabled) for 20 coins, plus 30 for a victory and 3 per kill, capped at 30 kill coins. Both winning teammates earn the victory bonus. Solo games against AI count. Participate through movement or firing and stay until the result; early departures, inactive players, spectators and disconnected finishes do not earn coins. Custom rules are practice for coins, but completed scores still follow leaderboard rules. Brief disconnects can rejoin before the match ends. Results automatically show the breakdown without an extra claim action.
+
+Open **Garage** beside the profile icon to preview, buy and equip skins. Desert Scout and Arctic Ghost cost 200 coins; Forest Ranger and Sunset Racer 500; Carbon Night and Golden Ace 1000. Ownership is permanent. All are cosmetic, with identical health, damage, speed and collision size. Team markers and your own-tank halo retain their identity colours. Equip outside the field countdown/battle; an unlocked Day 7 skin can be equipped directly from results.
+
+The first eligible match each Malaysia day earns 20, 25, 30, 40, 50, 65 and 100 daily coins across Days 1–7. Day 7 also unlocks one random unowned normal skin permanently; if all six are owned, receive 200 extra coins instead. One missed calendar day per cycle pauses progress; a second missed day or a gap longer than one missing day resets the next reward to Day 1. After Day 7, the next qualifying day begins a fresh cycle. Coins and owned skins never reset with a streak. The Garage shows the next reward and reset time.
+
+Open **Weekly challenges** from home, or scroll down in the Garage, for three optional goals: finish 5 standard matches (+75 coins), win 3 (+100), and land 10 bounced-shell hits on opponents (+125). Solo vs AI counts, and both winning teammates progress the win goal. Hits must actually damage an opponent; shields, friendly fire, lasers and shell clashes do not count. Multiple bounces on one hit still count once. Progress saves only when you participate through an eligible match completion. Each goal pays automatically once per week; the result breakdown includes its bonus. No extra claim button or mandatory extra matches. Goals reset Monday 00:00 Malaysia (UTC+8), based on match completion, not the time a delayed reward is saved. Earned coins remain yours. Older matches are not retroactively credited.
+
+Under the profile icon, expand **Protect or restore progress** and save your private recovery code. Enter it on another device on the same server to restore that profile's coins, skins and retained leaderboard scores. Leave any arena on the other device first. Anyone possessing the code can access the profile; do not share it with other players. Admin leaderboard resets do not remove wallets or skins. Progress starts with future matches; earlier leaderboard results are not retroactively credited.
+
+### Cosmetic collections
+
+Selecting a skin on a portrait phone brings its preview, name and action back into view. Desktop keeps the preview beside the scrolling collection; Back stays in the fixed header in both orientations.
+
+The **Originals** section keeps Classic and the six normal skins at their existing prices. **Showcase** adds Circuit Runner (turquoise circuit lines), Ember Forge (copper chevrons) and Royal Crest (purple with golden diamonds), each for 1500 earned coins. Preview before buying; purchases are permanent and equipping is your choice. Both sections show how many you own. All have the same health, damage, movement, firing and collision size. There are no armour bonuses, real-money payments or limited-time offers. Showcase skins do not enter the random Day 7 normal-skin pool and do not prevent its 200-coin substitute when all six normal skins are owned.
+
+## Rooms and invitations
 
 Open the game's address (in the Home Assistant app: `http://YOUR_PI_IP:8765`, the sidebar, or your `public_url` such as a Cloudflare Tunnel address) to browse active rooms or create a new room. Select a room to preview player names and available spots before joining. The list refreshes every five seconds; reconnecting players keep their reserved spots briefly, and full rooms remain visible but cannot be joined.
 
@@ -30,6 +54,8 @@ The home screen uses a forest-green backdrop with quarry artwork beside the play
 
 Results show the winning tank or team and weekly rank movement before the compact player/kill scorecard. **Match Details** opens a separate panel inside the fullscreen arena with kills, deaths, hit rate and damage. Back closes it. When the 20-second rematch window expires, the final scoreboard and details stay visible; the group does not return to the waiting room. **Find new match** leaves the old group and starts Quick Play in the same mode in one tap, preserving fullscreen/expanded view. **Play Again** is available only during the rematch window; **Find new match** and **Leave** remain afterward. Actions stay outside the scrolling content. The reaction button opens the horizontal picker; menu and illustrated reaction icons use SVG so their appearance does not depend on installed emoji fonts.
 
+After the rematch window closes, **Stay together** offers an optional next-match group when at least two humans are connected. Each person opts in for themselves; click again to withdraw. Opting in alone never starts a search. With at least two consenting players, the action becomes **Find match together** for those players. Any consenting member can launch it. All consenting connected humans enter one same-mode Quick Play search together; everyone else stays on their results. With no group selected, **Find new match** still searches solo in one click. Quitting or disconnecting clears consent. AI cannot opt in, and no one replaces AI in another locked lineup. The new search uses standard public Quick Play rules; open seats can match other players and 2 vs 2 teams are balanced afresh, so staying in the same match is not a same-team guarantee. If the whole group cannot be admitted, everyone stays put with a retry notice. Normal silent lineup, Ready and field countdown follow. Admin spectators only see their finished leaderboard and Quit.
+
 The circular **?** button opens **How to Play**, an eight-page guide with game screenshots: how to win, PC controls, phone controls, finding your tank, getting hit, bouncing bullets, power-up tokens and power-up effects. Turn pages with the **Back**/**Next** buttons, the page dots, the ← → keys or a horizontal swipe; the last page's button closes it. Escape, Close or a tap outside also closes it. Each page fits without scrolling.
 
 **Leaderboard:** Your own tank portrait, name and rank appear first, above the filters, including a last-used tank when the selected period has no entry yet. The 🏆 button defaults to **This week**, with a highlighted player row and your rank even outside the top ten. Today, This month, All time and country filters remain available. Phone rows show rank, name, wins and kills; tap a row for matches, deaths, damage and K/D. Boards sort by wins, kills, then fewer deaths, with stable tie breaking. Periods use Malaysia time (UTC+8); weeks start Monday. Country flags come only from Cloudflare’s reported country. LAN players remain under All regions. Every completed human round counts, including solo battles with bots; bots never occupy real leaderboard positions. In teams, participants who have not left the winning side earn a win; leaving preserves earned statistics when the match finishes, without a win or completed match. Guest scores follow a saved device profile rather than the typed name. Existing name-based scores remain preserved as legacy entries. Empty boards offer three clearly labelled AI benchmark targets, separate from player records.
@@ -42,7 +68,7 @@ The circular **?** button opens **How to Play**, an eight-page guide with game s
 
 **Bots:** AI tanks use natural callsigns such as CopperFox and MangoDash, with an **AI** label in the group, lobby and results. They move and shoot under the same game rules, navigate cover, and collect nearby powers. Friend-room hosts choose Easy, Normal or Hard. Quick Play selects difficulty from the humans’ last ten completed rounds, weighting the strongest player more heavily while capping mixed beginner groups at Normal. Fewer than three completed rounds starts Easy; easy bot wins have reduced weight so repetitive solo farming does not immediately produce Hard opponents. Difficulty is fixed within each round and reassessed for Quick Play rematches. Bots never own rooms, vote on rematches, or keep an abandoned room alive. AI seats are never replaced by new arrivals. A full arena only reopens a human seat after that player explicitly quits or their 90-second reconnect reservation expires. Hosts can still remove AI manually while configuring a friend room.
 
-After creating a friend room, everyone sees tank cards with readiness, team and host status. The host starts the round and can edit mode, win count (5–50), bouncing, powers and friends-only privacy under **Room rules & privacy**. They can swap teams without exceeding two tanks per side. Changing rules, teams or bots clears readiness. Rules are fixed during play. Host ownership passes to a connected human when needed. The group keeps the same arena between rounds: **Back to Lobby** returns everyone, or the result timer returns them automatically after 20 seconds. Hosts can then adjust rules and start again.
+After creating a friend room, everyone sees tank cards with readiness, team and host status. The host starts the round and can edit mode, win count (5–50), bouncing, powers and friends-only privacy under **Room rules & privacy**. They can swap teams without exceeding two tanks per side. Changing rules, teams or bots clears readiness. Rules are fixed during play. Host ownership passes to a connected human when needed. The completed leaderboard remains visible after the result timer; it never automatically returns players to the waiting room. Use Play Again during the rematch window, opt into a new group search afterward, or leave/create a new friend arena to configure another battle.
 
 Friend-room starts and rematches use the existing shared **3–2–1** battle countdown. Quick Play also uses this battlefield countdown after its silent five-second lineup ends or all humans press Ready. Movement, aiming, firing and pickups stay frozen during all pregame phases. Friend rooms still allow late joins to running rounds; the Quick Play queue groups new humans only while searching. After its lineup locks, a direct invitation may fill a vacant human seat during countdown or play, but cannot replace AI.
 
@@ -58,7 +84,9 @@ Players can open an invitation to join immediately or select a public arena. Eac
 
 On other devices, use the host's LAN address, not localhost. Both devices must be able to reach each other on the network. If Windows prompts for Node.js network access, allow it on your trusted private network. No firewall rules are changed by this project. For public Internet play, put the game behind an HTTPS tunnel or reverse proxy with WebSockets enabled (see DOCS.md).
 
-Maps are 1600 by 1040 world units (about 2.5 times the previous area). Each room gets a random map, regenerated for every new match. Clear spawn zones and connected lanes keep the arena traversable. All players receive the same map from the server.
+Maps are 1600 by 1040 world units (about 2.5 times the previous area). New rooms automatically choose between **Quarry**, the original seeded arrangement of scattered cover, and **Crossroads**, 16 cover islands mirrored across both axes around broad central lanes and an open perimeter. Crossroads gives every corner equivalent cover and flanking routes; normal tank, shell, laser and power rules are unchanged. Same-arena rematches alternate layouts. A friend-lobby return prepares the next layout without skipping it when Start is pressed. The selected geometry stays fixed from lineup through the match; everyone receives the same server-owned map. New group/solo searches may choose either layout again. No extra mode selection or click is required.
+
+The map name appears in matchmaking/waiting information and the field countdown, not as another combat HUD panel. Existing overview and follow-camera controls work on both layouts, on mobile and desktop. Spawn clearance and connected tank-sized lanes are checked automatically. Existing help screenshots still demonstrate Quarry; controls and combat rules apply equally to Crossroads. Geometric symmetry is not proof of equal real-player win rates; dev playtesting remains important.
 
 ## Controls and Rules
 
@@ -93,7 +121,7 @@ Maps are 1600 by 1040 world units (about 2.5 times the previous area). Each room
 - Left click: fire. Hold to keep firing, with a 0.42-second cooldown between shots.
 - Tanks have **10 health**: ten normal shells or three unprotected laser hits destroy a full-health tank. Respawn takes three seconds and restores all 10 health. Five compact health pips each represent two health; half pips show odd health values without widening the mobile header.
 - Mid-match joins and respawns have three seconds of protection, even while moving and firing. Protected tanks slowly fade in/out; the ten-second Shield power uses the same effect. Reduced-motion mode uses steady translucency.
-- First to the chosen win count wins (5–50 kills, default 10). The result card stops combat and lists kills, deaths and hit rate; team results group both sides. **Rematch** needs a majority of connected humans within 20 seconds: both of two, two of three, three of four. A non-voter leaving can complete that majority. **Back to Lobby** returns the group for rule changes; expiry also returns it automatically. **Leave Arena** needs no extra confirmation after a round. Friend-room late joiners can participate in the vote. Disconnected humans cannot vote until they reconnect.
+- First to the chosen win count wins (5–50 kills, default 10). The result card stops combat and lists kills, deaths and hit rate; team results group both sides. **Play Again** needs a majority of connected humans within 20 seconds: both of two, two of three, three of four. A non-voter leaving can complete that majority. Expiry preserves the completed leaderboard; Find new match searches solo, or Stay together enables explicit group search. **Leave** needs no extra confirmation after a round. Friend-room late joiners can participate in the rematch vote. Disconnected humans cannot vote until they reconnect.
 - Leaving the tab stops your controls, but other players keep playing.
 - During battle or a friend lobby, a connection loss reserves your tank for 90 seconds and reconnects automatically. Same-tab reloads restore the saved tank token. Quick Play removes disconnected pregame seats promptly; if the group has moved on, the client automatically finds another group. Leave Arena releases the spot immediately.
 
@@ -125,3 +153,20 @@ Friend-arena setup uses the forest-green background and cream cards. Its arena m
 The home screen renders its dark theme before JavaScript loads. Connecting and reconnecting retain the forest background; the battlefield appears only after its state arrives.
 
 Active power-ups show their icon, seconds remaining and duration bar in a dedicated row beneath the battle score indicators on desktop and mobile.
+
+
+## Vehicle test: free classes (dev pilot)
+
+All classes are free and every skin works on every class. Coins purchase appearance only. Garage remembers your vehicle choice; ordinary matches and Quick Play use Standard during the pilot.
+
+| Vehicle | Health | Speed | Normal reload |
+| --- | ---: | ---: | ---: |
+| Standard | 10 | 170 | 0.42 s |
+| Scout | 8 | 204 (+20%) | 0.42 s |
+| Heavy | 12 | 145 (about 15% slower) | 0.48 s |
+
+When the host enables the pilot, Garage offers **Create vehicle test · Private practice**. Invite friends with the existing code/QR flow. These rooms show **Vehicle test · Practice · No coins or rankings**. The final scoreboard and admin history remain available. Test results do not change public boards, bot difficulty or progression.
+
+Class choice locks from joining until results. **Change tank · Next match** on results opens the Garage without leaving the scoreboard. A saved change applies at the next countdown; reconnects and respawns keep the actual class. Entering ordinary Quick Play uses Standard while remembering your preferred test class.
+
+Shell and laser damage remain 1 and 4. Speed multiplies each vehicle's speed by 1.6. Heavy's 8/7 reload multiplier also applies to Machine Gun and Laser. Restore fills the selected class's maximum health and keeps the active power; Shield and protection timings are unchanged. Health bars use the actual capacity (4, 5 or 6 two-health pips), and low-health effects start at 30%. Collision size, muzzle, projectile caps and scoring remain shared. Scout's two-laser death threshold needs human playtesting before a wider rollout.

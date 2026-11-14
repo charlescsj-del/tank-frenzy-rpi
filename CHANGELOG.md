@@ -1,5 +1,79 @@
 # Changelog
 
+## v3.9.1 [2026-11-14]
+
+- Fixes sideways page scrolling in a very narrow desktop window while in an arena: the brand row is clipped instead of widening the page.
+- CI: the vehicle browser check now runs in the browser job. It had been added to the container job, which has no browser, so every run since v3.9.0 failed there.
+
+## v3.9.0 [2026-10-21]
+
+- Adds the private vehicle-class pilot: free Standard (10 HP), Scout (8 HP, faster) and Heavy (12 HP, slower movement and reload). Normal matches and Quick Play retain Standard.
+- Garage selections save independently of skins and survive recovery. Enable `vehicle_classes_enabled` to create a private Vehicle test from the Garage; all test arenas are unlisted and require a compatible browser build.
+- Class capacity applies to spawn, Restore, health bars and low-health feedback; movement and every firing mode use authoritative class stats. Bot classes rotate independently of difficulty.
+- Results offer Change tank for the next match. Preferences lock during pregame and play; rematches resolve the new choice before the shared 3-2-1, closing the Garage automatically.
+- Test results remain in admin history with ruleset, balance revision, map and vehicle details. They do not affect rankings, adaptive difficulty, coins, daily/weekly progress or achievements.
+- Adds focused combat, persistence and lifecycle tests plus vehicle UI coverage at desktop, phone portrait and landscape sizes. Human balance and Raspberry Pi performance observations are still pending; this is an opt-in dev pilot.
+
+## v3.8.3 [2026-10-20]
+
+- Compact the Garage showcase in short landscape windows and reveal the whole selected preview, so the tank, skin name and action remain visible together instead of revealing the action alone.
+- Require preview/name bounds at portrait and landscape sizes in browser verification, after the opening progress refresh finishes.
+
+## v3.8.2 [2026-10-20]
+
+- Pin the Garage preview only in taller desktop windows. Short landscape screens keep normal scrolling so Buy/Equip remains fully reachable; preserve portrait preview reveal and the fixed Back button.
+
+## v3.8.1 [2026-10-20]
+
+- Keep the selected tank preview, skin name and action visible together after choosing a skin on a portrait phone, with a stationary safe-area-aware Back header.
+- Pin the desktop preview beside the scrolling collection instead of stretching it to the full catalogue height. Landscape selection keeps its action reachable.
+- Check actual portrait preview bounds as well as card/action bounds, and capture both collection galleries and selected previews in browser verification.
+
+## v3.8.0 [2026-10-20]
+
+- Add three permanent Showcase skins: Circuit Runner, Ember Forge and Royal Crest, each costing 1500 earned coins. Fixed-price individual purchases, with no real-money checkout, random paid packs, timed offers or combat benefits.
+- Organize the Garage into Originals and Showcase with owned counts, shared previews and a clear same-battle-stats label. Selecting a skin brings its action into view without another menu; keep the fixed, safe-area-aware Back button.
+- Keep the six existing normal skins explicitly eligible for the permanent Day 7 reward. Owning all six still grants the 200-coin substitute even when Showcase skins remain unowned. Preserve existing inventory, prices, coins and daily/weekly progress.
+- Use bounded static circuit, chevron and diamond paintwork in the existing preview/combat renderer. Preserve tank size, slot bands, team markers, own-player halo and effects; add no per-tick simulation, downloads or snapshot fields.
+- Add purchase/recovery, rollback, Day 7 pool, combat parity and mobile/desktop collection browser regressions. Catalogue/prices are provisional dev choices pending real-player feedback, not a claim that retention or economy observations are complete.
+
+## v3.7.0 [2026-10-19]
+
+- Add Crossroads alongside the original procedural Quarry: mirrored cover islands, broad central lanes and connected flanking/perimeter routes, with the same four safe corner spawn zones.
+- New arenas choose between the two layouts automatically. Same-arena rematches alternate; returning to a friend lobby cannot skip a layout, and starting preserves the prepared geometry. No extra selection screen or gameplay-rule change.
+- Identify the arena in existing matchmaking/waiting text and the field countdown. Cache labels from full-map updates without adding a combat HUD panel or metadata to lean battle snapshots.
+- Add map regressions for determinism, collision-safe spawns, connected routes, symmetry, rotation, wall/laser/shell behaviour and bounded bot simulation in both modes. Browser checks inspect authoritative geometry and mobile/desktop views of both layouts.
+
+## v3.6.0 [2026-10-18]
+
+- After the rematch timer closes, opt into Stay together on the finished leaderboard. When two or more humans opt in, any member can choose Find match together. Consent alone never starts a search, and players who do not opt in stay on their result screen.
+- Reserve the whole consenting group in one same-mode Quick Play search, or create a fresh search if it cannot fit. Never split a group or remove AI from locked lineups. Quick Play uses standard rules and balances teams; group membership does not guarantee the same team.
+- Clear consent on withdrawal, departure, disconnect or a new round. Capacity failures leave players and results intact. Transfer using the existing connections and private credentials, preserving fullscreen, skins and earned rewards; support reconnecting with the previous room token if a transfer welcome was missed.
+- Add server, client and responsive browser regression checks for group consent, atomic admission, failure rollback, AI protection, solo search, reconnects and spectator exclusion. Keep group fields out of active-match snapshots.
+
+## v3.5.0 [2026-10-18]
+
+- Add optional weekly challenges: finish 5 standard matches (+75 coins), win 3 (+100), and land 10 ricochet hits (+125). Solo vs AI counts, with the same participation/finish checks as normal match rewards.
+- View progress bars and automatic reward status in the responsive Garage, with a direct home shortcut. Results include newly completed weekly bonuses without a claim step. Preserve the fixed, touch-safe Back button.
+- Reset goals Monday midnight Malaysia, using server match completion time. Atomic saves, persistent round credits and separate per-week records prevent duplicate payouts and keep delayed retries from changing the wrong week. Existing wallets, skins and daily streaks are preserved; no retroactive progress.
+- Count ricochet hits only from bounced shells that damage opponents, before the winning hit is saved. Keep counters private and off shared snapshots. Admin aggregate metrics include weekly goals and bonus coins, and the existing reward pause also pauses challenges.
+
+## v3.4.0 [2026-10-18]
+
+- Keep the home and Garage buttons below the iPhone status/notch area and away from landscape cutouts. Preserve a non-scrolling Garage header and a 44-pixel Back target. Add touch regression checks after scrolling with simulated portrait/landscape safe areas.
+- New players get short, optional first-match tips for movement, aiming/firing, ricochets and the win target. Prompts adapt to mouse/keyboard or touch, never pause the match, and can be skipped. Completed-match profiles and spectators do not see beginner tips.
+- Results highlight first victories, improved personal kill records and genuine comeback wins, with at most two highlights at once. Permanent First victory, Sharpshooter and Comeback badges appear in the Garage.
+- Verify achievements from server-owned eligible-match statistics. Preserve earlier victories without replaying the first-win announcement. Cosmetic badges add no coins, damage, armour or other battle advantages.
+
+## v3.3.0 [2026-10-17]
+
+- Earn coins for completing standard battles, winning and kills, including solo battles against AI. Results show an automatic reward breakdown; practice rules, inactivity and early departure do not earn coins.
+- Open the responsive Garage to preview, buy and equip six permanent cosmetic skins. Team identification and battle statistics remain unchanged; equipped skins appear to other players and in portraits.
+- Complete one standard match daily for increasing coin rewards. Day 7 awards 100 coins and a random permanent unowned normal skin; a full collection receives 200 extra coins. One missed day per cycle is protected, with midnight Malaysia resets.
+- Save a private recovery code through the player profile to restore coins, skins and retained scores on another device using the same server.
+- Wallets and inventory live separately from leaderboard cleanup and resets. Server-validated atomic purchases and persistent match IDs prevent duplicate deductions/rewards. Failed reward saves retry automatically.
+- Standalone launches now save scores and player progress under `data/` (override with `TANK_DATA_DIR`); Home Assistant uses `/data/player-progress.json` beside the existing leaderboard file.
+
 Game and Home Assistant app versions use the same numeric format on dev and production; the separate installation is identified by its Home Assistant slug. The branches share this release history, and `config.yaml` gives each installed app's version. Dates use the earliest release or import commit available in this repository, shown in the Asia/Kuala_Lumpur time zone. For v1.1.0–v1.3.2, the original game release commits are unavailable here, so 2026-09-23 is the archive import date, not a claimed release date. The v1.5.0 notes first appear in the 2026-09-24 import of v1.6.0. The 19.x builds were originally distributed under those numbers; their entries below are relabeled as consecutive 1.19.x versions for a consistent history. Git history retains the original package numbers.
 
 ## v3.2.7 [2026-10-17]
@@ -457,3 +531,4 @@ Game and Home Assistant app versions use the same numeric format on dev and prod
 - Free-for-All and 2 vs 2 rooms, room discovery, player previews, and optional bouncing bullets and powers.
 - Laser, double gun, speed and machine gun pickups.
 - Enemy bullet interception, leave confirmation, and a compact mobile HUD with a following camera and twin-stick controls.
+
