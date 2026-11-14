@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.9.1 [2026-11-14]
+
+- Fixes sideways page scrolling in a very narrow desktop window while in an arena: the brand row is clipped instead of widening the page.
+- CI: the vehicle browser check now runs in the browser job. It had been added to the container job, which has no browser, so every run since v3.9.0 failed there.
+
 ## v3.9.0 [2026-10-21]
 
 - Adds the private vehicle-class pilot: free Standard (10 HP), Scout (8 HP, faster) and Heavy (12 HP, slower movement and reload). Normal matches and Quick Play retain Standard.

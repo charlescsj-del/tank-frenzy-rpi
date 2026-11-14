@@ -36,6 +36,8 @@ jobs:
         if: ${{ !cancelled() }}
       - run: node tools/progress-ui-check.cjs
         if: ${{ !cancelled() }}
+      - run: node tools/vehicle-ui-check.cjs
+        if: ${{ !cancelled() }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -67,6 +69,3 @@ jobs:
             sleep 1
           done
           exit 1
-
-      - run: node tools/vehicle-ui-check.cjs
-        if: ${{ !cancelled() }}

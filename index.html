@@ -350,6 +350,8 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 /* Desktop battles and waiting rooms fit one screen: brand and tagline share a slim top row, the arena takes the rest. */
 .in-room .page{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);column-gap:24px;height:100vh;height:100dvh;max-width:none;padding:8px clamp(10px,1.5vw,20px) 12px;animation:none}
 .in-room .masthead{padding:0;border:0}.in-room .brand{font-size:26px}.in-room .intro{padding:0}
+/* A very narrow desktop window cannot fit the brand row; clip it instead of scrolling the page sideways. */
+.in-room .page{overflow-x:clip}
 .in-room .game{grid-column:1/-1;display:flex;flex-direction:column;min-height:0;margin-top:8px}
 .in-room .game .stage{flex:1;min-height:0}
 .in-room .game canvas{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto}
