@@ -4,7 +4,8 @@ Multiplayer browser tank game packaged as a **Home Assistant app** (formerly add
 
 ## Deployment facts
 
-- Runs on the owner's Pi 4 under Home Assistant OS. Players reach it through a **Cloudflare Tunnel** at `https://tank-frenzy.sipekholiao.com` (tunnel service `http://<Pi IP>:8765`, WebSockets on, no HTTP Host Header override), not the Pi directly. Cloudflare's WAF blocks datacenter IPs, so the live site cannot be fetched from a cloud container.
+- Runs on the owner's Pi 4 under Home Assistant OS. Players reach it through a **Cloudflare Tunnel** on the owner's own domain, with separate public addresses for production and dev (tunnel service `http://<Pi IP>:8765`, WebSockets on, no HTTP Host Header override), not the Pi directly. Cloudflare's WAF blocks datacenter IPs, so the live site cannot be fetched from a cloud container.
+- The public addresses are deliberately not written in this repository. Ask the owner; never add them to code, tests, docs or commit messages.
 - Two listeners: game port **8765** (LAN/tunnel, no HA login) and ingress port **8099** (HA sidebar, only accepts the Supervisor at `172.30.32.2`; never published on the host).
 - Capacity: 4 players per room, at most 32 rooms. A worst-case test of 19 clients in 5 rooms, all firing, used about 0.7 Mbit/s per player (13 Mbit/s total) and about 16% of one core on this container (the Pi is slower but has headroom).
 - Things never verified on real hardware: the Supervisor notify call, `CF-IPCountry` arriving through the tunnel, the HA app-list icon, and the admin page through the HA sidebar (`/hassio/ingress/tank_frenzy/<admin_path>`).
