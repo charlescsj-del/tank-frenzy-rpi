@@ -62,6 +62,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
   function closeSpectators(room,title,message){for(const [ws,watch] of spectators)if(watch.room===room){send(ws,{type:'error',title,message});ws.close(1000,title);spectators.delete(ws);}}
   const rooms=new Map(),sessions=new Map(),leaderboard=new Leaderboard(leaderboardFile),progress=new Progress(progressFile),pendingRewards=new Map();
   leaderboard.skinOf=id=>progress.skinOf(id);
+  const crowned=id=>Boolean(id)&&leaderboard.champion()?.profileId===id;
   function award(room){
     if(!rewardsEnabled){for(const result of room.lastResults?.values()||[])result.reward={round:room.roundId,total:0,reason:'Coin rewards are temporarily paused by the host.'};return;}
     try{
@@ -79,6 +80,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
   }
   function finish(room){
     if(room.recorded||!room.winner)return;room.recorded=true;room.rewardAt=Date.now();room.lastResults=leaderboard.record(room);
+    for(const p of room.humans())p.crown=crowned(p.profileId);
     award(room);
     for(const s of sessions.values())if(s.room===room&&s.player.connected){const result=room.lastResults?.get(s.player.id);if(result)send(s.ws,result);}
   }
@@ -99,7 +101,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
     }
     finish(source);
     const arrivals=[];
-    try{for(const s of members){const p=target.add(s.player.name,{profileId:s.profile.id});if(!p)throw Error('No group space');p.profileId=s.profile.id;p.skin=progress.skinOf(s.profile.id);p.level=progress.levelOf(s.profile.id);p.country=s.player.country;arrivals.push({session:s,player:p});}}
+    try{for(const s of members){const p=target.add(s.player.name,{profileId:s.profile.id});if(!p)throw Error('No group space');p.profileId=s.profile.id;p.skin=progress.skinOf(s.profile.id);p.level=progress.levelOf(s.profile.id);p.crown=crowned(s.profile.id);p.country=s.player.country;arrivals.push({session:s,player:p});}}
     catch{for(const a of arrivals)target.remove(a.player);fail('Could not reserve the whole group. Everyone is still on the results screen; try again.');return;}
     if(created)rooms.set(target.code,target);
     for(const a of arrivals){const s=a.session;source.remove(s.player);s.previousRoom=source.code;s.room=target;s.player=a.player;}
@@ -202,7 +204,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
       const period=url.searchParams.get('period')||'all',country=(url.searchParams.get('country')||'').toUpperCase().slice(0,2);
       res.setHeader('Content-Type','application/json');
       const profileId=url.searchParams.get('player')||'';
-      res.end(JSON.stringify({players:leaderboard.top({period,country}),countries:leaderboard.countries(),you:leaderboard.position(profileId,{period,country}),period,country,timezone:'Asia/Kuala_Lumpur',persistent:!!leaderboardFile}));return;
+      res.end(JSON.stringify({players:leaderboard.top({period,country}),countries:leaderboard.countries(),you:leaderboard.position(profileId,{period,country}),champion:(c=>c?{name:c.name,slot:c.slot,skin:c.skin,wins:c.wins,kills:c.kills}:null)(leaderboard.champion()),period,country,timezone:'Asia/Kuala_Lumpur',persistent:!!leaderboardFile}));return;
     }
     if(url.pathname==='/network-info'){
       const port=server.address().port;
@@ -339,7 +341,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
           if(room.phase==='postgame'){send(ws,{type:'error',message:'This match has ended and its rematch window closed. Choose another arena or create a new one.'});ws.close();return;}
           if(room.ruleset==='vehicle-test'&&msg.vehicleRevision!==F.vehicleRevision){if(created)rooms.delete(code);send(ws,{type:'error',message:'Reload the game to join this vehicle test.'});ws.close();return;}
           const player=room.add(name,{profileId:profile.id,vehicle:progress.vehicleOf(profile.id)});if(!player){send(ws,{type:'error',message:'Arena full (4 players). AI seats cannot be replaced. Join when a human leaves or choose another arena.'});ws.close();return;}
-          player.profileId=profile.id;player.skin=progress.skinOf(profile.id);player.level=progress.levelOf(profile.id);player.country=country;session={room,player,profile,token:randomBytes(24).toString('hex'),ws};sessions.set(session.token,session);
+          player.profileId=profile.id;player.skin=progress.skinOf(profile.id);player.level=progress.levelOf(profile.id);player.crown=crowned(profile.id);player.country=country;session={room,player,profile,token:randomBytes(24).toString('hex'),ws};sessions.set(session.token,session);
           if(created)try{onRoomCreated?.({code,name:player.name,mode:room.settings.mode,url:publicUrl?publicUrl+'/?room='+encodeURIComponent(code):''});}catch{/* Notifications never block play. */}
         }
         session.ws=ws;clearTimeout(joinTimeout);settle();send(ws,{type:'welcome',...(requeued?{requeued:true}:{}),id:session.player.id,token:session.token,profile:session.profile,progress:{...progress.view(session.profile.id),enabled:rewardsEnabled},slot:session.player.slot,room:code,seq:session.player.seq});sendRaw(ws,encodeState(session.room.snapshot()));const result=session.room.lastResults?.get(session.player.id);if(result)send(ws,result);return;

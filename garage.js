@@ -3,7 +3,7 @@ let playerProgress=null,progressLoading=null,garageOpen=false,garageSelected='cl
 // These dialogs must remain available inside the fullscreen arena after a match.
 $('arena').append($('garageDialog'),$('profileDialog'));
 function savePlayerProfile(profile){profileSecret=profile.secret;profileId=profile.id;try{localStorage.setItem('tank-frenzy-profile',JSON.stringify(profile));}catch{}}
-function receiveProgress(value){if(!value)return;playerProgress=value;renderProgressHome();if(garageOpen)renderGarage();clearTimeout(weeklyTimer);if(value.weekly)weeklyTimer=setTimeout(()=>loadPlayerProgress().catch(()=>{}),Math.max(1000,value.weekly.resetAt-Date.now()+100));}
+function receiveProgress(value){if(!value)return;playerProgress=value;renderProgressHome();if(garageOpen)renderGarage();clearTimeout(weeklyTimer);const refreshAt=Math.min(value.weekly?.resetAt??Infinity,value.missions?.resetAt??Infinity);if(Number.isFinite(refreshAt))weeklyTimer=setTimeout(()=>loadPlayerProgress().catch(()=>{}),Math.min(2147483000,Math.max(1000,refreshAt-Date.now()+100)));}
 async function playerAction(action,extra={}){
   const run=async()=>{
     const response=await fetch(appUrl('progress'),{method:'POST',headers:{'Content-Type':'application/json','X-Tank-Player':'1'},body:JSON.stringify({action,profile:profileSecret,...extra})});
@@ -20,6 +20,7 @@ function renderProgressHome(){
   const p=playerProgress;if(!p)return;
   $('coinBalance').textContent=p.coins.toLocaleString()+' coins';$('garageButton').setAttribute('aria-label','Garage · '+p.coins+' coins');
   const daily=p.daily;$('dailyHome').textContent=p.enabled===false?'Daily rewards paused':daily.qualified?'Day '+daily.step+' complete · Tomorrow: Day '+daily.nextDay:'Daily reward · Day '+daily.nextDay;
+  const missions=p.missions?.missions||[];$('missionsHome').hidden=!missions.length;$('missionsHome').textContent=p.enabled===false?'Daily missions paused':'Daily missions · '+missions.filter(m=>m.completed).length+'/'+missions.length+' →';
   const weekly=p.weekly?.challenges||[];$('weeklyHome').textContent=p.enabled===false?'Weekly challenges paused':'Weekly challenges · '+weekly.filter(c=>c.completed).length+'/'+weekly.length+' complete →';
   $('progressHomeNote').textContent=p.persistent?'Play matches. Earn coins. Make it yours.':'Progress lasts for this server session. Ask the host to enable permanent storage.';
   $('progressHome').hidden=spectating;
@@ -49,6 +50,32 @@ function renderWeekly(){
   const reset=new Date(p.weekly.resetAt).toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
   $('weeklyNote').textContent=(p.enabled===false?'Weekly earning is paused by the host.':'Finish standard matches to save progress, including solo vs AI. Rewards are automatic; no claiming needed.')+' Resets Monday 00:00 Malaysia ('+reset+' your time).';
 }
+// Today's three missions: the same for everyone, experience only, reset at midnight Malaysia.
+function renderMissions(){
+  const p=playerProgress;$('missionList').replaceChildren();if(!p?.missions)return;
+  const done=p.missions.missions.filter(m=>m.completed).length;
+  $('missionsBudget').textContent=p.missions.sweep.completed?'All three done ✓':'+'+p.missions.missions[0]?.xp+' XP each · +'+p.missions.sweep.xp+' XP for all three';
+  for(const mission of p.missions.missions){
+    const card=document.createElement('div'),heading=document.createElement('div'),title=document.createElement('strong'),xp=document.createElement('span'),detail=document.createElement('p'),bar=document.createElement('progress'),state=document.createElement('small');
+    card.className='mission-card'+(mission.completed?' completed':'');card.setAttribute('data-mission',mission.id);heading.className='weekly-challenge-heading';title.textContent=mission.name;xp.textContent='+'+mission.xp+' XP';heading.append(title,xp);detail.textContent=mission.description;
+    bar.max=mission.target;bar.value=mission.progress;bar.setAttribute('aria-label',mission.description+' '+mission.progress+' of '+mission.target);state.textContent=mission.completed?'Done ✓':mission.progress+' / '+mission.target;
+    card.append(heading,detail,bar,state);$('missionList').append(card);
+  }
+  const reset=new Date(p.missions.resetAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  $('missionsNote').textContent=(p.enabled===false?'Missions are paused by the host. ':'')+done+' of '+p.missions.missions.length+' done today. Everyone gets the same three. Progress counts in standard matches you finish, including solo vs AI. New missions at '+reset+' your time (midnight Malaysia).';
+}
+// Head-to-head records against the people you have played most.
+function rivalScore(r){return r.wins+' – '+r.losses;}
+function renderRivals(){
+  const rivals=playerProgress?.rivals||[];$('rivalList').replaceChildren();
+  if(!rivals.length){const empty=document.createElement('p');empty.className='rival-empty';empty.textContent='Play a match with a friend and your record against them appears here: wins, losses and who destroyed whom.';$('rivalList').append(empty);return;}
+  for(const r of rivals){
+    const item=document.createElement('div'),name=document.createElement('strong'),score=document.createElement('span'),detail=document.createElement('small');
+    item.className='rival-item'+(r.wins>r.losses?' ahead':r.wins<r.losses?' behind':'');name.textContent=r.name;score.textContent='You '+rivalScore(r);
+    detail.textContent=r.matches+(r.matches===1?' match':' matches')+' together · You destroyed them '+r.kills+(r.kills===1?' time':' times')+' · They destroyed you '+r.deaths+(r.deaths===1?' time':' times')+(r.allied?' · '+r.allied+' as team mates':'');
+    item.append(name,score,detail);$('rivalList').append(item);
+  }
+}
 function renderGarage(){
   const p=playerProgress,skin=FIELD.skins.find(s=>s.id===garageSelected)||FIELD.skins[0];
   $('garageBalance').textContent=p?p.coins.toLocaleString()+' coins':'Loading…';$('garageSkinName').textContent=skin.name;$('garageSkinDescription').textContent=skin.description;
@@ -68,7 +95,7 @@ function renderGarage(){
   const owned=p?.owned.includes(skin.id),equipped=p?.equipped===skin.id,need=skin.price-(p?.coins||0);
   $('garageAction').disabled=garageBusy||!p||equipped||!owned&&(need>0||p.enabled===false);
   $('garageAction').textContent=garageBusy?'Saving…':equipped?'Equipped ✓':owned?'Equip':p?.enabled===false?'Purchases paused':need>0?'Need '+need+' more coins':'Buy · '+skin.price+' coins';
-  renderVehicles();renderDaily();renderWeekly();
+  renderVehicles();renderMissions();renderDaily();renderWeekly();renderRivals();
   $('garageStats').textContent=p?p.stats.matches+' completed matches · '+p.stats.wins+' wins · Best: '+p.stats.bestKills+' kills · Longest streak: '+p.daily.longest+' days':'';
   const level=p?.level;$('garageLevel').hidden=!level;
   if(level){$('garageLevelTitle').textContent='Level '+level.level+' · '+level.rank;$('garageLevelNote').textContent=level.into+' / '+level.need+' XP'+(level.nextRank?' · '+level.nextRank.name+' at Level '+level.nextRank.level:'');$('garageLevelFill').style.width=xpPercent(level)+'%';$('garageLevelBar').setAttribute('aria-valuenow',String(xpPercent(level)));$('garageLevelBar').setAttribute('aria-label','Progress to Level '+(level.level+1));}
@@ -109,6 +136,7 @@ async function openGarage(){
 function closeGarage(){garageOpen=false;$('garageDialog').hidden=true;(joined&&['results','postgame'].includes(latest?.phase)?$('changeTank'):joined?$('game'):$('garageButton')).focus?.({preventScroll:true});}
 $('changeTank').addEventListener('click',openGarage);
 $('garageButton').addEventListener('click',openGarage);$('dailyHome').addEventListener('click',async()=>{await openGarage();if(garageOpen)$('dailyTitle').scrollIntoView({block:'start'});});$('closeGarage').addEventListener('click',closeGarage);
+$('missionsHome').addEventListener('click',async()=>{await openGarage();if(garageOpen)$('missionsTitle').scrollIntoView({block:'start'});});
 $('weeklyHome').addEventListener('click',async()=>{await openGarage();if(garageOpen)$('weeklyTitle').scrollIntoView({block:'start'});});
 $('garageDialog').addEventListener('click',e=>{if(e.target===$('garageDialog'))closeGarage();});
 $('garageDialog').addEventListener('keydown',e=>{if(e.code==='Escape'){e.preventDefault();closeGarage();}else trapModalFocus(e,$('garageDialog'));});
@@ -132,6 +160,8 @@ function showMatchRewards(result){
   $('rewardWeekly').hidden=!r.weekly?.length;$('rewardWeekly').textContent=(r.weekly||[]).map(c=>'Weekly: '+c.name+' +'+c.coins).join(' · ');
   showExperience(r);
   const medals=medalSummary(r.medals);$('rewardMedals').hidden=!medals;$('rewardMedals').textContent=medals?'Medals · '+medals:'';
+  const missionLine=[...(r.missions||[]).map(m=>'Mission: '+m.name+' +'+m.xp+' XP'),r.missionSweep?'All three missions +'+r.missionSweep+' XP':''].filter(Boolean).join(' · ');$('rewardMissions').hidden=!missionLine;$('rewardMissions').textContent=missionLine;
+  $('rewardRivals').replaceChildren(...(r.rivals||[]).slice(0,3).map(rival=>{const line=document.createElement('p');line.textContent=!rival.wins&&!rival.losses&&rival.allied?'With '+rival.name+' · '+rival.allied+(rival.allied===1?' match':' matches')+' as team mates':'vs '+rival.name+' · '+(rival.wins===rival.losses?'Level at '+rivalScore(rival):rival.wins>rival.losses?'You lead '+rivalScore(rival):'You trail '+rivalScore(rival));return line;}));$('rewardRivals').hidden=!(r.rivals||[]).length;
   const next=nextGoals();$('rewardNext').hidden=!next;$('rewardNext').textContent=next?'Next · '+next:'';
   $('shareResult').hidden=!r.xp;$('shareResult').textContent='Share result';
   const skin=FIELD.skins.find(s=>s.id===r.skin);$('rewardSkin').hidden=!skin;$('equipRewardSkin').hidden=!skin;
@@ -159,6 +189,8 @@ function showExperience(r){
 function nextGoals(){
   const p=playerProgress;if(!p?.level)return'';
   const goals=[(p.level.need-p.level.into)+' XP to Level '+(p.level.level+1)];
+  const mission=(p.missions?.missions||[]).filter(m=>!m.completed).sort((a,b)=>(a.target-a.progress)/a.target-(b.target-b.progress)/b.target)[0];
+  if(mission&&p.enabled!==false)goals.push('Mission: '+mission.name+' '+mission.progress+'/'+mission.target);
   const weekly=(p.weekly?.challenges||[]).filter(c=>!c.completed).sort((a,b)=>(a.target-a.progress)/a.target-(b.target-b.progress)/b.target)[0];
   if(weekly&&p.enabled!==false)goals.push(weekly.name+' '+weekly.progress+'/'+weekly.target+' (+'+weekly.coins+' coins)');
   return goals.join(' · ');

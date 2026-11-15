@@ -309,7 +309,7 @@ test('the leaderboard endpoint lists the top ten, and creating a room triggers t
   sandboxServer.join('ALPHA','create','Ann');sandboxServer.join('ALPHA','join','Bo');
   assert.equal(created.length,1);assert.equal(created[0].code,'ALPHA');assert.equal(created[0].name,'Ann');assert.equal(created[0].url,'http://pi.local:8765/?room=ALPHA');
   const board=await sandboxServer.read('/leaderboard');assert.equal(board.status,200);
-  assert.deepEqual(JSON.parse(board.body.toString()),{players:[],countries:[],period:'all',country:'',persistent:false,you:null,timezone:'Asia/Kuala_Lumpur'});
+  assert.deepEqual(JSON.parse(board.body.toString()),{players:[],countries:[],period:'all',country:'',persistent:false,you:null,champion:null,timezone:'Asia/Kuala_Lumpur'});
 });
 
 test('/admin is hidden without a password, asks for one, and shows and ends rooms with it',async()=>{

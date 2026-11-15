@@ -378,6 +378,11 @@ function tankPortrait(slot,skin='classic',vehicle='standard'){
   }
   return art;
 }
+function crownIcon(){
+  const holder=document.createElement('span');holder.className='crown-icon';holder.setAttribute('role','img');holder.setAttribute('aria-label','Last week’s champion');holder.title='Last week’s champion';
+  if(document.createElementNS){const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg'),use=document.createElementNS(ns,'use');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('width','100%');svg.setAttribute('height','100%');svg.setAttribute('aria-hidden','true');use.setAttribute('href','#ui-crown');svg.append(use);holder.append(svg);}
+  return holder;
+}
 function levelChip(level){const chip=document.createElement('span');chip.className='level-chip';chip.textContent='LV '+level;chip.setAttribute('aria-label','Level '+level);return chip;}
 function renderMatchmaking(data){
   const searching=data.phase==='searching';$('matchmakingTitle').textContent=searching?'Finding opponents':'Get ready!';
@@ -390,13 +395,13 @@ function renderMatchmaking(data){
   $('matchmakingTime').textContent=searching?'Finding a match · '+seconds+'s':String(seconds);
   $('matchmakingTime').setAttribute('aria-label',searching?'Finding a match':`Entering the field in ${seconds} seconds`);
   const ready=(data.readyIds||[]).includes(myId);$('readyButton').hidden=searching;$('readyButton').disabled=ready;$('readyButton').textContent=ready?'READY ✓':'READY';
-  const signature=JSON.stringify([data.phase,data.players.map(p=>[p.id,p.name,p.slot,p.skin,p.vehicle,p.bot,p.team,p.level]),data.readyIds]);
+  const signature=JSON.stringify([data.phase,data.players.map(p=>[p.id,p.name,p.slot,p.skin,p.vehicle,p.bot,p.team,p.level,p.crown]),data.readyIds]);
   if($('matchmakingPlayers').signature===signature)return;$('matchmakingPlayers').signature=signature;$('matchmakingPlayers').replaceChildren();
   const players=data.settings?.mode==='teams'?[...data.players].sort((a,b)=>(a.team??0)-(b.team??0)):data.players;
   for(let i=0;i<4;i++){
     const p=players[i],card=document.createElement('div');card.className='match-player'+(p?.id===myId?' is-you':'')+(!p?' is-searching':'');
     const name=document.createElement('strong'),detail=document.createElement('small');
-    if(p){card.append(tankPortrait(p.slot,p.skin,p.vehicle));name.textContent=p.name+(p.id===myId?' · YOU':'');if(p.level)name.append(levelChip(p.level));detail.textContent=(data.ruleset==='vehicle-test'?FIELD.vehicleOf(p.vehicle).name+' · ':'')+(p.bot?'AI · ':'')+(p.team!=null?(p.team===0?'ORANGE':'BLUE')+' TEAM · ':'')+(p.bot||(data.readyIds||[]).includes(p.id)?'READY ✓':'MATCHED');}
+    if(p){card.append(tankPortrait(p.slot,p.skin,p.vehicle));name.textContent=p.name+(p.id===myId?' · YOU':'');if(p.crown)name.append(crownIcon());if(p.level)name.append(levelChip(p.level));detail.textContent=(data.ruleset==='vehicle-test'?FIELD.vehicleOf(p.vehicle).name+' · ':'')+(p.bot?'AI · ':'')+(p.team!=null?(p.team===0?'ORANGE':'BLUE')+' TEAM · ':'')+(p.bot||(data.readyIds||[]).includes(p.id)?'READY ✓':'MATCHED');}
     else{const radar=document.createElement('span');radar.className='search-radar';card.append(radar);name.textContent='Searching…';detail.textContent='Finding your rival';}
     card.append(name,detail);$('matchmakingPlayers').append(card);
   }
@@ -453,7 +458,7 @@ function updateRoomPhase(data){
     const needed=data.rematchNeeded||connected.length,ready=votes.filter(id=>connected.some(p=>p.id===id)).length;
     $('resultsVotes').textContent=postgame?'Round finished':ready+' / '+needed+' ready to play again';
     $('resultsVotes').hidden=postgame||spectating;
-    const board=JSON.stringify([data.settings?.mode,data.winner.team,data.teamScores,data.players.map(p=>[p.id,p.skin,p.vehicle,p.team,p.kills,p.deaths,p.damageDealt,p.shots,p.hits,p.reaction]),muteReactions]);
+    const board=JSON.stringify([data.settings?.mode,data.winner.team,data.teamScores,data.players.map(p=>[p.id,p.skin,p.vehicle,p.team,p.kills,p.deaths,p.damageDealt,p.shots,p.hits,p.reaction,p.crown]),muteReactions]);
     if(board!==resultsSignature){
       resultsSignature=board;$('resultsRows').replaceChildren();$('resultDamageRows').replaceChildren();
       const winners=data.players.filter(p=>data.settings?.mode==='teams'?p.team===data.winner.team:p.id===data.winner.id);
@@ -472,7 +477,7 @@ function updateRoomPhase(data){
         for(const p of data.players.filter(p=>!teams||p.team===team).sort((a,b)=>b.kills-a.kills||a.deaths-b.deaths)){
         const row=document.createElement('tr');if(p.id===myId)row.className='me';
          const cells=[p.name+(data.ruleset==='vehicle-test'?' · '+FIELD.vehicleOf(p.vehicle).name:'')+(p.bot?' · AI':'')+(p.id===myId?' ★':''),p.kills,p.deaths,p.shots?Math.round(100*Math.min(p.hits,p.shots)/p.shots)+'%':'—'].map(value=>{const cell=document.createElement('td');cell.textContent=value;return cell;});
-         cells[0].prepend?.(tankPortrait(p.slot,p.skin,p.vehicle));if(/^[A-Z]{2}$/.test(p.country||''))cells[0].append(countryFlag(p.country));if(!muteReactions&&p.reaction){const bubble=document.createElement('span');bubble.className='reaction-bubble';reactionContent(bubble,p.reaction);cells[0].append(bubble);}
+         cells[0].prepend?.(tankPortrait(p.slot,p.skin,p.vehicle));if(p.crown)cells[0].append(crownIcon());if(/^[A-Z]{2}$/.test(p.country||''))cells[0].append(countryFlag(p.country));if(!muteReactions&&p.reaction){const bubble=document.createElement('span');bubble.className='reaction-bubble';reactionContent(bubble,p.reaction);cells[0].append(bubble);}
         cells[0].style.color=colors[p.slot];row.append(...cells);$('resultsRows').append(row);
         const damageRow=document.createElement('tr');if(p.id===myId)damageRow.className='me';
         const values=[p.name+(p.bot?' · AI':'')+(p.id===myId?' · YOU':''),p.kills,p.deaths,p.shots?Math.round(100*Math.min(p.hits,p.shots)/p.shots)+'%':'—',Number.isFinite(p.damageDealt)?p.damageDealt:'—'];
@@ -497,12 +502,12 @@ function updateRoomPhase(data){
     $('results').classList.add('spectator-results');
   }
   if(waiting){
-    const signature=JSON.stringify([data.ownerId,data.readyIds,data.settings,data.private,data.players.map(p=>[p.id,p.name,p.skin,p.vehicle,p.connected,p.team,p.bot,p.level])]);
+    const signature=JSON.stringify([data.ownerId,data.readyIds,data.settings,data.private,data.players.map(p=>[p.id,p.name,p.skin,p.vehicle,p.connected,p.team,p.bot,p.level,p.crown])]);
     if(signature!==waitingSignature){
       waitingSignature=signature;$('waitingPlayers').replaceChildren();
       for(const p of data.players){
         const item=document.createElement('li');item.style.setProperty('--tank',colors[p.slot]);
-        const name=document.createElement('strong'),detail=document.createElement('small');name.textContent=p.name+(p.id===myId?' · YOU':'');if(p.level)name.append(levelChip(p.level));detail.textContent=(data.ruleset==='vehicle-test'?FIELD.vehicleOf(p.vehicle).name+' · ':'')+(p.bot?'AI · ':'')+(p.team!=null?(p.team===0?'Orange':'Blue')+' team · ':'')+(p.id===data.ownerId?'HOST · ':'')+(p.connected?(p.bot||(data.readyIds||[]).includes(p.id)?'READY ✓':'Joined'):'Reconnecting');
+        const name=document.createElement('strong'),detail=document.createElement('small');name.textContent=p.name+(p.id===myId?' · YOU':'');if(p.crown)name.append(crownIcon());if(p.level)name.append(levelChip(p.level));detail.textContent=(data.ruleset==='vehicle-test'?FIELD.vehicleOf(p.vehicle).name+' · ':'')+(p.bot?'AI · ':'')+(p.team!=null?(p.team===0?'Orange':'Blue')+' team · ':'')+(p.id===data.ownerId?'HOST · ':'')+(p.connected?(p.bot||(data.readyIds||[]).includes(p.id)?'READY ✓':'Joined'):'Reconnecting');
         const copy=document.createElement('span');copy.append(name,detail);item.append(tankPortrait(p.slot,p.skin,p.vehicle),copy);
         if(data.ownerId===myId&&p.team!=null){const swap=document.createElement('button');swap.type='button';swap.className='tool team-swap';swap.textContent='⇄';swap.setAttribute('aria-label','Swap '+p.name+' to the other team');swap.addEventListener('click',()=>send({type:'room',action:'team',player:p.id,team:1-p.team}));item.append(swap);}
         $('waitingPlayers').append(item);
@@ -685,6 +690,8 @@ async function loadLeaderboard(){
     const response=await fetch(appUrl('leaderboard?period='+leaderboardPeriod+'&country='+leaderboardCountry+'&player='+encodeURIComponent(profileId)));if(!response.ok)throw Error();
     const data=await response.json();if(request!==leaderboardRequest)return;
     $('starterRivals').hidden=Boolean(data.players.length);
+    $('leaderboardChampion').hidden=!data.champion;
+    if(data.champion){const text=document.createElement('span');text.textContent='Last week’s champion · '+data.champion.name+' · '+data.champion.wins+(data.champion.wins===1?' win':' wins')+'. Wears the crown all week.';$('leaderboardChampion').replaceChildren(tankPortrait(data.champion.slot||0,data.champion.skin),text,crownIcon());}
     const ownName=document.createElement('strong'),ownRank=document.createElement('span'),ownCopy=document.createElement('div');
     ownName.textContent=($('callsign').value||data.you?.name||'Your tank')+' · YOU';
     ownRank.textContent=data.you?'#'+data.you.rank+' · '+data.you.wins+' wins · '+data.you.kills+' kills':'Finish a battle to rank in this view. Solo battles count too.';
@@ -1304,6 +1311,11 @@ function drawHurtEdge(){
   }
   ctx.restore();
 }
+// Last week's champion wears a small gold crown above the name tag.
+function drawCrown(x,y){
+  ctx.beginPath();ctx.moveTo(x-8,y);ctx.lineTo(x-9.5,y-8);ctx.lineTo(x-4.5,y-4.5);ctx.lineTo(x,y-10.5);ctx.lineTo(x+4.5,y-4.5);ctx.lineTo(x+9.5,y-8);ctx.lineTo(x+8,y);ctx.closePath();
+  ctx.fillStyle='#f2bb2e';ctx.strokeStyle='#7a5410';ctx.lineWidth=1.2;ctx.lineJoin='round';ctx.fill();ctx.stroke();
+}
 function currentTurretAim(t){
   const canAim=latest?.phase!=='waiting'&&latest?.phase!=='countdown';
   return canAim&&t.id===myId&&touchAim?Math.atan2(touchAim.y,touchAim.x):canAim&&t.id===myId&&pointer.active?Math.atan2(pointer.y-t.y,pointer.x-t.x):t.aim;
@@ -1366,6 +1378,7 @@ function drawTank(t){
   const width=(ctx.measureText(label)?.width??label.length*5.7)+12;
   roundedRect(ctx,top.x-width/2,top.y-12,width,17,5,relation==='ally'?'#e3fff1ed':relation==='enemy'?'#fff0e7ed':t.id===myId?'#fff9e6ee':'#ffffffba');
   ctx.fillStyle=relation==='ally'?'#176d56':relation==='enemy'?'#a72e24':t.team==null?ink:t.team===0?'#ae4c1c':'#226ba5';ctx.textAlign='center';ctx.fillText(label,top.x,top.y);
+  if(t.crown)drawCrown(top.x,top.y-14);
   if(t.id!==myId&&latest?.phase==='playing'){
     const w=Math.max(82*boardScale,70/scale),h=Math.max(15*boardScale,16/scale),x=p.x-w/2,y=p.y+Math.max(36*boardScale,28/scale);
     roundedRect(ctx,x,y,w,h,4*boardScale,'#fff9e9e8','#365343',boardScale);

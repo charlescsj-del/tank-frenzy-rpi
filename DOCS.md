@@ -69,7 +69,7 @@ v3.7.0 adds one server-generated layout, Crossroads, beside the original seeded 
 1. The app log should show listeners on game port `8765` and internal ingress port `8099`.
 2. Open **Web UI**: the lobby, banner and room list should load.
 3. Open `http://YOUR_PI_IP:8765` on two devices. Create and join one arena, set a win count between 5 and 50 (default 10), start a round, move, shoot, and confirm sound after interacting.
-4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `3.10.0`.
+4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `3.11.0`.
 5. Test an invitation generated from the sidebar after setting `public_url`.
 
 ## Updates
@@ -132,7 +132,9 @@ Chat apps cache previews, sometimes for days. To see a change, share the link wi
 
 After changing the home artwork, regenerate the picture with `npx -y -p playwright node tools/og-image.cjs`, keep it under about 300 KB, and commit it. It is listed in the server's file map and the Dockerfile.
 
-Levels, experience, medal totals and win streaks are saved in `player-progress.json` with coins and skins, and restore with the same recovery code. Resetting the leaderboard does not reset them.
+Levels, experience, medal totals, win streaks, daily mission progress and rival records are saved in `player-progress.json` with coins and skins, and restore with the same recovery code. Resetting the leaderboard does not reset them.
+
+The weekly champion is worked out from the leaderboard's match history: last week's number one (Monday to Sunday, Malaysia time) among players with a saved profile and at least one win. Removing that name in the admin page passes the crown to the next player; resetting the leaderboard leaves no champion until a full week has been played. Rival records list other players' display names only, never their profile IDs.
 
 ## Private vehicle-class pilot (v3.9.0)
 

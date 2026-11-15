@@ -2,7 +2,7 @@
 
 Prepared 2026-11-15 (Malaysia) against v3.9.1. Goal: more people try the game, and those who try it come back. This plan continues [PROGRESSION_PLAN.md](PROGRESSION_PLAN.md) and keeps its rules: earned coins only, no payments, no paid randomness, no timed offers, no combat advantage from anything a player owns.
 
-Phase 1 is implemented as v3.10.0 on `dev`. Later phases are proposals for the owner to accept, reorder or drop.
+Phase 1 is implemented as v3.10.0 on `dev`, and Phase 2 items 1, 3 and 4 as v3.11.0. Later phases are proposals for the owner to accept, reorder or drop.
 
 ## Where the game stood at v3.9.1
 
@@ -43,7 +43,9 @@ Four gaps mattered most:
 
 Same eligibility as coins throughout: standard rules, taking part, staying to the end. Practice, vehicle tests, idling and leaving earn nothing, and leaving a standard match ends a win streak.
 
-## Phase 2: reasons to return and to invite (proposed)
+## Phase 2: reasons to return and to invite (v3.11.0, except invite rewards)
+
+Implemented on `dev` in v3.11.0: daily missions (experience only, 40 each and 60 for all three), the weekly champion's crown, and rivalries. Invite rewards remain a proposal because they change the coin economy.
 
 1. **Daily missions.** Three small goals a day, the same for everyone, picked by date from a pool (destroy 8 tanks, collect 3 power-ups, earn a medal, win in 2 vs 2). Reward mainly experience. Short, varied, and a shared topic ("did you get today's three?").
 2. **Invite rewards.** A personal invite link. When a new player finishes their first standard match, both get coins (suggested 100 for the inviter, 50 for the newcomer, at most ten rewarded invites). This is the one mechanic that directly rewards spreading the game. Needs an economy decision.

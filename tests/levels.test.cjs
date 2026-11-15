@@ -17,12 +17,14 @@ test('the level curve starts fast, grows by 40 XP a level and settles at 600',()
 });
 test('a first finished match always reaches Level 2; experience follows the published amounts',()=>{
   const f=fixture();let r=f.award();
-  assert.deepEqual({...r.reward.xp,before:undefined,after:undefined},{completion:50,victory:0,kills:0,medals:0,streak:0,daily:30,total:80,before:undefined,after:undefined,levelUp:true,promotion:null});
-  assert.equal(r.reward.xp.before.level,1);assert.equal(r.reward.xp.after.level,2);assert.equal(r.progress.level.level,2);assert.equal(r.progress.xp,80);
+  // Daily missions add experience on top; everything else is fixed.
+  const base=xp=>xp.total-xp.missions;
+  assert.deepEqual({...r.reward.xp,before:undefined,after:undefined,missions:undefined,total:undefined,promotion:undefined},{completion:50,victory:0,kills:0,medals:0,streak:0,daily:30,missions:undefined,total:undefined,before:undefined,after:undefined,levelUp:true,promotion:undefined});
+  assert.equal(base(r.reward.xp),80);assert.equal(r.reward.xp.before.level,1);assert(r.reward.xp.after.level>=2);assert.equal(r.progress.level.level,r.reward.xp.after.level);assert.equal(r.progress.xp,r.reward.xp.total);
   f.win();f.p.kills=40;f.p.medals={'double-kill':3,'revenge':20,'made-up':99};r=f.award();
   assert.equal(r.reward.xp.kills,F.xp.killCap*F.xp.kill);assert.equal(r.reward.xp.medals,F.xp.medalCap*F.xp.medal,'medal experience is capped');assert.equal(r.reward.xp.daily,0,'first-match bonus once a day');
-  assert.equal(r.reward.xp.total,50+40+90+80);assert.deepEqual(r.reward.medals,{'double-kill':3,'revenge':20},'unknown medal IDs are ignored');
-  assert.deepEqual(r.progress.stats.medals,{'double-kill':3,'revenge':20});assert.equal(r.reward.xp.promotion,'Private');
+  assert.equal(base(r.reward.xp),50+40+90+80);assert.deepEqual(r.reward.medals,{'double-kill':3,'revenge':20},'unknown medal IDs are ignored');
+  assert.deepEqual(r.progress.stats.medals,{'double-kill':3,'revenge':20});assert(r.progress.level.level>=3);
 });
 test('levels never pay coins: the coin breakdown is exactly what it was before levels',()=>{
   const f=fixture();f.win();f.p.kills=3;const r=f.award();
@@ -94,7 +96,7 @@ test('a real server shows levels in the lobby and results, sends private experie
   const room=game.rooms.get('RANKED'),human=room.humans()[0];room.botCommand(human,{action:'add'});room.start(human);room.step(3.1);
   const bot=[...room.players.values()].find(p=>p.bot);human.activeSeconds=20;human.kills=9;human.shieldUntil=0;bot.shieldUntil=0;bot.hp=1;room.damage(bot,human.id,1,true);
   const result=await wait(m=>m.type==='result'&&m.reward);
-  assert.equal(result.reward.xp.total,50+40+60+16+30);assert.deepEqual(result.reward.medals,{'first-blood':1,'trick-shot':1});assert.equal(result.progress.xp,2160+196);
+  assert.equal(result.reward.xp.total-result.reward.xp.missions,50+40+60+16+30);assert.deepEqual(result.reward.medals,{'first-blood':1,'trick-shot':1});assert.equal(result.progress.xp,2160+result.reward.xp.total);
   const ended=await wait(m=>m.type==='state'&&m.phase==='results');const me=ended.players.find(p=>p.id===welcome.id);
   assert.deepEqual(me.medals,{'first-blood':1,'trick-shot':1});assert.equal(me.level,10);assert.equal(ended.players.find(p=>p.bot).level,undefined,'AI tanks have no level');
   const others=JSON.stringify(ended);assert(!others.includes('"xp"'));assert(!others.includes(load.profile.secret));

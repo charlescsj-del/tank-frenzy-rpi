@@ -35,7 +35,7 @@ class Room {
     const played=this.lastMapLayout||(this.winner?this.map.layout:null),layout=played?played==='crossroads'?'quarry':'crossroads':this.map.layout;
     this.winner=null;this.recorded=false;this.lastResults=null;this.rematchUntil=0;this.rematchVotes.clear();this.groupIds?.clear();this.teamScores=[0,0];if(this.map.layout!==layout)this.map=generateMap(undefined,layout);this.matchPlayers=new Map();
     this.firstBlood=false;
-    for(const p of this.players.values()){p.kills=0;p.deaths=0;p.damageDealt=0;p.shots=0;p.hits=0;p.ricochetHits=0;p.streak=0;p.reaction=null;p.activeSeconds=0;p.maxDeficit=0;p.medals={};p.multi=0;p.lastKillAt=-Infinity;p.lastKilledBy=null;}
+    for(const p of this.players.values()){p.kills=0;p.deaths=0;p.damageDealt=0;p.shots=0;p.hits=0;p.ricochetHits=0;p.streak=0;p.reaction=null;p.activeSeconds=0;p.maxDeficit=0;p.medals={};p.multi=0;p.lastKillAt=-Infinity;p.lastKilledBy=null;p.pickups=0;p.killsOn={};}
   }
   lobby(p){
     if(this.players.get(p?.id)!==p||!p?.connected||p.bot||!['results','postgame'].includes(this.phase))return false;
@@ -80,7 +80,7 @@ class Room {
     if(this.players.size>=F.maxPlayers)return null;
     const slot=Array.from({length:F.maxPlayers},(_,i)=>i).find(i=>![...this.players.values()].some(p=>p.slot===i));
     const used=new Set([...this.players.values()].map(t=>t.name));const botName=Bots.botNames.find(n=>!used.has(n))||'Nova';
-    const p={id:randomUUID(),slot,bot,name:bot?botName:name||F.palette[slot].name,x:0,y:0,a:0,aim:0,hp:F.maxHealth,kills:0,deaths:0,damageDealt:0,shots:0,hits:0,ricochetHits:0,streak:0,medals:{},multi:0,lastKillAt:-Infinity,lastKilledBy:null,cool:0,respawnAt:0,shieldUntil:0,connected:true,disconnectedAt:0,input:neutral(),lastInput:this.time,seq:-1,life:0};
+    const p={id:randomUUID(),slot,bot,name:bot?botName:name||F.palette[slot].name,x:0,y:0,a:0,aim:0,hp:F.maxHealth,kills:0,deaths:0,damageDealt:0,shots:0,hits:0,ricochetHits:0,streak:0,medals:{},multi:0,lastKillAt:-Infinity,lastKilledBy:null,pickups:0,killsOn:{},cool:0,respawnAt:0,shieldUntil:0,connected:true,disconnectedAt:0,input:neutral(),lastInput:this.time,seq:-1,life:0};
     p.profileId=profileId;this.resolveVehicle(p,vehicle);
     const teams=[0,1].map(team=>[...this.players.values()].filter(t=>t.team===team).length);
     p.team=this.settings.mode==='teams'?(teams[0]<=teams[1]?0:1):null;
@@ -171,7 +171,7 @@ class Room {
     if(!dead)return;
     p.deaths++;p.respawnAt=this.time+3;p.input=neutral();p.pendingShot=false;p.power=null;p.powerUntil=0;
     if(!attacker)return;
-    attacker.kills++;
+    attacker.kills++;(attacker.killsOn??={})[p.id]=(attacker.killsOn[p.id]||0)+1;
     const teams=this.settings.mode==='teams',score=teams?++this.teamScores[attacker.team]:attacker.kills;
     this.trackDeficits();
     if(score>=this.settings.targetScore){this.winner={id:attacker.id,team:attacker.team,name:teams?(attacker.team===0?'Orange team':'Blue team'):attacker.name};this.phase='results';this.rematchUntil=this.time+20;this.rematchVotes.clear();this.shells=[];this.pickups=[];this.refreshOwner();this.onFinish?.(this);}
@@ -288,7 +288,7 @@ class Room {
           const [drop]=this.pickups.splice(index,1);
           if(drop.type==='restore')p.hp=(p.vehicleStats||F.vehicleOf(p.vehicle)).health;
           else{p.power=drop.type;p.powerUntil=this.time+F.powerDuration;}
-          this.emit('pickup',{x:p.x,y:p.y,slot:p.slot,player:p.id,power:drop.type});
+          p.pickups=(p.pickups||0)+1;this.emit('pickup',{x:p.x,y:p.y,slot:p.slot,player:p.id,power:drop.type});
         }
       }
       if(input.fire||p.pendingShot){this.fire(p);p.pendingShot=false;}
@@ -339,7 +339,7 @@ class Room {
   snapshot({withMap=true}={}){
     const matchEnded=this.phase==='results'||this.phase==='postgame';
     const pregame=['searching','ready','waiting'].includes(this.phase);
-    return {type:'state',room:this.code,...(this.ruleset==='vehicle-test'?{ruleset:this.ruleset,balanceRevision:this.balanceRevision}:{}),settings:this.settings,phase:this.phase,quick:!!this.quick,private:!!this.private,roundId:this.roundId,...(this.phase==='postgame'?{groupIds:[...(this.groupIds||[])].filter(id=>this.players.get(id)?.connected)}:{}),...(pregame?{readyIds:[...(this.readyIds||[])],searchIn:Math.max(0,(this.searchUntil||0)-this.time),readyIn:Math.max(0,(this.readyUntil||0)-this.time)}:{}),countdownIn:this.phase==='countdown'?Math.max(0,this.countdownUntil-this.time):0,ownerId:this.ownerId,teamScores:this.teamScores,pickups:this.pickups,map:withMap?this.map:undefined,mapId:this.map.id,time:this.time,winner:this.winner,rematchIn:this.phase==='results'?Math.max(0,this.rematchUntil-this.time):0,rematchVotes:[...this.rematchVotes],botSkill:this.botSkill,rematchNeeded:this.phase==='results'?this.rematchNeeded():0,players:[...this.players.values()].map(({id,slot,skin,vehicle,bot,name,x,y,a,aim,hp,kills,deaths,damageDealt,shots,hits,streak,connected,respawnAt,shieldUntil,life,team,power,powerUntil,reaction,medals,level})=>({id,slot,...(vehicle&&vehicle!=='standard'?{vehicle}:{}),...(skin&&skin!=='classic'?{skin}:{}),bot,name,x,y,a,aim,hp,kills,deaths,...(matchEnded?{damageDealt,reaction:reaction?.until>this.time?reaction.value:null,...(medals&&Object.keys(medals).length?{medals}:{})}:{}),...(level&&this.phase!=='playing'&&this.phase!=='countdown'?{level}:{}),shots,hits,streak,connected,respawnIn:Math.max(0,respawnAt-this.time),shield:shieldUntil>this.time,life,team,power,powerRemaining:Math.max(0,powerUntil-this.time)})),shells:this.shells.map(({id,x,y,slot})=>({id,x,y,slot})),events:this.events};
+    return {type:'state',room:this.code,...(this.ruleset==='vehicle-test'?{ruleset:this.ruleset,balanceRevision:this.balanceRevision}:{}),settings:this.settings,phase:this.phase,quick:!!this.quick,private:!!this.private,roundId:this.roundId,...(this.phase==='postgame'?{groupIds:[...(this.groupIds||[])].filter(id=>this.players.get(id)?.connected)}:{}),...(pregame?{readyIds:[...(this.readyIds||[])],searchIn:Math.max(0,(this.searchUntil||0)-this.time),readyIn:Math.max(0,(this.readyUntil||0)-this.time)}:{}),countdownIn:this.phase==='countdown'?Math.max(0,this.countdownUntil-this.time):0,ownerId:this.ownerId,teamScores:this.teamScores,pickups:this.pickups,map:withMap?this.map:undefined,mapId:this.map.id,time:this.time,winner:this.winner,rematchIn:this.phase==='results'?Math.max(0,this.rematchUntil-this.time):0,rematchVotes:[...this.rematchVotes],botSkill:this.botSkill,rematchNeeded:this.phase==='results'?this.rematchNeeded():0,players:[...this.players.values()].map(({id,slot,skin,vehicle,bot,name,x,y,a,aim,hp,kills,deaths,damageDealt,shots,hits,streak,connected,respawnAt,shieldUntil,life,team,power,powerUntil,reaction,medals,level,crown})=>({id,slot,...(crown?{crown:true}:{}),...(vehicle&&vehicle!=='standard'?{vehicle}:{}),...(skin&&skin!=='classic'?{skin}:{}),bot,name,x,y,a,aim,hp,kills,deaths,...(matchEnded?{damageDealt,reaction:reaction?.until>this.time?reaction.value:null,...(medals&&Object.keys(medals).length?{medals}:{})}:{}),...(level&&this.phase!=='playing'&&this.phase!=='countdown'?{level}:{}),shots,hits,streak,connected,respawnIn:Math.max(0,respawnAt-this.time),shield:shieldUntil>this.time,life,team,power,powerRemaining:Math.max(0,powerUntil-this.time)})),shells:this.shells.map(({id,x,y,slot})=>({id,x,y,slot})),events:this.events};
   }
 }
 // Snapshots go out 30 times a second; tenths of a unit (hundredths of a radian for angles) look identical and are a quarter smaller.

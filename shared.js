@@ -1,6 +1,6 @@
 (function(root) {
   const data = {
-    version:'3.10.0',maxHealth:10,laserDamage:4,laserRadius:6,barrelLength:40,doubleBarrelOffset:6,turretHeight:28,
+    version:'3.11.0',maxHealth:10,laserDamage:4,laserRadius:6,barrelLength:40,doubleBarrelOffset:6,turretHeight:28,
     mapLabels:{quarry:'Quarry',crossroads:'Crossroads'},
     // Badges with a stat and target unlock from lifetime totals and show progress in the Garage.
     achievements:[
@@ -15,7 +15,9 @@
       {id:'giant-slayer',name:'Giant slayer',description:'Earn 5 Shutdown medals.',stat:'medal:shutdown',target:5},
       {id:'veteran',name:'Veteran',description:'Finish 25 standard matches.',stat:'matches',target:25},
       {id:'centurion',name:'Centurion',description:'Destroy 100 tanks in standard matches.',stat:'kills',target:100},
-      {id:'sergeant',name:'Earn your stripes',description:'Reach Level 10.',stat:'level',target:10}
+      {id:'sergeant',name:'Earn your stripes',description:'Reach Level 10.',stat:'level',target:10},
+      {id:'dutiful',name:'On duty',description:'Complete 20 daily missions.',stat:'missions',target:20},
+      {id:'champion',name:'Weekly champion',description:'Finish a week at number one, then play a match wearing the crown.'}
     ],
     // Combat medals are decided by the server at the moment of a kill. They are praise, not power.
     medals:[
@@ -27,6 +29,20 @@
       {id:'trick-shot',name:'Trick Shot',description:'A kill with a bounced shell.'},
       {id:'clutch',name:'Clutch',description:'A kill while you are on your last point of health.'}
     ],
+    // Three of these are chosen for everyone each Malaysia day. They pay experience only.
+    dailyMissions:[
+      {id:'kills',name:'Tank buster',description:'Destroy 8 tanks.',target:8},
+      {id:'wins',name:'Winner',description:'Win a standard match.',target:1},
+      {id:'matches',name:'Regular',description:'Finish 2 standard matches.',target:2},
+      {id:'hits',name:'On target',description:'Land 20 hits.',target:20},
+      {id:'damage',name:'Heavy hitter',description:'Deal 30 damage.',target:30},
+      {id:'medals',name:'Decorated',description:'Earn 2 medals.',target:2},
+      {id:'ricochetHits',name:'Bank shot',description:'Land 3 bounced-shell hits.',target:3},
+      {id:'pickups',name:'Collector',description:'Collect 3 power-ups.',target:3},
+      {id:'sharp',name:'Steady aim',description:'Finish a match with 40% accuracy or better (10+ shots).',target:1},
+      {id:'survivor',name:'Survivor',description:'Finish a match destroyed 3 times or fewer.',target:1}
+    ],
+    missionsPerDay:3,missionXp:40,missionSweepXp:60,rivalLimit:30,
     multiKillWindow:4,
     // Experience is earned under the same rules as coins. Levels never change combat.
     xp:{completion:50,win:40,kill:6,killCap:15,medal:8,medalCap:10,firstOfDay:30,winStreak:10,winStreakCap:4},
@@ -86,6 +102,12 @@
     while(into>=data.levelNeed(level)){into-=data.levelNeed(level);level++;}
     const rank=[...data.ranks].reverse().find(r=>level>=r.level),next=data.ranks.find(r=>r.level>level);
     return {level,into,need:data.levelNeed(level),rank:rank.name,nextRank:next?{level:next.level,name:next.name}:null};
+  };
+  // The same three missions for everyone on a given day, chosen by the day number alone.
+  data.missionsFor=day=>{
+    let state=(Math.floor(day)*2654435761)>>>0;const pool=[...data.dailyMissions],picked=[];
+    while(picked.length<data.missionsPerDay&&pool.length){state=(Math.imul(state,1664525)+1013904223)>>>0;picked.push(pool.splice(state%pool.length,1)[0]);}
+    return picked;
   };
   data.medalName=id=>data.medals.find(m=>m.id===id)?.name||id;
   // Lifetime value behind a stat badge, from a player's saved statistics.
