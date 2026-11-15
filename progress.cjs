@@ -3,7 +3,7 @@ const fs=require('node:fs'),{randomBytes,createHash,randomInt}=require('node:cry
 const day=864e5,validSecret=value=>typeof value==='string'&&/^[a-f0-9]{48}$/.test(value);
 const dayNumber=now=>Math.floor((now+8*3600e3)/day);
 const weekNumber=now=>{const d=dayNumber(now);return d-((d+3)%7+7)%7;};
-const blank=()=>({coins:0,owned:['classic'],equipped:'classic',achievements:{},weekly:{},daily:{step:0,lastDay:null,graceUsed:false,longest:0,streak:0},credited:{},transactions:[],pending:null,stats:{matches:0,wins:0,kills:0,bestKills:0,earned:0,weeklyCompleted:0,weeklyCoins:0,firstDay:null,nextDayReturn:false,day7Return:false,firstPurchaseMatches:null}});
+const blank=()=>({coins:0,xp:0,owned:['classic'],equipped:'classic',achievements:{},weekly:{},daily:{step:0,lastDay:null,graceUsed:false,longest:0,streak:0},credited:{},transactions:[],pending:null,stats:{matches:0,wins:0,kills:0,bestKills:0,winStreak:0,bestWinStreak:0,medals:{},earned:0,weeklyCompleted:0,weeklyCoins:0,firstDay:null,nextDayReturn:false,day7Return:false,firstPurchaseMatches:null}});
 class Progress {
   constructor(file=null,{now=Date.now,random=randomInt}={}){
     this.file=file;this.now=now;this.random=random;this.players=new Map();
@@ -13,7 +13,10 @@ class Progress {
       for(const [id,p]of data.players){
         if(!/^[a-f0-9]{64}$/.test(id)||!Number.isSafeInteger(p?.coins)||p.coins<0||!Array.isArray(p.owned)||!p.owned.includes('classic')||!p.owned.includes(p.equipped)||!p.daily||!p.credited)throw Error('Invalid player progress file. Restore a backup before starting.');
         if(p.weekly!==undefined&&(!p.weekly||typeof p.weekly!=='object'||Array.isArray(p.weekly)||Object.entries(p.weekly).some(([week,value])=>! /^-?\d+$/.test(week)||!value||F.weeklyChallenges.some(c=>!Number.isSafeInteger(value[c.id])||value[c.id]<0)||!Array.isArray(value.completed)||value.completed.some(id=>typeof id!=='string'))))throw Error('Invalid weekly progress. Restore a backup before starting.');
-        this.players.set(id,{...blank(),...p,stats:{...blank().stats,...p.stats}});
+        const stats={...blank().stats,...p.stats};
+        if(p.xp!==undefined&&(!Number.isSafeInteger(p.xp)||p.xp<0)||!stats.medals||typeof stats.medals!=='object'||Array.isArray(stats.medals))throw Error('Invalid player experience. Restore a backup before starting.');
+        // Players from before levels start with experience for the matches they already finished.
+        this.players.set(id,{...blank(),...p,xp:p.xp??stats.matches*F.xp.completion+stats.wins*F.xp.win+Math.min(stats.kills,stats.matches*F.xp.killCap)*F.xp.kill,stats});
       }
     }
   }
@@ -28,6 +31,7 @@ class Progress {
   edit(id){const p=JSON.parse(JSON.stringify(this.players.get(id)||blank()));this.players.set(id,p);return p;}
   ensure(id){if(!this.players.has(id))this.commit(()=>this.players.set(id,blank()));return this.view(id);}
   skinOf(id){return this.players.get(id)?.equipped||'classic';}
+  levelOf(id){return F.levelOf(this.players.get(id)?.xp||0).level;}
   vehicleOf(id){return F.vehicleOf(this.players.get(id)?.selectedVehicle).id;}
   selectVehicle(id,vehicle){
     if(!F.vehicles.some(v=>v.id===vehicle))throw Error('Unknown vehicle.');
@@ -44,7 +48,7 @@ class Progress {
     const week=weekNumber(this.now()),value=p.weekly[week];
     return {week,resetAt:(week+7)*day-8*3600e3,timezone:F.economy.timezone,challenges:F.weeklyChallenges.map(c=>({...c,progress:Math.min(c.target,value?.[c.id]||0),completed:value?.completed.includes(c.id)||false}))};
   }
-  view(id){const p=this.players.get(id)||blank();return {selectedVehicle:this.vehicleOf(id),coins:p.coins,owned:p.owned,equipped:p.equipped,achievements:{...(p.stats.wins>0?{'first-win':{t:null}}:{}),...p.achievements},weekly:this.weeklyState(p),daily:this.dailyState(p),pending:p.pending,stats:p.stats,persistent:!!this.file};}
+  view(id){const p=this.players.get(id)||blank();return {selectedVehicle:this.vehicleOf(id),xp:p.xp,level:F.levelOf(p.xp),coins:p.coins,owned:p.owned,equipped:p.equipped,achievements:{...(p.stats.wins>0?{'first-win':{t:null}}:{}),...p.achievements},weekly:this.weeklyState(p),daily:this.dailyState(p),pending:p.pending,stats:p.stats,persistent:!!this.file};}
   transaction(p,type,coins,extra={}){p.transactions.push({t:this.now(),type,coins,...extra});p.transactions=p.transactions.slice(-100);}
   buy(id,skinId){
     const skin=F.skins.find(s=>s.id===skinId);if(!skin)throw Error('Unknown skin.');
@@ -75,7 +79,9 @@ class Progress {
         const participated=(player.activeSeconds||0)>=Math.min(10,Math.max(2,(room.time-(player.joinedRoundAt??room.roundStarted??room.time))*.1));
         const reason=!eligible?'Practice match · Standard rules earn coins':player.left?'Left early · Finish the match to earn coins':!player.connected?'Disconnected at match end':!participated?'No coins · Participate in the battle':'';
         const won=!reason&&(room.settings.mode==='teams'?player.team!=null&&player.team===room.winner.team:player.id===room.winner.id);
-        const reward={round:room.roundId,completion:reason?0:F.economy.completion,victory:won?F.economy.win:0,kills:reason?0:Math.max(0,Math.min(F.economy.killCap,Math.floor(player.kills)||0))*F.economy.kill,daily:null,weekly:[],skin:null,reason,highlights:[]};
+        const reward={round:room.roundId,completion:reason?0:F.economy.completion,victory:won?F.economy.win:0,kills:reason?0:Math.max(0,Math.min(F.economy.killCap,Math.floor(player.kills)||0))*F.economy.kill,daily:null,weekly:[],skin:null,reason,highlights:[],xp:null,medals:{},winStreak:0};
+        // Leaving or dropping out of a standard match ends a win streak, so streaks cannot be protected by quitting.
+        if(reason&&eligible&&(player.left||!player.connected))p.stats.winStreak=0;
         if(!reason){
           const week=weekNumber(room.rewardAt??this.now()),w=p.weekly[week]??={matches:0,wins:0,ricochetHits:0,completed:[]},gains={matches:1,wins:won?1:0,ricochetHits:Math.max(0,Math.floor(player.ricochetHits)||0)};
           for(const challenge of F.weeklyChallenges){
@@ -98,8 +104,17 @@ class Progress {
           }
           p.stats.firstDay??=today;p.stats.nextDayReturn||=today===p.stats.firstDay+1;p.stats.day7Return||=today===p.stats.firstDay+7;
           p.stats.matches++;p.stats.wins+=won?1:0;p.stats.kills+=Math.max(0,Math.floor(player.kills)||0);p.stats.bestKills=Math.max(p.stats.bestKills,player.kills||0);
+          // Medals, win streak and experience. Levels are status only: no coins and no combat effect.
+          let medalCount=0;
+          for(const medal of F.medals){const n=Math.max(0,Math.floor(player.medals?.[medal.id])||0);if(!n)continue;reward.medals[medal.id]=n;medalCount+=n;p.stats.medals[medal.id]=(p.stats.medals[medal.id]||0)+n;}
+          p.stats.winStreak=won?p.stats.winStreak+1:0;p.stats.bestWinStreak=Math.max(p.stats.bestWinStreak,p.stats.winStreak);reward.winStreak=p.stats.winStreak;
+          const X=F.xp,before=F.levelOf(p.xp),xp={completion:X.completion,victory:won?X.win:0,kills:Math.max(0,Math.min(X.killCap,Math.floor(player.kills)||0))*X.kill,medals:Math.min(X.medalCap,medalCount)*X.medal,streak:won?Math.min(X.winStreakCap,p.stats.winStreak-1)*X.winStreak:0,daily:reward.daily?X.firstOfDay:0};
+          xp.total=xp.completion+xp.victory+xp.kills+xp.medals+xp.streak+xp.daily;p.xp+=xp.total;
+          const after=F.levelOf(p.xp);reward.xp={...xp,before,after,levelUp:after.level>before.level,promotion:after.rank!==before.rank?after.rank:null};
+          if(won&&!(player.deaths>0)&&!p.achievements.flawless)unlock('flawless','Flawless victory!','Won without being destroyed.');
+          for(const badge of F.achievements)if(badge.stat&&!p.achievements[badge.id]&&F.statValue(p.stats,badge.stat,after.level)>=badge.target)unlock(badge.id,badge.name+' unlocked',badge.description);
         }
-        const priority={'comeback':0,'first-win':1,'personal-best':2,'sharpshooter':3};reward.highlights.sort((a,b)=>priority[a.id]-priority[b.id]);reward.highlights=reward.highlights.slice(0,2);
+        const priority={'comeback':0,'first-win':1,'flawless':2,'personal-best':3,'sharpshooter':4};reward.highlights.sort((a,b)=>(priority[a.id]??5)-(priority[b.id]??5));reward.highlights=reward.highlights.slice(0,2);
         reward.total=reward.completion+reward.victory+reward.kills+(reward.daily?.coins||0)+(reward.daily?.collectionBonus||0)+reward.weekly.reduce((n,c)=>n+c.coins,0);
         p.coins+=reward.total;p.stats.earned+=reward.total;p.credited[room.roundId]=1;p.pending=reward;
         this.transaction(p,'match',reward.total,{round:room.roundId});rewards.set(player.id,{reward,progress:this.view(player.profileId)});

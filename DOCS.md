@@ -69,7 +69,7 @@ v3.7.0 adds one server-generated layout, Crossroads, beside the original seeded 
 1. The app log should show listeners on game port `8765` and internal ingress port `8099`.
 2. Open **Web UI**: the lobby, banner and room list should load.
 3. Open `http://YOUR_PI_IP:8765` on two devices. Create and join one arena, set a win count between 5 and 50 (default 10), start a round, move, shoot, and confirm sound after interacting.
-4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `3.9.1`.
+4. Check `http://YOUR_PI_IP:8765/health`; it should return `status: ok` and game version `3.10.0`.
 5. Test an invitation generated from the sidebar after setting `public_url`.
 
 ## Updates
@@ -123,6 +123,16 @@ Fair-use limits protect the server from one visitor filling it: each address can
 
 The container uses the maintained `node:22-alpine` tag; patch updates may change the underlying image on future rebuilds. ARM64 build success and real-device performance are separate checks.
 
+
+## Link previews and sharing (v3.10.0)
+
+The game page carries Open Graph and Twitter tags so WhatsApp, Telegram and similar apps show a title, description and the 1200×630 picture `/og-image.jpg` beside a shared link. Chat apps fetch the page from the Internet, so previews only work for a public address. The tags use `public_url` when it is set; otherwise they use the host the visitor requested, with `https` when the tunnel sends `X-Forwarded-Proto: https` (Cloudflare does). Setting `public_url` to your tunnel address is the reliable choice. The Home Assistant sidebar copy carries no preview tags.
+
+Chat apps cache previews, sometimes for days. To see a change, share the link with a harmless query such as `?v=2`.
+
+After changing the home artwork, regenerate the picture with `npx -y -p playwright node tools/og-image.cjs`, keep it under about 300 KB, and commit it. It is listed in the server's file map and the Dockerfile.
+
+Levels, experience, medal totals and win streaks are saved in `player-progress.json` with coins and skins, and restore with the same recovery code. Resetting the leaderboard does not reset them.
 
 ## Private vehicle-class pilot (v3.9.0)
 

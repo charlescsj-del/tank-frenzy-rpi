@@ -23,7 +23,10 @@ function renderProgressHome(){
   const weekly=p.weekly?.challenges||[];$('weeklyHome').textContent=p.enabled===false?'Weekly challenges paused':'Weekly challenges · '+weekly.filter(c=>c.completed).length+'/'+weekly.length+' complete →';
   $('progressHomeNote').textContent=p.persistent?'Play matches. Earn coins. Make it yours.':'Progress lasts for this server session. Ask the host to enable permanent storage.';
   $('progressHome').hidden=spectating;
+  const level=p.level;$('levelHome').hidden=!level;
+  if(level){$('levelHomeTitle').textContent='Level '+level.level+' · '+level.rank;$('levelHomeFill').style.width=xpPercent(level)+'%';$('levelHomeNote').textContent=(level.need-level.into)+' XP to Level '+(level.level+1);$('levelHome').setAttribute('aria-label','Level '+level.level+', '+level.rank+'. '+(level.need-level.into)+' experience to the next level. Open badges.');}
 }
+const xpPercent=level=>Math.max(0,Math.min(100,Math.round(100*level.into/level.need)));
 function renderDaily(){
   const p=playerProgress;$('dailyDays').replaceChildren();if(!p)return;
   for(let i=1;i<=7;i++){
@@ -67,6 +70,8 @@ function renderGarage(){
   $('garageAction').textContent=garageBusy?'Saving…':equipped?'Equipped ✓':owned?'Equip':p?.enabled===false?'Purchases paused':need>0?'Need '+need+' more coins':'Buy · '+skin.price+' coins';
   renderVehicles();renderDaily();renderWeekly();
   $('garageStats').textContent=p?p.stats.matches+' completed matches · '+p.stats.wins+' wins · Best: '+p.stats.bestKills+' kills · Longest streak: '+p.daily.longest+' days':'';
+  const level=p?.level;$('garageLevel').hidden=!level;
+  if(level){$('garageLevelTitle').textContent='Level '+level.level+' · '+level.rank;$('garageLevelNote').textContent=level.into+' / '+level.need+' XP'+(level.nextRank?' · '+level.nextRank.name+' at Level '+level.nextRank.level:'');$('garageLevelFill').style.width=xpPercent(level)+'%';$('garageLevelBar').setAttribute('aria-valuenow',String(xpPercent(level)));$('garageLevelBar').setAttribute('aria-label','Progress to Level '+(level.level+1));}
   renderAchievements();
 }
 function renderVehicles(){
@@ -93,6 +98,7 @@ function renderAchievements(){
     const earned=Boolean(playerProgress?.achievements?.[badge.id]),item=document.createElement('div'),copy=document.createElement('div'),name=document.createElement('strong'),detail=document.createElement('small');
     item.className='achievement-item'+(earned?'':' locked');name.textContent=badge.name+(earned?' · Earned ✓':'');detail.textContent=badge.description;copy.append(name,detail);
     if(document.createElementNS){const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg'),use=document.createElementNS(ns,'use');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('class','ui-icon');svg.setAttribute('aria-hidden','true');use.setAttribute('href','#ui-trophy');svg.append(use);item.append(svg);}
+    if(!earned&&badge.stat&&badge.target>1&&playerProgress){const value=Math.min(badge.target,FIELD.statValue(playerProgress.stats,badge.stat,playerProgress.level?.level)),bar=document.createElement('progress');bar.max=badge.target;bar.value=value;bar.setAttribute('aria-label',badge.name+' '+value+' of '+badge.target);detail.textContent=badge.description+' · '+value+' / '+badge.target;copy.append(bar);}
     item.append(copy);$('achievementList').append(item);
   }
 }
@@ -124,10 +130,52 @@ function showMatchRewards(result){
   $('rewardTotal').textContent='+'+r.total+' coins';
   $('rewardBreakdown').textContent=r.reason||['Completed +'+r.completion,r.victory?'Victory +'+r.victory:'',r.kills?'Kills +'+r.kills:'',r.daily?'Day '+r.daily.day+' +'+r.daily.coins:'',r.daily?.collectionBonus?'Full collection +'+r.daily.collectionBonus:''].filter(Boolean).join(' · ');
   $('rewardWeekly').hidden=!r.weekly?.length;$('rewardWeekly').textContent=(r.weekly||[]).map(c=>'Weekly: '+c.name+' +'+c.coins).join(' · ');
+  showExperience(r);
+  const medals=medalSummary(r.medals);$('rewardMedals').hidden=!medals;$('rewardMedals').textContent=medals?'Medals · '+medals:'';
+  const next=nextGoals();$('rewardNext').hidden=!next;$('rewardNext').textContent=next?'Next · '+next:'';
+  $('shareResult').hidden=!r.xp;$('shareResult').textContent='Share result';
   const skin=FIELD.skins.find(s=>s.id===r.skin);$('rewardSkin').hidden=!skin;$('equipRewardSkin').hidden=!skin;
   if(skin){$('rewardSkin').replaceChildren(TankSkins.portrait(lastTankSlot,skin.id));const text=document.createElement('span');text.textContent='Day 7 unlocked · '+skin.name+' · Yours forever';$('rewardSkin').append(text);$('equipRewardSkin').textContent=playerProgress?.equipped===skin.id?'Equipped ✓':'Equip '+skin.name;$('equipRewardSkin').disabled=playerProgress?.equipped===skin.id;}
   $('rewardProtect').hidden=!playerProgress?.stats.matches||Boolean(localStorageSafe('tank-frenzy-recovery-saved')); 
 }
+const medalSummary=medals=>FIELD.medals.filter(m=>medals?.[m.id]).map(m=>m.name+(medals[m.id]>1?' ×'+medals[m.id]:'')).join(' · ');
+let xpTimer=null;
+// Fill the bar from where the player stood to where they stand now; a new level refills from empty.
+function showExperience(r){
+  const xp=r.xp;$('rewardXp').hidden=!xp;clearTimeout(xpTimer);if(!xp)return;
+  const fill=$('rewardXpFill'),set=level=>{fill.style.width=xpPercent(level)+'%';$('rewardXpBar').setAttribute('aria-valuenow',String(xpPercent(level)));};
+  $('rewardXp').classList.toggle('level-up',xp.levelUp);
+  $('rewardXpTitle').textContent=(xp.levelUp?'LEVEL UP! ':'')+'Level '+xp.after.level+' · '+xp.after.rank;$('rewardXpGain').textContent='+'+xp.total+' XP';
+  const note=[xp.promotion?'Promoted to '+xp.promotion+'!':'',r.winStreak>=2?r.winStreak+' wins in a row · +'+xp.streak+' XP':''].filter(Boolean).join(' ');$('rewardXpNote').textContent=note;$('rewardXpNote').hidden=!note;
+  $('rewardXpBar').setAttribute('aria-label','Experience towards Level '+(xp.after.level+1));
+  if(reducedMotion||typeof requestAnimationFrame!=='function'){set(xp.after);return;}
+  set(xp.before);
+  requestAnimationFrame(()=>{
+    if(!xp.levelUp){set(xp.after);return;}
+    fill.style.width='100%';xpTimer=setTimeout(()=>{fill.style.transition='none';fill.style.width='0%';void fill.offsetWidth;fill.style.transition='';set(xp.after);},750);
+  });
+}
+// One short line of what is closest: the next level and the nearest unfinished weekly goal.
+function nextGoals(){
+  const p=playerProgress;if(!p?.level)return'';
+  const goals=[(p.level.need-p.level.into)+' XP to Level '+(p.level.level+1)];
+  const weekly=(p.weekly?.challenges||[]).filter(c=>!c.completed).sort((a,b)=>(a.target-a.progress)/a.target-(b.target-b.progress)/b.target)[0];
+  if(weekly&&p.enabled!==false)goals.push(weekly.name+' '+weekly.progress+'/'+weekly.target+' (+'+weekly.coins+' coins)');
+  return goals.join(' · ');
+}
+function resultShareText(){
+  const me=latest?.players.find(p=>p.id===myId),r=lastResult?.reward;if(!me||!latest?.winner)return'';
+  const won=latest.settings?.mode==='teams'?me.team===latest.winner.team:me.id===latest.winner.id,medals=medalSummary(r?.medals);
+  return (won?'🏆 Victory':'💥 Good battle')+' in Tank Frenzy! '+me.kills+(me.kills===1?' kill':' kills')+' · '+me.deaths+(me.deaths===1?' death':' deaths')+(me.shots?' · 🎯 '+Math.round(100*Math.min(me.hits,me.shots)/me.shots)+'%':'')+(medals?' · 🏅 '+medals:'')+(playerProgress?.level?' · Level '+playerProgress.level.level+' '+playerProgress.level.rank:'')+'\nCan you beat me?';
+}
+$('shareResult').addEventListener('click',async()=>{
+  const text=resultShareText(),url=networkBase+'/';if(!text)return;
+  try{
+    if(navigator.share){await navigator.share({title:'Tank Frenzy',text,url});return;}
+    await navigator.clipboard.writeText(text+' '+url);$('shareResult').textContent='Copied · Paste it anywhere ✓';
+  }catch(error){if(error?.name!=='AbortError')$('shareResult').textContent='Sharing is unavailable here';}
+});
+$('levelHome').addEventListener('click',async()=>{await openGarage();if(garageOpen)$('garageLevel').scrollIntoView?.({block:'center'});});
 function localStorageSafe(key){try{return localStorage.getItem(key);}catch{return null;}}
 $('equipRewardSkin').addEventListener('click',async()=>{const skin=lastResult?.reward?.skin;if(!skin)return;try{await playerAction('equip',{skin});showMatchRewards(lastResult);}catch(error){$('rewardBreakdown').textContent=error.message;}});
 $('rewardProtect').addEventListener('click',()=>{$('profileButton').click();});

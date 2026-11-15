@@ -188,7 +188,49 @@ function sendInput(){
   if(!joined||(latest&&latest.phase!=='playing'))return;
   const me=tanks.find(t=>t.id===myId);
   const aim=touchAim?{x:(me?.x??500)+touchAim.x*150,y:(me?.y??330)+touchAim.y*150}:pointer.active?pointer:{x:(me?.x??500)+Math.cos(me?.aim||0)*150,y:(me?.y??330)+Math.sin(me?.aim||0)*150};
-  send({type:'input',seq:++seq,x:Math.max(-1,Math.min(1,sticks.move.x+Number(keys.has('KeyD'))-Number(keys.has('KeyA')))),y:Math.max(-1,Math.min(1,sticks.move.y+Number(keys.has('KeyS'))-Number(keys.has('KeyW')))),aimX:aim.x,aimY:aim.y,fire:firing||Math.hypot(sticks.aim.x,sticks.aim.y)>0});
+  const move=moveInput();
+  // Count the time up to this change with the old input, so a press or release between two frames is exact.
+  if(predicted.active&&me){const now=performance.now();advancePrediction(me,now);rememberPrediction(now);predicted.input=move;}
+  send({type:'input',seq:++seq,x:move.x,y:move.y,aimX:aim.x,aimY:aim.y,fire:firing||Math.hypot(sticks.aim.x,sticks.aim.y)>0});
+}
+function moveInput(){return {x:Math.max(-1,Math.min(1,sticks.move.x+Number(keys.has('KeyD'))-Number(keys.has('KeyA')))),y:Math.max(-1,Math.min(1,sticks.move.y+Number(keys.has('KeyS'))-Number(keys.has('KeyW'))))};}
+// Your own tank moves the moment you press, using the server's movement rules, instead of
+// waiting a round trip for the next snapshot. Each snapshot then eases the prediction toward
+// where the server says the tank was one round trip ago; the server stays in charge.
+const predicted={active:false,x:0,y:0,a:0,life:-1,at:0,input:{x:0,y:0},history:[]},pingSamples=[];
+function predictedBlocked(x,y,me){
+  return x<26||x>W-26||y<26||y>H-26||walls.some(w=>(x-Math.max(w.x,Math.min(w.x+w.w,x)))**2+(y-Math.max(w.y,Math.min(w.y+w.h,y)))**2<676)||tanks.some(t=>t.id!==me.id&&t.hp>0&&Math.hypot(x-t.targetX,y-t.targetY)<50);
+}
+// Move with the held input from the last update until now, in the server's 120 Hz steps.
+function advancePrediction(me,now){
+  if(now<=predicted.at)return;
+  const dt=Math.min(.25,(now-predicted.at)/1000),input=predicted.input,length=Math.hypot(input.x,input.y);predicted.at=now;
+  if(!length)return;
+  const speed=FIELD.vehicleOf(me.vehicle).speed*(latest.settings?.powers!==false&&me.power==='speed'&&me.powerRemaining>0?1.6:1),steps=Math.max(1,Math.round(dt*120)),dx=input.x/length*speed*dt/steps,dy=input.y/length*speed*dt/steps;
+  predicted.a=Math.atan2(dy,dx);
+  for(let i=0;i<steps;i++){if(!predictedBlocked(predicted.x+dx,predicted.y,me))predicted.x+=dx;if(!predictedBlocked(predicted.x,predicted.y+dy,me))predicted.y+=dy;}
+}
+function predictOwnTank(me,now){
+  const usable=joined&&!spectating&&latest?.phase==='playing'&&me.hp>0;
+  if(!usable||!predicted.active||predicted.life!==me.life){Object.assign(predicted,{active:usable,x:me.targetX,y:me.targetY,a:me.a,life:me.life,at:now,input:moveInput(),history:[]});if(!usable)return false;}
+  advancePrediction(me,now);rememberPrediction(now);predicted.input=moveInput();
+  me.x=predicted.x;me.y=predicted.y;me.a=predicted.a;return true;
+}
+// One second of where the prediction was, with an entry at every input change so starts and stops are exact.
+function rememberPrediction(now){
+  const h=predicted.history;if(h.length&&h[h.length-1].t>=now)return;
+  h.push({t:now,x:predicted.x,y:predicted.y});while(h.length>2&&now-h[1].t>1000)h.shift();
+}
+function reconcileOwnTank(me,now){
+  if(!predicted.active||predicted.life!==me.life||!predicted.history.length)return;
+  // The snapshot reflects the inputs sent one round trip ago, so compare with the prediction from then.
+  // A busy frame can only inflate a ping reading, so the lowest recent one is the honest delay;
+  // the server then waits half of its 60 Hz loop on average before using an input.
+  const at=now-Math.min(400,(pingSamples.length?Math.min(...pingSamples):80)+8),h=predicted.history;let i=0;
+  while(i<h.length-1&&h[i+1].t<=at)i++;
+  const a=h[i],b=h[i+1],k=b&&at>a.t?(at-a.t)/(b.t-a.t):0,pastX=a.x+((b?.x??a.x)-a.x)*k,pastY=a.y+((b?.y??a.y)-a.y)*k;
+  const ex=me.targetX-pastX,ey=me.targetY-pastY,error=Math.hypot(ex,ey);if(error<.4)return;
+  const gain=error>90?1:.2;predicted.x+=ex*gain;predicted.y+=ey*gain;for(const entry of predicted.history){entry.x+=ex*gain;entry.y+=ey*gain;}
 }
 function resetForRequeue(){
   release();resetResultDamage();closeLeaveDialog();setArenaMenu(false);if(profileOpen)closeProfile();if(shareOpen)closeShare();if(typeof garageOpen!=='undefined'&&garageOpen&&typeof closeGarage==='function')closeGarage();
@@ -223,7 +265,7 @@ function connect(){
       history.replaceState(null,'','?room='+encodeURIComponent(roomCode));sendInput();
     }else if(data.type==='state'){applySnapshot(data);}
     else if(data.type==='result'){lastResult=data;if(typeof receiveProgress==='function')receiveProgress(data.progress);renderRankChange();}
-    else if(data.type==='pong'){const value=performance.now()-data.sent;if(Number.isFinite(value)&&value>=0){pingMs=Math.round(value);pingAt=performance.now();$('latency').textContent=pingMs+' MS';updatePing();}}
+    else if(data.type==='pong'){const value=performance.now()-data.sent;if(Number.isFinite(value)&&value>=0){pingMs=Math.round(value);pingAt=performance.now();pingSamples.push(value);if(pingSamples.length>5)pingSamples.shift();$('latency').textContent=pingMs+' MS';updatePing();}}
     else if(data.type==='queue-error'){$('groupError').textContent=data.message||'Your group could not queue. Try again.';$('groupError').hidden=false;if(latest)updateRoomPhase(latest);}
     else if(data.type==='error'){
       const requeue=data.code==='session_expired'&&latest?.quick&&['searching','ready'].includes(latest.phase);
@@ -284,7 +326,8 @@ function leave({keepFullscreen=false}={}){
 }
 function applySnapshot(data){
   if(spectating&&spectatorFinished)return;
-  latest=data;lastSnapshot=performance.now();
+  const arrived=performance.now(),snapshotGap=Math.max(1,Math.min(3,Math.round((arrived-lastSnapshot)*.03)))/30;
+  latest=data;lastSnapshot=arrived;
   if(data.map)mapLayout=typeof data.map.layout==='string'&&Object.prototype.hasOwnProperty.call(FIELD.mapLabels,data.map.layout)?data.map.layout:null;
   updateMatchSounds(data);
   pickups=data.pickups||[];
@@ -295,8 +338,10 @@ function applySnapshot(data){
     return {...p,x:before&&before.life===p.life?before.x:p.x,y:before&&before.life===p.life?before.y:p.y,
       targetX:p.x,targetY:p.y,recoil:before?.recoil||0,flash:before?.flash||0,track:before?.track||0};
   });
+  const mine=tanks.find(t=>t.id===myId);if(mine)reconcileOwnTank(mine,arrived);
+  // Shells arrive 30 times a second; remember their speed so frames in between can keep them moving.
   const oldShells=new Map(shells.map(s=>[s.id,s]));
-  shells=data.shells.map(s=>({...s,trail:oldShells.get(s.id)?.trail||[]}));
+  shells=data.shells.map(s=>{const old=oldShells.get(s.id);return {...s,sx:s.x,sy:s.y,vx:old?(s.x-old.sx)/snapshotGap:0,vy:old?(s.y-old.sy)/snapshotGap:0,trail:old?.trail||[]};});
   for(const e of data.events){if(e.id<=lastEvent)continue;lastEvent=e.id;
     if(e.type==='shot'){const t=tanks.find(t=>t.id===e.player);if(t)t.recoil=5;burst(e.x,e.y,22,shellColors[e.slot].glow,5);playShotSound(e);}
     if(e.type==='bounce'){burst(e.x,e.y,22,shellColors[e.slot].glow,4);if(!playEffect('ricochet',e,{volume:.5,interval:.075,vary:true}))beep(850,.09,'sine',.025);}
@@ -333,6 +378,7 @@ function tankPortrait(slot,skin='classic',vehicle='standard'){
   }
   return art;
 }
+function levelChip(level){const chip=document.createElement('span');chip.className='level-chip';chip.textContent='LV '+level;chip.setAttribute('aria-label','Level '+level);return chip;}
 function renderMatchmaking(data){
   const searching=data.phase==='searching';$('matchmakingTitle').textContent=searching?'Finding opponents':'Get ready!';
   $('matchmaking').classList.toggle('is-ready',!searching);
@@ -344,13 +390,13 @@ function renderMatchmaking(data){
   $('matchmakingTime').textContent=searching?'Finding a match · '+seconds+'s':String(seconds);
   $('matchmakingTime').setAttribute('aria-label',searching?'Finding a match':`Entering the field in ${seconds} seconds`);
   const ready=(data.readyIds||[]).includes(myId);$('readyButton').hidden=searching;$('readyButton').disabled=ready;$('readyButton').textContent=ready?'READY ✓':'READY';
-  const signature=JSON.stringify([data.phase,data.players.map(p=>[p.id,p.name,p.slot,p.skin,p.vehicle,p.bot,p.team]),data.readyIds]);
+  const signature=JSON.stringify([data.phase,data.players.map(p=>[p.id,p.name,p.slot,p.skin,p.vehicle,p.bot,p.team,p.level]),data.readyIds]);
   if($('matchmakingPlayers').signature===signature)return;$('matchmakingPlayers').signature=signature;$('matchmakingPlayers').replaceChildren();
   const players=data.settings?.mode==='teams'?[...data.players].sort((a,b)=>(a.team??0)-(b.team??0)):data.players;
   for(let i=0;i<4;i++){
     const p=players[i],card=document.createElement('div');card.className='match-player'+(p?.id===myId?' is-you':'')+(!p?' is-searching':'');
     const name=document.createElement('strong'),detail=document.createElement('small');
-    if(p){card.append(tankPortrait(p.slot,p.skin,p.vehicle));name.textContent=p.name+(p.id===myId?' · YOU':'');detail.textContent=(data.ruleset==='vehicle-test'?FIELD.vehicleOf(p.vehicle).name+' · ':'')+(p.bot?'AI · ':'')+(p.team!=null?(p.team===0?'ORANGE':'BLUE')+' TEAM · ':'')+(p.bot||(data.readyIds||[]).includes(p.id)?'READY ✓':'MATCHED');}
+    if(p){card.append(tankPortrait(p.slot,p.skin,p.vehicle));name.textContent=p.name+(p.id===myId?' · YOU':'');if(p.level)name.append(levelChip(p.level));detail.textContent=(data.ruleset==='vehicle-test'?FIELD.vehicleOf(p.vehicle).name+' · ':'')+(p.bot?'AI · ':'')+(p.team!=null?(p.team===0?'ORANGE':'BLUE')+' TEAM · ':'')+(p.bot||(data.readyIds||[]).includes(p.id)?'READY ✓':'MATCHED');}
     else{const radar=document.createElement('span');radar.className='search-radar';card.append(radar);name.textContent='Searching…';detail.textContent='Finding your rival';}
     card.append(name,detail);$('matchmakingPlayers').append(card);
   }
@@ -451,12 +497,12 @@ function updateRoomPhase(data){
     $('results').classList.add('spectator-results');
   }
   if(waiting){
-    const signature=JSON.stringify([data.ownerId,data.readyIds,data.settings,data.private,data.players.map(p=>[p.id,p.name,p.skin,p.vehicle,p.connected,p.team,p.bot])]);
+    const signature=JSON.stringify([data.ownerId,data.readyIds,data.settings,data.private,data.players.map(p=>[p.id,p.name,p.skin,p.vehicle,p.connected,p.team,p.bot,p.level])]);
     if(signature!==waitingSignature){
       waitingSignature=signature;$('waitingPlayers').replaceChildren();
       for(const p of data.players){
         const item=document.createElement('li');item.style.setProperty('--tank',colors[p.slot]);
-        const name=document.createElement('strong'),detail=document.createElement('small');name.textContent=p.name+(p.id===myId?' · YOU':'');detail.textContent=(data.ruleset==='vehicle-test'?FIELD.vehicleOf(p.vehicle).name+' · ':'')+(p.bot?'AI · ':'')+(p.team!=null?(p.team===0?'Orange':'Blue')+' team · ':'')+(p.id===data.ownerId?'HOST · ':'')+(p.connected?(p.bot||(data.readyIds||[]).includes(p.id)?'READY ✓':'Joined'):'Reconnecting');
+        const name=document.createElement('strong'),detail=document.createElement('small');name.textContent=p.name+(p.id===myId?' · YOU':'');if(p.level)name.append(levelChip(p.level));detail.textContent=(data.ruleset==='vehicle-test'?FIELD.vehicleOf(p.vehicle).name+' · ':'')+(p.bot?'AI · ':'')+(p.team!=null?(p.team===0?'Orange':'Blue')+' team · ':'')+(p.id===data.ownerId?'HOST · ':'')+(p.connected?(p.bot||(data.readyIds||[]).includes(p.id)?'READY ✓':'Joined'):'Reconnecting');
         const copy=document.createElement('span');copy.append(name,detail);item.append(tankPortrait(p.slot,p.skin,p.vehicle),copy);
         if(data.ownerId===myId&&p.team!=null){const swap=document.createElement('button');swap.type='button';swap.className='tool team-swap';swap.textContent='⇄';swap.setAttribute('aria-label','Swap '+p.name+' to the other team');swap.addEventListener('click',()=>send({type:'room',action:'team',player:p.id,team:1-p.team}));item.append(swap);}
         $('waitingPlayers').append(item);
@@ -587,8 +633,9 @@ fetch(appUrl('network-info')).then(r=>{if(!r.ok)throw Error();return r.json();})
 $('copy').addEventListener('click',async()=>{const invite=updateInvite();try{await navigator.clipboard.writeText(invite);$('copy').setAttribute('aria-label','Invite link copied');$('copy').title='Invite link copied';setTimeout(()=>{$('copy').setAttribute('aria-label','Share invite');$('copy').title='Share invite';},1800);}catch{$('networkNote').textContent='Invite link: '+invite;status('INVITE LINK SHOWN BELOW THE ARENA');}});
 let shareOpen=false;
 function closeShare(){shareOpen=false;$('shareDialog').hidden=true;$('shareRoom').focus();}
-$('shareRoom').addEventListener('click',()=>{release();shareOpen=true;$('shareDialog').hidden=false;$('shareTitle').textContent='Invite to '+roomCode;$('shareLink').value=updateInvite();$('shareStatus').textContent='Scan to join immediately. No code to type.';if(typeof TankQR!=='undefined')TankQR.draw($('shareQR'),$('shareLink').value);$('closeShare').focus();});
+$('shareRoom').addEventListener('click',()=>{release();shareOpen=true;$('shareDialog').hidden=false;$('shareTitle').textContent='Invite to '+roomCode;$('shareLink').value=updateInvite();$('shareStatus').textContent='Scan to join immediately. No code to type.';$('nativeShare').hidden=typeof navigator.share!=='function';if(typeof TankQR!=='undefined')TankQR.draw($('shareQR'),$('shareLink').value);$('closeShare').focus();});
 $('closeShare').addEventListener('click',closeShare);
+$('nativeShare').addEventListener('click',async()=>{try{await navigator.share({title:'Tank Frenzy',text:'Join my Tank Frenzy arena '+roomCode+'. Tap to play, nothing to install.',url:$('shareLink').value});$('shareStatus').textContent='Invitation shared';}catch(error){if(error?.name!=='AbortError')$('shareStatus').textContent='Sharing is unavailable. Copy the link instead.';}});
 $('shareDialog').addEventListener('click',e=>{if(e.target===$('shareDialog'))closeShare();});
 $('copyShare').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('shareLink').value);$('shareStatus').textContent='Invite link copied';}catch{$('shareLink').focus();$('shareLink').select?.();$('shareStatus').textContent='Copy the selected invite link';}});
 $('joinForm').addEventListener('submit',e=>{e.preventDefault();enterFullscreen();audioReady=true;playCue('menu');connect();});
@@ -890,6 +937,9 @@ function announceKill(e,players){
   const item=document.createElement('li');
   const tag=(player,fallback)=>{const name=document.createElement('b');name.textContent=player?.name||fallback;name.style.color=player?colors[player.slot]:'#6a765e';return name;};
   item.append(tag(killer,'Someone'),' 💥 ',tag(victim,'a tank'));
+  const medals=(Array.isArray(e.medals)?e.medals:[]).filter(id=>FIELD.medals.some(m=>m.id===id));
+  if(medals.length){const badge=document.createElement('em');badge.textContent=FIELD.medalName(medals.includes('triple-kill')?'triple-kill':medals.includes('double-kill')?'double-kill':medals[0]);item.append(badge);}
+  if(e.by===myId&&medals.length)showMedals(medals);
   if(e.by===myId||e.player===myId)item.className='mine';
   $('killFeed').prepend(item);
   while($('killFeed').children.length>4)$('killFeed').lastElementChild.remove();
@@ -899,6 +949,13 @@ function announceKill(e,players){
     $('streakBanner').textContent=(killer.id===myId?'You':killer.name)+' '+(killer.id===myId?call.replace(/^is /,'are '):call);
     $('streakBanner').hidden=false;clearTimeout(streakTimer);streakTimer=setTimeout(()=>{$('streakBanner').hidden=true;},2600);
   }
+}
+let medalTimer;
+// Your own medals pop up in the middle of the screen with a two-note chime.
+function showMedals(medals){
+  $('medalToast').textContent=medals.slice(0,3).map(id=>FIELD.medalName(id).toUpperCase()).join(' · ');
+  $('medalToast').hidden=false;clearTimeout(medalTimer);medalTimer=setTimeout(()=>{$('medalToast').hidden=true;},2400);
+  if(sound){beep(660,.09,'triangle',.05);setTimeout(()=>beep(990,.16,'triangle',.05),90);}
 }
 // Your own hits: fiery screen edges, a harder shake and, on phones that support it, a buzz.
 function feelHit(dead,damage){
@@ -1318,10 +1375,10 @@ function drawTank(t){
   }
 }
 function frame(time){
-  const dt=Math.min((time-last)/1000||0,.05);last=time;
+  const dt=Math.min((time-last)/1000||0,.05),clock=performance.now();last=time;
   const smoothing=1-Math.exp(-dt*25);let ownSpeed=0;
   for(const t of tanks){
-    const x=t.x,y=t.y;t.x+=(t.targetX-t.x)*smoothing;t.y+=(t.targetY-t.y)*smoothing;
+    const x=t.x,y=t.y;if(t.id!==myId||!predictOwnTank(t,clock)){t.x+=(t.targetX-t.x)*smoothing;t.y+=(t.targetY-t.y)*smoothing;}
     if(t.id===myId&&t.hp>0&&(keys.size>0||Math.hypot(sticks.move.x,sticks.move.y)>0))ownSpeed=Math.hypot(t.x-x,t.y-y)/Math.max(dt,.001);
     t.recoil=Math.max(0,t.recoil-28*dt);t.flash=Math.max(0,t.flash-dt);
     if(Math.hypot(t.x-x,t.y-y)>.1&&t.hp>0){t.track+=dt;if(t.track>.08){tracks.push({x:t.x,y:t.y,a:t.a,life:9});t.track=0;}}
@@ -1332,7 +1389,8 @@ function frame(time){
   beams=beams.filter(b=>(b.life-=dt)>0);
   pickupFlashes=pickupFlashes.filter(f=>(f.life-=dt)>0);
   floaters=floaters.filter(f=>(f.life-=dt)>0);rings=rings.filter(r=>(r.life-=dt)>0);hurt=Math.max(0,hurt-dt*1.1);
-  for(const s of shells){s.trail.push({x:s.x,y:s.y});if(s.trail.length>7)s.trail.shift();}
+  const shellAge=Math.max(0,Math.min(.05,(performance.now()-lastSnapshot)/1000));
+  for(const s of shells){if(s.sx!==undefined){s.x=Math.max(5,Math.min(W-5,s.sx+s.vx*shellAge));s.y=Math.max(5,Math.min(H-5,s.sy+s.vy*shellAge));}s.trail.push({x:s.x,y:s.y});if(s.trail.length>7)s.trail.shift();}
   tracks=tracks.filter(t=>(t.life-=dt)>0).slice(-500);updateEffects(dt);updateCamera();draw();requestAnimationFrame(frame);
 }
 new ResizeObserver(resize).observe(canvas);

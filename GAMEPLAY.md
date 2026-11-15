@@ -8,13 +8,40 @@ A playful, browser-based tank arena with chunky toy tanks, a sunny cartoon quarr
 
 On a phone, creating an arena and adding bots fit within the viewport. The map remains edge to edge during the countdown and on the result screen.
 
-Current release: **v3.9.1**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
+Current release: **v3.10.0**, also shown in the top-left corner of the arena browser artwork. See [CHANGELOG.md](CHANGELOG.md) for release notes. The version appears in several files; follow the release checklist in [AGENTS.md](AGENTS.md).
 
 The private admin page uses **system CPU and memory gauges**, with the game's share overlaid in orange from the zero end of each arc. CPU converts the game's one-core reading to a fraction of all cores; memory compares resident game memory with total RAM. Game percentages appear inside the gauges, with resident MiB in the memory gauge. Pi load shows 1-, 5- and 15-minute averages, values per CPU core and a 60-second history collected while the page is open. Core-count reference markers make load easier to interpret. Resource readings refresh once a second and are marked stale when disconnected; room views still refresh twice a second. See [DOCS.md](DOCS.md) for measurement details.
 
 See [SOUND_DESIGN.md](SOUND_DESIGN.md) for the approved cartoon arcade audio direction and implementation notes.
 
 The main-screen illustration animates with tank recoil, brief muzzle flashes and slow flying shells between shots. Reduced-motion preferences keep the illustration still. Animation pauses when the lobby or browser tab is hidden.
+
+## Levels, medals and sharing
+
+**Instant controls:** your own tank moves the moment you press a key or tilt the stick. The browser predicts your movement with the server's rules (speed, Speed power, walls, arena edges, other tanks) and then gently follows the server's position, which still decides everything: hits, scores and where every tank really is. On a slow connection your tank is drawn slightly ahead of where the server has it; when you stop, any small difference is eased away without a jump. Other tanks and shells are still drawn from the server's updates, with shells now gliding between them.
+
+**Combat medals** are awarded by the server at the moment of a kill:
+
+| Medal | How |
+| --- | --- |
+| First Blood | The first kill of the match |
+| Double Kill / Triple Kill | Two, then three or more kills within four seconds of each other, without being destroyed |
+| Revenge | Destroy the tank that last destroyed you |
+| Shutdown | End an opponent's streak of three or more kills |
+| Trick Shot | A kill with a bounced shell |
+| Clutch | A kill while you are on your last point of health |
+
+One kill can earn several. Your own medals appear as a banner with a short chime (Effects Off mutes it); every kill-feed line shows the main medal; your results list them. AI tanks can earn medals too. Medals give experience, not coins or power.
+
+**Levels and ranks:** every finished standard match gives experience: 50 for finishing, 40 for winning, 6 per kill (15 counted), 8 per medal (10 counted), 30 for your first match of the Malaysia day, and 10 for each extra win in a row (up to 40). The same rules as coins apply: standard settings, taking part, and staying to the end; practice matches, vehicle tests, idling and leaving earn none. Leaving or dropping out of a standard match also ends your win streak. Level 2 needs 80 experience, so your first finished match always levels you up; each level needs 40 more than the last, up to 600. Ranks: Recruit (1), Private (3), Corporal (6), Sergeant (10), Lieutenant (15), Captain (20), Major (26), Colonel (33), General (41), Field Marshal (50). Your level shows on the home screen and in the Garage; everyone sees a **LV** chip beside each player in lobbies and Quick Play line-ups. AI tanks have no level. **Levels are status only: no coins, no stat changes.** Players who had finished matches before levels existed start with experience for them (no coins).
+
+Results show the experience gained on a bar that fills to your new position, **LEVEL UP!** and any promotion, your medals, consecutive wins, and one **Next** line with the experience to the next level and your nearest unfinished weekly goal.
+
+**Badges:** twelve in all. First victory, Sharpshooter, Comeback and Flawless (win without being destroyed) are earned in one match. Double trouble (a Double Kill), Hot streak (3 wins in a row), Trickster (10 Trick Shots), Avenger (10 Revenges), Giant slayer (5 Shutdowns), Veteran (25 matches), Centurion (100 kills) and Earn your stripes (Level 10) count lifetime totals and show progress in the Garage. Totals from before v3.10.0 count for matches and kills; medal totals start now.
+
+**Share result** on the results screen opens your phone's share sheet (or copies the text on a computer) with a short summary such as "🏆 Victory in Tank Frenzy! 10 kills · 4 deaths · 🎯 52% · 🏅 Double Kill · Level 5 Private. Can you beat me?" and the game's address. Nothing private is included. In a friend lobby, **Invite / QR** also offers **Share invite** where the browser has a share sheet.
+
+**Link previews:** a game link pasted into a chat app shows a title, a description and a picture; an invitation link reads "Join my Tank Frenzy arena · CODE". Previews need a public address (see DOCS.md).
 
 ## Coins, Garage and daily rewards
 

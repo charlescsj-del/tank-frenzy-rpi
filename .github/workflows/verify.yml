@@ -38,6 +38,10 @@ jobs:
         if: ${{ !cancelled() }}
       - run: node tools/vehicle-ui-check.cjs
         if: ${{ !cancelled() }}
+      - run: node tools/growth-ui-check.cjs
+        if: ${{ !cancelled() }}
+      - run: node tools/prediction-check.cjs
+        if: ${{ !cancelled() }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
