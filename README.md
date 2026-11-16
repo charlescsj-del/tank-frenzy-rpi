@@ -2,7 +2,9 @@
 
 Install Tank Frenzy as a Home Assistant app (formerly called an add-on). The Pi hosts the multiplayer game; players use Safari, Edge, Chrome, or another modern browser on their phones, tablets, or computers. Rendering and sound run on each player's device.
 
-**Tank Frenzy v3.9.1** keeps the v3.9.0 features and fixes a narrow-window layout overflow. v3.9.0 adds an optional private vehicle-class pilot. Standard, Scout and Heavy are free; skins remain cosmetic. Enable `vehicle_classes_enabled` in the app Configuration, then open Garage → Create vehicle test. Ordinary matches still use Standard. Test matches save admin history but award no coins or rankings. See [VEHICLE_CLASSES_PLAN.md](VEHICLE_CLASSES_PLAN.md) for the rules and remaining playtesting.
+**Tank Frenzy v3.11.0** adds three daily missions (the same for everyone, paying experience), head-to-head records against the people you play, and a crown for last week's number one. v3.10.0 makes your own tank respond the instant you press, adds combat medals (Double Kill, Revenge, Trick Shot and more), player levels with ranks, nine more badges with progress, a one-tap **Share result**, and link previews with a picture in chat apps. Levels are status only and pay no coins. See [GROWTH_PLAN.md](GROWTH_PLAN.md) for the reasoning and what is proposed next.
+
+v3.9.0 adds an optional private vehicle-class pilot. Standard, Scout and Heavy are free; skins remain cosmetic. Enable `vehicle_classes_enabled` in the app Configuration, then open Garage → Create vehicle test. Ordinary matches still use Standard. Test matches save admin history but award no coins or rankings. See [VEHICLE_CLASSES_PLAN.md](VEHICLE_CLASSES_PLAN.md) for the rules and remaining playtesting.
 
 On phones, the create form and waiting-room controls fit in one viewport; the map keeps its full-screen layout through countdown and results.
 
@@ -58,7 +60,7 @@ docker run --rm -p 8765:8765 tank-frenzy-rpi
 
 Run the build on the intended architecture (or use Docker Buildx with `--platform linux/arm64`). The repository includes CI for tests and ARM64/AMD64 container builds. A physical Pi/Home Assistant installation and mobile play must still be checked on the target device; automated tests do not establish Pi performance under load.
 
-App package version: **3.9.1**. Game version: **3.9.1**. Production retains the `tank_frenzy` slug, data and host port across upgrades; releases bump the numeric version in several files at once. See the release checklist in [AGENTS.md](AGENTS.md).
+App package version: **3.11.0**. Game version: **3.11.0**. Production retains the `tank_frenzy` slug, data and host port across upgrades; releases bump the numeric version in several files at once. See the release checklist in [AGENTS.md](AGENTS.md).
 
 The How to Play screenshots in `tutorial/` are rendered by the game itself. After a visual change, run `npm start` and then `npx -y -p playwright node tools/tutorial-screenshots.cjs` to regenerate them (set `ONLY=win.webp` for one image).
 

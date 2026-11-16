@@ -26,10 +26,8 @@ configuration:
     description: >-
       Private address of the admin page, for example hq-7f3k to use /hq-7f3k. Nothing in the game
       links to it. Letters, digits, - and _ only. Leave empty for /admin.
-network:
-  8765/tcp: Game access for LAN players (no Home Assistant login)
-
   vehicle_classes_enabled:
     name: Private vehicle-class pilot
     description: Enable optional private Vehicle test arenas. Standard, Scout and Heavy are free. Test matches award no coins or rankings. Restart required.
-
+network:
+  8765/tcp: Game access for LAN players (no Home Assistant login)

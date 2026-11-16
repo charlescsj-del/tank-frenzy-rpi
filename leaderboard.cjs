@@ -6,6 +6,7 @@ const {randomBytes,createHash}=require('node:crypto');
 const nameLimit=200,historyDays=62,matchLimit=20000,day=864e5;
 const blank=name=>({name,wins:0,matches:0,kills:0,deaths:0,damageDealt:0,country:'',lastPlayed:0});
 const keyOf=p=>p.profileId||p.name.toLowerCase();
+const byRank=(a,b)=>b.wins-a.wins||b.kills-a.kills||a.deaths-b.deaths||a.name.localeCompare(b.name)||(a.profileId||'').localeCompare(b.profileId||'');
 function positionIn(rows,profileId){const i=rows.findIndex(p=>p.profileId===profileId);return i<0?null:{...rows[i],rank:i+1};}
 
 // All boards reset together in Malaysia time, including standalone installs.
@@ -104,8 +105,20 @@ class Leaderboard {
   }
   rows(period){
     if(period==='all')return [...this.entries.values()];
-    const since=periodStart(period,this.now()),totals=new Map();
-    for(const match of this.matches)if(match.ruleset!=='vehicle-test'&&match.t>=since)for(const p of match.players){
+    return this.totalsBetween(periodStart(period,this.now()));
+  }
+  // Last week's number one guest profile (Monday to Sunday, Malaysia time) wears the crown this week.
+  champion(){
+    const start=periodStart('week',this.now());
+    if(this.crown?.start!==start||this.crown.matches!==this.matches){
+      const first=this.totalsBetween(start-7*day,start).filter(p=>p.profileId&&p.wins>0).sort(byRank)[0];
+      this.crown={start,matches:this.matches,value:first?{profileId:first.profileId,name:first.name,slot:first.slot,wins:first.wins,kills:first.kills}:null};
+    }
+    return this.crown.value&&{...this.crown.value,skin:this.skinOf?.(this.crown.value.profileId)||'classic'};
+  }
+  totalsBetween(since,until=Infinity){
+    const totals=new Map();
+    for(const match of this.matches)if(match.ruleset!=='vehicle-test'&&match.t>=since&&match.t<until)for(const p of match.players){
       const key=keyOf(p),entry=totals.get(key)||blank(p.name);
       Object.assign(entry,{name:p.name,country:p.country||entry.country,...(p.profileId?{profileId:p.profileId,slot:p.slot}:{}),matches:entry.matches+(p.completed===false?0:1),wins:entry.wins+(p.won?1:0),kills:entry.kills+p.kills,deaths:entry.deaths+p.deaths,damageDealt:entry.damageDealt+(Number.isFinite(p.damageDealt)?p.damageDealt:0)});
       totals.set(key,entry);
@@ -115,7 +128,7 @@ class Leaderboard {
   top({period='all',country='',count=10}={}){
     if(!['day','week','month','all'].includes(period))period='all';
     return this.rows(period).filter(p=>!country||p.country===country)
-      .sort((a,b)=>b.wins-a.wins||b.kills-a.kills||a.deaths-b.deaths||a.name.localeCompare(b.name)||(a.profileId||'').localeCompare(b.profileId||''))
+      .sort(byRank)
       .slice(0,count).map(({name,country,wins,matches,kills,deaths,damageDealt,profileId,slot})=>({name,country,wins,matches,kills,deaths,damageDealt,...(profileId?{profileId,slot,skin:this.skinOf?.(profileId)||'classic'}:{})}));
   }
   // Countries seen in all-time results, most players first, for the region filter.

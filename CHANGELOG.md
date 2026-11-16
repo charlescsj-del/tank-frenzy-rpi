@@ -1,5 +1,26 @@
 # Changelog
 
+## v3.11.0 [2026-11-15]
+
+- **Daily missions.** Three small goals every Malaysia day, the same for everyone, from a pool of ten (destroy 8 tanks, collect 3 power-ups, earn 2 medals, and so on). Each pays 40 experience once; all three add 60 more. Experience only, no coins. Shown on the home screen, in the Garage and on results.
+- **Rivals.** Your record against each person you finish a match with: wins, losses and who destroyed whom. Results show "vs Aiman · You lead 5 – 3"; the Garage lists the ten people you have met most. Custom-rule friend matches count; AI, vehicle tests and early leavers do not.
+- **Weekly champion.** Last week's number one wears a gold crown all week, in lobbies, line-ups, results, above their tank in battle and on the leaderboard, and earns a badge for playing as champion.
+- Two more badges (fourteen in all): On duty (20 daily missions) and Weekly champion.
+- Technical: `player-progress.json` gains `missions` and `rivals` per player and `stats.missions`; older files load unchanged. Snapshots carry `crown:true` for the champion only. Private results add `reward.missions`, `reward.missionSweep`, `reward.rivals` and `xp.missions`; `/leaderboard` adds `champion`. The server now counts power-ups collected and kills per opponent each round. New tests for missions, rivals and the champion (306 in all) and a new browser check, `tools/social-ui-check.cjs`, with two real browsers.
+- Invite rewards from the growth plan are not included; they wait for a decision on coin amounts.
+
+## v3.10.0 [2026-11-15]
+
+- **Instant controls.** Your own tank now moves the moment you press or tilt, instead of waiting for the server's reply. The browser applies the server's own movement and collision rules and then eases toward the server's position, which stays the only authority. Shells glide between the server's 30 updates a second instead of stepping.
+- **Combat medals.** First Blood, Double Kill, Triple Kill, Revenge, Shutdown, Trick Shot and Clutch, awarded by the server at the moment of a kill. Your own medals show as a banner with a chime; everyone sees a tag in the kill feed; results list them.
+- **Levels and ranks.** Earn experience for finishing, winning, kills, medals, the first match of the day and consecutive wins. Ten ranks from Recruit to Field Marshal. Levels show on the home screen, in lobbies and line-ups, and on results with an animated bar. Levels are status only: they pay no coins and change nothing in battle. Existing players start with experience for matches already played.
+- **Nine more badges** (twelve in all), most with visible progress in the Garage, plus a win-streak count on results.
+- **Next goal on results**: experience to the next level and the nearest unfinished weekly goal.
+- **Sharing.** Results have **Share result** (the phone's share sheet, or copy). The invitation dialog offers the share sheet. Shared links now show a title, description and picture in chat apps; invitation links preview as "Join my Tank Frenzy arena".
+- Fixes the `vehicle_classes_enabled` label, which sat under Network instead of Configuration in the app's option translations.
+- Technical: `destroyed` events may carry `medals`; snapshots carry `medals` after a match and `level` outside battle only, so 30 Hz battle snapshots are unchanged. Private results add `reward.xp`, `reward.medals` and `reward.winStreak`. `/` gains link-preview tags built from `public_url` or the requested host; `/og-image.jpg` is new (regenerate with `tools/og-image.cjs`). New tests: medals, levels, sharing and prediction (290 in all). New browser checks: `tools/growth-ui-check.cjs` and `tools/prediction-check.cjs`, which measures control response through a delaying relay.
+- Not yet verified on real hardware: control feel on phones through the Cloudflare tunnel, and previews inside WhatsApp or Telegram. See [GROWTH_PLAN.md](GROWTH_PLAN.md).
+
 ## v3.9.1 [2026-11-14]
 
 - Fixes sideways page scrolling in a very narrow desktop window while in an arena: the brand row is clipped instead of widening the page.

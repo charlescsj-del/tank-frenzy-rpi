@@ -38,6 +38,17 @@ function securityHeaders(res,req,scriptHash=''){
   res.setHeader('Content-Security-Policy',`default-src 'self'; script-src 'self'${scriptHash?` '${scriptHash}'`:''}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors ${framing}`);
   res.setHeader('X-Frame-Options',req[ingressRequest]?'SAMEORIGIN':'DENY');res.setHeader('Referrer-Policy','no-referrer');
 }
+// Chat apps read these tags to show a title, text and picture beside a shared link. They need
+// absolute addresses, so the configured public address wins; otherwise the requested host is used.
+const escapeHtml=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+function previewTags(req,url,publicUrl){
+  const host=String(req.headers?.host||''),proto=String(req.headers?.['x-forwarded-proto']||'').split(',')[0].trim()==='https'?'https':'http';
+  const origin=publicUrl||(/^[A-Za-z0-9.-]{1,253}(:\d{1,5})?$/.test(host)?proto+'://'+host:'');if(!origin)return '';
+  const room=(url.searchParams.get('room')||'').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,16);
+  const title=room?'Join my Tank Frenzy arena · '+room:'Tank Frenzy — Cartoon Tank Battles',text=room?'Tap to join the battle. Up to 4 tanks, bouncing bullets and wild power-ups. Nothing to install.':'Small tanks. Big rivalries. Free multiplayer tank battles in your browser. Nothing to install.';
+  const tags=[['property','og:type','website'],['property','og:site_name','Tank Frenzy'],['property','og:title',title],['property','og:description',text],['property','og:url',origin+'/'+(room?'?room='+encodeURIComponent(room):'')],['property','og:image',origin+'/og-image.jpg'],['property','og:image:type','image/jpeg'],['property','og:image:width','1200'],['property','og:image:height','630'],['property','og:image:alt','Cartoon tanks battling in a sunny quarry'],['name','twitter:card','summary_large_image'],['name','twitter:title',title],['name','twitter:description',text],['name','twitter:image',origin+'/og-image.jpg']];
+  return tags.map(([key,name,content])=>`<meta ${key}="${name}" content="${escapeHtml(content)}">`).join('\n');
+}
 function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progressFile=leaderboardFile?path.join(path.dirname(leaderboardFile),'player-progress.json'):null,rewardsEnabled=true,vehicleClassesEnabled=false,onRoomCreated=null,adminPassword='',adminPath='admin',quickSearchSeconds=12,quickReadySeconds=5}={}){
   // The admin page lives at a private address of your choosing; nothing in the game links to it.
   const adminRoot='/'+(/^[A-Za-z0-9_-]{3,64}$/.test(adminPath)?adminPath:'admin');
@@ -51,12 +62,14 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
   function closeSpectators(room,title,message){for(const [ws,watch] of spectators)if(watch.room===room){send(ws,{type:'error',title,message});ws.close(1000,title);spectators.delete(ws);}}
   const rooms=new Map(),sessions=new Map(),leaderboard=new Leaderboard(leaderboardFile),progress=new Progress(progressFile),pendingRewards=new Map();
   leaderboard.skinOf=id=>progress.skinOf(id);
+  const crowned=id=>Boolean(id)&&leaderboard.champion()?.profileId===id;
   function award(room){
     if(!rewardsEnabled){for(const result of room.lastResults?.values()||[])result.reward={round:room.roundId,total:0,reason:'Coin rewards are temporarily paused by the host.'};return;}
     try{
       const rewards=progress.record(room);pendingRewards.delete(room.roundId);
       for(const [id,value]of rewards){
         const result=room.lastResults?.get(id);if(result)Object.assign(result,value,{rewardError:false});
+        const player=room.players.get(id);if(player)player.level=value.progress.level.level;
         for(const s of sessions.values())if(s.player.id===id&&s.player.connected&&s.room.roundId===room.roundId&&result)send(s.ws,result);
       }
     }catch(error){
@@ -67,6 +80,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
   }
   function finish(room){
     if(room.recorded||!room.winner)return;room.recorded=true;room.rewardAt=Date.now();room.lastResults=leaderboard.record(room);
+    for(const p of room.humans())p.crown=crowned(p.profileId);
     award(room);
     for(const s of sessions.values())if(s.room===room&&s.player.connected){const result=room.lastResults?.get(s.player.id);if(result)send(s.ws,result);}
   }
@@ -87,7 +101,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
     }
     finish(source);
     const arrivals=[];
-    try{for(const s of members){const p=target.add(s.player.name,{profileId:s.profile.id});if(!p)throw Error('No group space');p.profileId=s.profile.id;p.skin=progress.skinOf(s.profile.id);p.country=s.player.country;arrivals.push({session:s,player:p});}}
+    try{for(const s of members){const p=target.add(s.player.name,{profileId:s.profile.id});if(!p)throw Error('No group space');p.profileId=s.profile.id;p.skin=progress.skinOf(s.profile.id);p.level=progress.levelOf(s.profile.id);p.crown=crowned(s.profile.id);p.country=s.player.country;arrivals.push({session:s,player:p});}}
     catch{for(const a of arrivals)target.remove(a.player);fail('Could not reserve the whole group. Everyone is still on the results screen; try again.');return;}
     if(created)rooms.set(target.code,target);
     for(const a of arrivals){const s=a.session;source.remove(s.player);s.previousRoom=source.code;s.room=target;s.player=a.player;}
@@ -96,7 +110,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
     for(const {session:s}of arrivals){send(s.ws,{type:'welcome',requeued:true,id:s.player.id,token:s.token,profile:s.profile,progress:{...progress.view(s.profile.id),enabled:rewardsEnabled},slot:s.player.slot,room:target.code,seq:s.player.seq});sendRaw(s.ws,snapshot);}
     if(created)try{onRoomCreated?.({code:target.code,name:request.player.name,mode:target.settings.mode,url:publicUrl?publicUrl+'/?room='+encodeURIComponent(target.code):''});}catch{}
   }
-  const files={'/onboarding.js':['onboarding.js','text/javascript'],'/garage.js':['garage.js','text/javascript'],'/skin-art.js':['skin-art.js','text/javascript'],'/':['index.html','text/html'],'/index.html':['index.html','text/html'],'/qr.js':['qr.js','text/javascript'],'/client.js':['client.js','text/javascript'],'/shared.js':['shared.js','text/javascript'],'/sound-bank.js':['sound-bank.js','text/javascript'],'/music.js':['music.js','text/javascript'],'/audio/cartoon-v1.mp3':['audio/cartoon-v1.mp3','audio/mpeg'],'/mode-banner.webp':['mode-banner.webp','image/webp'],'/mode-banner-idle.webp':['mode-banner-idle.webp','image/webp'],'/hero-quarry.webp':['hero-quarry.webp','image/webp'],'/hero-tanks.webp':['hero-tanks.webp','image/webp']};
+  const files={'/onboarding.js':['onboarding.js','text/javascript'],'/garage.js':['garage.js','text/javascript'],'/skin-art.js':['skin-art.js','text/javascript'],'/':['index.html','text/html'],'/index.html':['index.html','text/html'],'/qr.js':['qr.js','text/javascript'],'/client.js':['client.js','text/javascript'],'/shared.js':['shared.js','text/javascript'],'/sound-bank.js':['sound-bank.js','text/javascript'],'/music.js':['music.js','text/javascript'],'/audio/cartoon-v1.mp3':['audio/cartoon-v1.mp3','audio/mpeg'],'/mode-banner.webp':['mode-banner.webp','image/webp'],'/mode-banner-idle.webp':['mode-banner-idle.webp','image/webp'],'/hero-quarry.webp':['hero-quarry.webp','image/webp'],'/hero-tanks.webp':['hero-tanks.webp','image/webp'],'/og-image.jpg':['og-image.jpg','image/jpeg']};
   for(const name of ['iron-advance','overdrive','steel-pressure'])files[`/audio/music-${name}-v1.mp3`]=[`audio/music-${name}-v1.mp3`,'audio/mpeg'];
   for(const name of ['fire-a','ricochet-c','pickup-a','explosion-c'])files[`/audio/effects-${name}-v1.mp3`]=[`audio/effects-${name}-v1.mp3`,'audio/mpeg'];
   for(const name of ['countdown','battle-start'])files[`/audio/${name}-v1.mp3`]=[`audio/${name}-v1.mp3`,'audio/mpeg'];
@@ -190,7 +204,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
       const period=url.searchParams.get('period')||'all',country=(url.searchParams.get('country')||'').toUpperCase().slice(0,2);
       res.setHeader('Content-Type','application/json');
       const profileId=url.searchParams.get('player')||'';
-      res.end(JSON.stringify({players:leaderboard.top({period,country}),countries:leaderboard.countries(),you:leaderboard.position(profileId,{period,country}),period,country,timezone:'Asia/Kuala_Lumpur',persistent:!!leaderboardFile}));return;
+      res.end(JSON.stringify({players:leaderboard.top({period,country}),countries:leaderboard.countries(),you:leaderboard.position(profileId,{period,country}),champion:(c=>c?{name:c.name,slot:c.slot,skin:c.skin,wins:c.wins,kills:c.kills}:null)(leaderboard.champion()),period,country,timezone:'Asia/Kuala_Lumpur',persistent:!!leaderboardFile}));return;
     }
     if(url.pathname==='/network-info'){
       const port=server.address().port;
@@ -198,11 +212,12 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
       res.setHeader('Content-Type','application/json');res.end(JSON.stringify({vehicleClassesEnabled,urls:ingress?[]:urls,publicUrl,ingress:!!req[ingressRequest]}));return;
     }
     const file=files[url.pathname];if(!file){res.writeHead(404);res.end('Not found');return;}
-    if(req[ingressRequest]&&(url.pathname==='/'||url.pathname==='/index.html')){
-      const base=ingressBase(req);
-      if(!base){res.writeHead(400);res.end('Missing or invalid Home Assistant ingress path');return;}
+    if(url.pathname==='/'||url.pathname==='/index.html'){
+      // The sidebar copy needs its ingress base; the public copy gets link-preview tags instead.
+      const base=req[ingressRequest]?ingressBase(req):null;
+      if(req[ingressRequest]&&!base){res.writeHead(400);res.end('Missing or invalid Home Assistant ingress path');return;}
       res.setHeader('Content-Type','text/html; charset=utf-8');
-      res.end(fs.readFileSync(path.join(__dirname,'index.html'),'utf8').replace('<head>','<head>\n<base href="'+base+'">'));return;
+      res.end(fs.readFileSync(path.join(__dirname,'index.html'),'utf8').replace('<head>','<head>\n'+(base?'<base href="'+base+'">':previewTags(req,url,publicUrl))));return;
     }
     if(file[1].startsWith('image/'))res.setHeader('Cache-Control','public, max-age=86400');
     if(file[1]==='audio/mpeg')res.setHeader('Cache-Control','public, max-age=31536000, immutable');
@@ -326,7 +341,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
           if(room.phase==='postgame'){send(ws,{type:'error',message:'This match has ended and its rematch window closed. Choose another arena or create a new one.'});ws.close();return;}
           if(room.ruleset==='vehicle-test'&&msg.vehicleRevision!==F.vehicleRevision){if(created)rooms.delete(code);send(ws,{type:'error',message:'Reload the game to join this vehicle test.'});ws.close();return;}
           const player=room.add(name,{profileId:profile.id,vehicle:progress.vehicleOf(profile.id)});if(!player){send(ws,{type:'error',message:'Arena full (4 players). AI seats cannot be replaced. Join when a human leaves or choose another arena.'});ws.close();return;}
-          player.profileId=profile.id;player.skin=progress.skinOf(profile.id);player.country=country;session={room,player,profile,token:randomBytes(24).toString('hex'),ws};sessions.set(session.token,session);
+          player.profileId=profile.id;player.skin=progress.skinOf(profile.id);player.level=progress.levelOf(profile.id);player.crown=crowned(profile.id);player.country=country;session={room,player,profile,token:randomBytes(24).toString('hex'),ws};sessions.set(session.token,session);
           if(created)try{onRoomCreated?.({code,name:player.name,mode:room.settings.mode,url:publicUrl?publicUrl+'/?room='+encodeURIComponent(code):''});}catch{/* Notifications never block play. */}
         }
         session.ws=ws;clearTimeout(joinTimeout);settle();send(ws,{type:'welcome',...(requeued?{requeued:true}:{}),id:session.player.id,token:session.token,profile:session.profile,progress:{...progress.view(session.profile.id),enabled:rewardsEnabled},slot:session.player.slot,room:code,seq:session.player.seq});sendRaw(ws,encodeState(session.room.snapshot()));const result=session.room.lastResults?.get(session.player.id);if(result)send(ws,result);return;
