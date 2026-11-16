@@ -19,13 +19,22 @@ function loadPlayerProgress(){
 function renderProgressHome(){
   const p=playerProgress;if(!p)return;
   $('coinBalance').textContent=p.coins.toLocaleString()+' coins';$('garageButton').setAttribute('aria-label','Garage · '+p.coins+' coins');
-  const daily=p.daily;$('dailyHome').textContent=p.enabled===false?'Daily rewards paused':daily.qualified?'Day '+daily.step+' complete · Tomorrow: Day '+daily.nextDay:'Daily reward · Day '+daily.nextDay;
-  const missions=p.missions?.missions||[];$('missionsHome').hidden=!missions.length;$('missionsHome').textContent=p.enabled===false?'Daily missions paused':'Daily missions · '+missions.filter(m=>m.completed).length+'/'+missions.length+' →';
-  const weekly=p.weekly?.challenges||[];$('weeklyHome').textContent=p.enabled===false?'Weekly challenges paused':'Weekly challenges · '+weekly.filter(c=>c.completed).length+'/'+weekly.length+' complete →';
+  const paused=p.enabled===false,daily=p.daily,missions=p.missions?.missions||[],weekly=p.weekly?.challenges||[],missionsDone=missions.filter(m=>m.completed).length,weeklyDone=weekly.filter(c=>c.completed).length;
+  homeTile('dailyHome','Daily',paused?'Paused':'Day '+(daily.qualified?daily.step:daily.nextDay),daily.qualified?' complete →':' →',paused?0:daily.step/7,daily.qualified,paused?'Daily rewards are paused.':daily.qualified?'Daily reward: Day '+daily.step+' earned. Tomorrow is Day '+daily.nextDay+'.':'Daily reward: play one standard match for Day '+daily.nextDay+'.');
+  $('missionsHome').hidden=!missions.length;homeTile('missionsHome','Missions',paused?'Paused':missionsDone+'/'+missions.length,' →',paused||!missions.length?0:missionsDone/missions.length,missions.length>0&&missionsDone===missions.length,paused?'Daily missions are paused.':'Daily missions: '+missionsDone+' of '+missions.length+' done.');
+  homeTile('weeklyHome','Weekly',paused?'Paused':weeklyDone+'/'+weekly.length,' complete →',paused||!weekly.length?0:weeklyDone/weekly.length,weekly.length>0&&weeklyDone===weekly.length,paused?'Weekly challenges are paused.':'Weekly challenges: '+weeklyDone+' of '+weekly.length+' complete.');
   $('progressHomeNote').textContent=p.persistent?'Play matches. Earn coins. Make it yours.':'Progress lasts for this server session. Ask the host to enable permanent storage.';
   $('progressHome').hidden=spectating;
   const level=p.level;$('levelHome').hidden=!level;
+  // The player's own tank, in the skin and class they will take into the next match.
+  const look=[lastTankSlot,p.equipped,p.selectedVehicle].join();if($('homeTank').look!==look&&typeof tankPortrait==='function'){$('homeTank').look=look;$('homeTank').replaceChildren(tankPortrait(lastTankSlot,p.equipped||'classic',p.selectedVehicle||'standard'));}
   if(level){$('levelHomeTitle').textContent='Level '+level.level+' · '+level.rank;$('levelHomeFill').style.width=xpPercent(level)+'%';$('levelHomeNote').textContent=(level.need-level.into)+' XP to Level '+(level.level+1);$('levelHome').setAttribute('aria-label','Level '+level.level+', '+level.rank+'. '+(level.need-level.into)+' experience to the next level. Open badges.');}
+}
+// One progress tile on the home screen: a short label, the number that matters and a bar.
+function homeTile(id,label,value,tail,ratio,done,description){
+  const tile=$(id),part=(tag,name,text)=>{const e=document.createElement(tag);e.className=name;e.textContent=text;return e;},bar=part('i','tile-bar',''),fill=document.createElement('i');
+  fill.style.width=Math.round(100*Math.max(0,Math.min(1,ratio||0)))+'%';bar.append(fill);bar.setAttribute('aria-hidden','true');
+  tile.replaceChildren(part('span','tile-label',label),part('span','tile-join',' · '),part('b','tile-value',value),part('span','tile-join',tail),bar);tile.classList.toggle('tile-done',Boolean(done));tile.setAttribute('aria-label',description+' Open details.');
 }
 const xpPercent=level=>Math.max(0,Math.min(100,Math.round(100*level.into/level.need)));
 function renderDaily(){
@@ -155,11 +164,12 @@ function showMatchRewards(result){
   $('matchHighlights').replaceChildren();
   for(const highlight of r.highlights||[]){const item=document.createElement('div'),title=document.createElement('strong'),detail=document.createElement('span');item.className='match-highlight';title.textContent=highlight.title;detail.textContent=highlight.detail;item.append(title,detail);$('matchHighlights').append(item);}
   $('matchHighlights').hidden=!(r.highlights?.length);
-  $('rewardTotal').textContent='+'+r.total+' coins';
+  $('rewardTotal').textContent='+'+r.total+' coins';$('rewardTotal').setAttribute('aria-label','+'+r.total+' coins');
   $('rewardBreakdown').textContent=r.reason||['Completed +'+r.completion,r.victory?'Victory +'+r.victory:'',r.kills?'Kills +'+r.kills:'',r.daily?'Day '+r.daily.day+' +'+r.daily.coins:'',r.daily?.collectionBonus?'Full collection +'+r.daily.collectionBonus:''].filter(Boolean).join(' · ');
   $('rewardWeekly').hidden=!r.weekly?.length;$('rewardWeekly').textContent=(r.weekly||[]).map(c=>'Weekly: '+c.name+' +'+c.coins).join(' · ');
   showExperience(r);
-  const medals=medalSummary(r.medals);$('rewardMedals').hidden=!medals;$('rewardMedals').textContent=medals?'Medals · '+medals:'';
+  const medals=FIELD.medals.filter(m=>r.medals?.[m.id]);$('rewardMedals').hidden=!medals.length;$('rewardMedals').setAttribute('aria-label','Medals: '+medalSummary(r.medals));
+  $('rewardMedals').replaceChildren(...medals.map((m,i)=>{const chip=document.createElement('span'),count=r.medals[m.id];chip.className='medal-chip medal-'+m.id;chip.style.setProperty('--i',String(i));chip.title=m.description;chip.append(medalIcon(),m.name+(count>1?' ×'+count:''));return chip;}));
   const missionLine=[...(r.missions||[]).map(m=>'Mission: '+m.name+' +'+m.xp+' XP'),r.missionSweep?'All three missions +'+r.missionSweep+' XP':''].filter(Boolean).join(' · ');$('rewardMissions').hidden=!missionLine;$('rewardMissions').textContent=missionLine;
   $('rewardRivals').replaceChildren(...(r.rivals||[]).slice(0,3).map(rival=>{const line=document.createElement('p');line.textContent=!rival.wins&&!rival.losses&&rival.allied?'With '+rival.name+' · '+rival.allied+(rival.allied===1?' match':' matches')+' as team mates':'vs '+rival.name+' · '+(rival.wins===rival.losses?'Level at '+rivalScore(rival):rival.wins>rival.losses?'You lead '+rivalScore(rival):'You trail '+rivalScore(rival));return line;}));$('rewardRivals').hidden=!(r.rivals||[]).length;
   const next=nextGoals();$('rewardNext').hidden=!next;$('rewardNext').textContent=next?'Next · '+next:'';
@@ -167,23 +177,36 @@ function showMatchRewards(result){
   const skin=FIELD.skins.find(s=>s.id===r.skin);$('rewardSkin').hidden=!skin;$('equipRewardSkin').hidden=!skin;
   if(skin){$('rewardSkin').replaceChildren(TankSkins.portrait(lastTankSlot,skin.id));const text=document.createElement('span');text.textContent='Day 7 unlocked · '+skin.name+' · Yours forever';$('rewardSkin').append(text);$('equipRewardSkin').textContent=playerProgress?.equipped===skin.id?'Equipped ✓':'Equip '+skin.name;$('equipRewardSkin').disabled=playerProgress?.equipped===skin.id;}
   $('rewardProtect').hidden=!playerProgress?.stats.matches||Boolean(localStorageSafe('tank-frenzy-recovery-saved')); 
+  playRewardReveal();
+}
+function medalIcon(){
+  const holder=document.createElement('i');holder.className='medal-icon';holder.setAttribute('aria-hidden','true');
+  if(document.createElementNS){const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg'),use=document.createElementNS(ns,'use');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('width','100%');svg.setAttribute('height','100%');use.setAttribute('href','#ui-medal');svg.append(use);holder.append(svg);}
+  return holder;
+}
+// When the results come into view: coins count up, then the experience bar fills. Once per round.
+let revealKey='';
+function playRewardReveal(){
+  const result=lastResult,r=result?.reward;if(!r||$('matchRewards').hidden||$('results').hidden||revealKey===result.roundId)return;revealKey=result.roundId;
+  if(reducedMotion||typeof requestAnimationFrame!=='function'){showExperience(r);return;}
+  const started=performance.now(),key=revealKey,count=()=>{if(revealKey!==key||lastResult!==result)return;const k=Math.min(1,(performance.now()-started)/750);$('rewardTotal').textContent='+'+Math.round(r.total*(1-(1-k)**3))+' coins';if(k<1)requestAnimationFrame(count);};
+  if(r.total>0)count();
+  clearTimeout(xpTimer);xpTimer=setTimeout(()=>showExperience(r,true),420);
 }
 const medalSummary=medals=>FIELD.medals.filter(m=>medals?.[m.id]).map(m=>m.name+(medals[m.id]>1?' ×'+medals[m.id]:'')).join(' · ');
 let xpTimer=null;
 // Fill the bar from where the player stood to where they stand now; a new level refills from empty.
-function showExperience(r){
-  const xp=r.xp;$('rewardXp').hidden=!xp;clearTimeout(xpTimer);if(!xp)return;
+function showExperience(r,animate=false){
+  const xp=r.xp;$('rewardXp').hidden=!xp;if(!animate)clearTimeout(xpTimer);if(!xp)return;
   const fill=$('rewardXpFill'),set=level=>{fill.style.width=xpPercent(level)+'%';$('rewardXpBar').setAttribute('aria-valuenow',String(xpPercent(level)));};
   $('rewardXp').classList.toggle('level-up',xp.levelUp);
   $('rewardXpTitle').textContent=(xp.levelUp?'LEVEL UP! ':'')+'Level '+xp.after.level+' · '+xp.after.rank;$('rewardXpGain').textContent='+'+xp.total+' XP';
   const note=[xp.promotion?'Promoted to '+xp.promotion+'!':'',r.winStreak>=2?r.winStreak+' wins in a row · +'+xp.streak+' XP':''].filter(Boolean).join(' ');$('rewardXpNote').textContent=note;$('rewardXpNote').hidden=!note;
   $('rewardXpBar').setAttribute('aria-label','Experience towards Level '+(xp.after.level+1));
-  if(reducedMotion||typeof requestAnimationFrame!=='function'){set(xp.after);return;}
-  set(xp.before);
-  requestAnimationFrame(()=>{
-    if(!xp.levelUp){set(xp.after);return;}
-    fill.style.width='100%';xpTimer=setTimeout(()=>{fill.style.transition='none';fill.style.width='0%';void fill.offsetWidth;fill.style.transition='';set(xp.after);},750);
-  });
+  // Until the results are revealed the bar waits where the player stood before the match.
+  if(!animate){set(reducedMotion||typeof requestAnimationFrame!=='function'||revealKey===lastResult?.roundId?xp.after:xp.before);return;}
+  if(!xp.levelUp){set(xp.after);return;}
+  fill.style.width='100%';xpTimer=setTimeout(()=>{fill.style.transition='none';fill.style.width='0%';void fill.offsetWidth;fill.style.transition='';set(xp.after);},750);
 }
 // One short line of what is closest: the next level and the nearest unfinished weekly goal.
 function nextGoals(){

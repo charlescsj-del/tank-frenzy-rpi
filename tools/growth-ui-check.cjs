@@ -17,8 +17,8 @@ const out=process.env.ARTIFACT_DIR||path.join(__dirname,'../artifacts/growth');f
     const pc=await browser.newPage({viewport:{width:1440,height:900}});watch(pc);await pc.addInitScript(shareStub);
     await pc.goto(base);await pc.waitForFunction(()=>playerProgress?.level);
     // Home: a new player sees Level 1 and how far the next level is.
-    assert.equal(await pc.locator('#levelHomeTitle').textContent(),'Level 1 · Recruit');assert.equal(await pc.locator('#levelHomeNote').textContent(),'80 XP to Level 2');
-    for(const [width,height]of [[1440,900],[390,844],[320,568],[844,390]]){await pc.setViewportSize({width,height});await fits(pc,'#quickPlay');await pc.locator('#levelHome').scrollIntoViewIfNeeded();await fits(pc,'#levelHome');await pc.screenshot({path:path.join(out,'home-'+width+'.png')});await pc.evaluate(()=>scrollTo(0,0));}
+    assert.equal(await pc.locator('#levelHomeTitle').textContent(),'Level 1 · Recruit');assert.equal(await pc.locator('#levelHomeNote').textContent(),'80 XP to Level 2');assert.equal(await pc.locator('#homeTank .tank-portrait').count(),1,'your own tank on the home screen');assert.deepEqual(await pc.locator('.progress-shortcuts .tile-label').allTextContents(),['Daily','Missions','Weekly']);assert.deepEqual(await pc.locator('.progress-shortcuts .tile-value').allTextContents(),['Day 1','0/3','0/3']);
+    for(const [width,height]of [[1440,900],[390,844],[320,568],[844,390]]){await pc.setViewportSize({width,height});await fits(pc,'#quickPlay');await pc.locator('#levelHome').scrollIntoViewIfNeeded();await fits(pc,'#levelHome');await pc.locator('.progress-shortcuts').scrollIntoViewIfNeeded();await fits(pc,'.progress-shortcuts');for(const id of ['dailyHome','missionsHome','weeklyHome'])assert(await pc.locator('#'+id).evaluate(e=>e.scrollWidth<=e.clientWidth+1&&e.getBoundingClientRect().height>=44),id+' is a readable, touch-sized tile');await pc.screenshot({path:path.join(out,'home-'+width+'.png')});await pc.evaluate(()=>scrollTo(0,0));}
     await pc.setViewportSize({width:1440,height:900});
     const profile=await pc.evaluate(()=>({id:profileId}));
     // A friend arena with one AI: the level chip shows in the lobby.
@@ -46,9 +46,9 @@ const out=process.env.ARTIFACT_DIR||path.join(__dirname,'../artifacts/growth');f
     await pc.waitForFunction(()=>latest?.phase==='results'&&lastResult?.reward?.xp);await pc.locator('#rewardXp').waitFor({state:'visible'});
     const reward=await pc.evaluate(()=>lastResult.reward);assert.equal(reward.xp.levelUp,true);assert(reward.medals['double-kill']>=1&&reward.medals['first-blood']===1&&reward.medals.revenge>=1);
     assert.match(await pc.locator('#rewardXpTitle').textContent(),/^LEVEL UP! Level \d+ · /);assert.equal(await pc.locator('#rewardXpGain').textContent(),'+'+reward.xp.total+' XP');
-    assert.equal(await pc.locator('#rewardXpNote').textContent(),'Promoted to Private!');assert.match(await pc.locator('#rewardMedals').textContent(),/^Medals · First Blood · Double Kill/);
+    assert.equal(await pc.locator('#rewardXpNote').textContent(),'Promoted to Private!');assert.deepEqual((await pc.locator('#rewardMedals .medal-chip').allTextContents()).slice(0,2),['First Blood','Double Kill']);assert.match(await pc.locator('#rewardMedals').getAttribute('aria-label'),/^Medals: First Blood · Double Kill/);assert.equal(await pc.locator('#rewardMedals .medal-icon svg').count(),await pc.locator('#rewardMedals .medal-chip').count());
     assert.match(await pc.locator('#rewardNext').textContent(),/^Next · \d+ XP to Level \d+ · /);
-    assert.equal(await pc.locator('#rewardTotal').textContent(),'+'+reward.total+' coins');assert.equal(reward.total,20+30+30+20,'levels add no coins');
+    await pc.waitForFunction(total=>document.getElementById('rewardTotal').textContent==='+'+total+' coins',reward.total);assert.equal(await pc.locator('#rewardTotal').getAttribute('aria-label'),'+'+reward.total+' coins');assert.equal(reward.total,20+30+30+20,'levels add no coins');
     await pc.waitForTimeout(1700);const level=await pc.evaluate(()=>playerProgress.level);
     assert.equal(await pc.locator('#rewardXpFill').evaluate(e=>e.style.width),Math.round(100*level.into/level.need)+'%','the bar settles on the saved progress');
     await pc.locator('#matchRewards').scrollIntoViewIfNeeded();await pc.screenshot({path:path.join(out,'results-desktop.png')});

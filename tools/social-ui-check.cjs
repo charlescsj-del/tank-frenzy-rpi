@@ -19,7 +19,7 @@ const out=process.env.ARTIFACT_DIR||path.join(__dirname,'../artifacts/social');f
     const annId=await ann.evaluate(()=>profileId),boId=await bo.evaluate(()=>profileId);
     // Home and Garage: today's three missions, the same on both devices.
     const today=F.missionsFor(dayNumber(Date.now()));
-    assert.equal(await ann.locator('#missionsHome').textContent(),'Daily missions · 0/3 →');
+    assert.equal(await ann.locator('#missionsHome').textContent(),'Missions · 0/3 →');assert.equal(await ann.locator('#missionsHome').getAttribute('aria-label'),'Daily missions: 0 of 3 done. Open details.');
     for(const [width,height]of [[1440,900],[390,844],[320,568],[844,390]]){await ann.setViewportSize({width,height});await fits(ann,'#quickPlay');await ann.locator('#missionsHome').scrollIntoViewIfNeeded();await fits(ann,'#missionsHome');await ann.screenshot({path:path.join(out,'home-'+width+'.png')});await ann.evaluate(()=>scrollTo(0,0));}
     await ann.setViewportSize({width:1440,height:900});
     await ann.locator('#missionsHome').click();await ann.waitForFunction(()=>garageOpen&&!progressLoading);
@@ -63,7 +63,7 @@ const out=process.env.ARTIFACT_DIR||path.join(__dirname,'../artifacts/social');f
     for(const [width,height]of [[390,844],[320,640],[844,390]]){await resize(bo,width,height);await bo.locator('#rewardRivals').scrollIntoViewIfNeeded();await fits(bo,'#rewardRivals');await bo.screenshot({path:path.join(out,'results-'+width+'.png')});}
     // Garage afterwards: missions ticked off, and the rival with both sides of the record.
     await ann.evaluate(()=>leave());await ann.locator('#missionsHome').waitFor({state:'visible'});
-    assert.equal(await ann.locator('#missionsHome').textContent(),'Daily missions · '+done.length+'/3 →');
+    assert.equal(await ann.locator('#missionsHome').textContent(),'Missions · '+done.length+'/3 →');assert.equal(await ann.locator('#missionsHome').evaluate(e=>e.classList.contains('tile-done')),done.length===3);
     await ann.locator('#missionsHome').click();await ann.waitForFunction(()=>garageOpen&&!progressLoading);
     assert.equal(await ann.locator('#missionList .mission-card.completed').count(),done.length);if(done.length===3)assert.equal(await ann.locator('#missionsBudget').textContent(),'All three done ✓');
     assert.equal(await ann.locator('.rival-item').count(),1);assert.equal(await ann.locator('.rival-item.ahead strong').textContent(),'Bo');assert.equal(await ann.locator('.rival-item span').textContent(),'You 1 – 0');

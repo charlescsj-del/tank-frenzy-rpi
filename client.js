@@ -446,7 +446,7 @@ function updateRoomPhase(data){
   $('changeTank').hidden=spectating||!(results||postgame);
   $('vehicleResultNote').hidden=data.ruleset!=='vehicle-test';$('vehicleResultNote').textContent=FIELD.vehicleNotice;
   $('countdown').hidden=!countdown;
-  $('results').hidden=!(results||postgame)||Boolean(finalBlow);
+  $('results').hidden=!(results||postgame)||Boolean(finalBlow);if(!$('results').hidden&&typeof playRewardReveal==='function')playRewardReveal();
   const humans=data.players.filter(p=>!p.bot&&p.connected),group=humans.filter(p=>(data.groupIds||[]).includes(p.id)),inGroup=group.some(p=>p.id===myId),together=postgame&&inGroup&&group.length>=2;
   $('groupRequeue').hidden=!postgame||spectating||humans.length<2||typeof data.roundId!=='string';
   $('groupConsent').setAttribute('aria-pressed',String(inGroup));$('groupConsent').textContent=inGroup?'Joined group ✓':'Stay together';
@@ -471,6 +471,10 @@ function updateRoomPhase(data){
       resultsSignature=board;$('resultsRows').replaceChildren();$('resultDamageRows').replaceChildren();
       const winners=data.players.filter(p=>data.settings?.mode==='teams'?p.team===data.winner.team:p.id===data.winner.id);
       $('resultsWinnerArt').replaceChildren(...winners.map(p=>tankPortrait(p.slot,p.skin,p.vehicle)));
+      // The score at a glance, above the rewards; the full table stays below.
+      $('resultsStrip')?.replaceChildren(...[...data.players].sort((a,b)=>b.kills-a.kills||a.deaths-b.deaths).map(p=>{
+        const chip=document.createElement('span'),name=document.createElement('b'),score=document.createElement('small');chip.className='strip-player'+(p.id===myId?' me':'')+(p.team!=null?(p.team===0?' orange':' blue'):'');
+        name.textContent=p.name;score.textContent=p.kills+' K · '+p.deaths+' D';chip.append(tankPortrait(p.slot,p.skin,p.vehicle),name,score);return chip;}));
       const teams=data.settings?.mode==='teams';
       for(const team of teams?[0,1]:[null]){
         if(teams){
