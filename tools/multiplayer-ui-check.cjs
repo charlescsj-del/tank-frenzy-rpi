@@ -8,7 +8,7 @@ const {generateMap}=require('../map-generator.cjs');
 const output=process.env.ARTIFACT_DIR||path.join(__dirname,'../artifacts');
 fs.mkdirSync(output,{recursive:true});
 (async()=>{
-  const game=createGameServer({quickSearchSeconds:2,quickReadySeconds:5});
+  const game=createGameServer({quickSearchSeconds:2,quickReadySeconds:5,quickFirstMatch:false});
   let browser;
   try{
     game.server.listen(0,'127.0.0.1');await once(game.server,'listening');

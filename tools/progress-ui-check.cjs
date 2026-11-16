@@ -5,7 +5,7 @@ const {createGameServer}=require('../server.cjs'),F=require('../shared.js');
 const {weekNumber}=require('../progress.cjs');
 const out=process.env.ARTIFACT_DIR||path.join(__dirname,'../artifacts/progress');fs.mkdirSync(out,{recursive:true});
 (async()=>{
-  const game=createGameServer({quickSearchSeconds:.5,quickReadySeconds:2});let browser;const errors=[];
+  const game=createGameServer({quickSearchSeconds:.5,quickReadySeconds:2,quickFirstMatch:false});let browser;const errors=[];
   try{
     game.server.listen(0,'127.0.0.1');await once(game.server,'listening');const base='http://127.0.0.1:'+game.server.address().port;
     browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.CHROMIUM_EXECUTABLE_PATH}:{})});
@@ -55,7 +55,7 @@ const out=process.env.ARTIFACT_DIR||path.join(__dirname,'../artifacts/progress')
     await pc.screenshot({path:path.join(out,'first-match-desktop.png')});await pc.locator('#skipCoach').click();assert.equal(await pc.locator('#matchCoach').isVisible(),false);
     const room=game.rooms.get(await pc.evaluate(()=>roomCode)),human=room.humans()[0],bot=[...room.players.values()].find(p=>p.bot);assert.equal(human.skin,'desert');assert.equal(await pc.evaluate(()=>tanks.find(t=>t.id===myId).skin),'desert');
     human.activeSeconds=15;human.kills=9;human.ricochetHits=9;bot.shieldUntil=0;room.damage(bot,human.id,10,true);room.rematchUntil=room.time+120;
-    await pc.waitForFunction(()=>lastResult?.reward?.daily?.day===7&&document.getElementById('rewardSkin').hidden===false);await fits(pc,'.results-card');assert.equal(await pc.evaluate(()=>lastResult.reward.total),480);assert.equal(await pc.evaluate(()=>lastResult.reward.weekly.length),3);assert.match(await pc.locator('#rewardWeekly').textContent(),/Around the corner \+125/);assert.match(await pc.locator('#matchHighlights').textContent(),/First victory/);assert.equal(await pc.locator('#matchCoach').isVisible(),false);const awarded=await pc.evaluate(()=>lastResult.reward.skin);assert.notEqual(awarded,'desert');assert(game.progress.view(profile.id).owned.includes(awarded));
+    await pc.waitForFunction(()=>lastResult?.reward?.daily?.day===7&&document.getElementById('rewardSkin').hidden===false);await pc.locator('#results').waitFor({state:'visible'});await fits(pc,'.results-card');assert.equal(await pc.evaluate(()=>lastResult.reward.total),480);assert.equal(await pc.evaluate(()=>lastResult.reward.weekly.length),3);assert.match(await pc.locator('#rewardWeekly').textContent(),/Around the corner \+125/);assert.match(await pc.locator('#matchHighlights').textContent(),/First victory/);assert.equal(await pc.locator('#matchCoach').isVisible(),false);const awarded=await pc.evaluate(()=>lastResult.reward.skin);assert.notEqual(awarded,'desert');assert(game.progress.view(profile.id).owned.includes(awarded));
     await pc.locator('#equipRewardSkin').scrollIntoViewIfNeeded();await pc.locator('#equipRewardSkin').click();await pc.waitForFunction(s=>playerProgress.equipped===s,awarded);await pc.screenshot({path:path.join(out,'day7-results-desktop.png')});
     // Recovery remains accessible in true fullscreen; closing it returns to the same results.
     await pc.locator('#rewardProtect').click();assert(await pc.locator('#profileDialog').isVisible());await pc.locator('#closeProfile').click();assert(await pc.locator('#results').isVisible());
