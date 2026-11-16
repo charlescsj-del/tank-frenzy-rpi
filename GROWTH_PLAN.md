@@ -52,6 +52,15 @@ Implemented on `dev` in v3.11.0: daily missions (experience only, 40 each and 60
 3. **Weekly champion.** Last week's number one wears a crown beside their name for the following week. Costs nothing, and in a small community everyone knows who it is.
 4. **Rivalries.** Head-to-head records against people you have played ("You 5 – 3 Aiman"), and your most frequent opponent on your profile. Friend groups care more about each other than about a global board.
 
+## First impressions (v3.12.0, implemented on dev)
+
+A pass on how the game looks and feels in a newcomer's first minute, because that minute decides whether a shared link turns into a player.
+
+1. **Livelier battles.** Muzzle flashes, dust, track marks, debris, scorch marks, wreck smoke, hit markers and a slow-motion final blow. Client-only and bounded; no rule or network change.
+2. **No waiting for the first shot.** A first-time player alone in the queue starts at once against three easy AI tanks. Everyone else can drive and shoot while Quick Play searches. Trade-off accepted: two brand-new players who press Play within the same few seconds each get their own first match instead of meeting; from the second match on they queue together.
+3. **A picture to share.** Share result sends a square result card where the device can share files.
+4. **Tidier home and results.** Own tank and progress tiles on the home screen; score at a glance, counted coins and medal chips on results.
+
 ## Phase 3: variety and events (proposed)
 
 1. **Seasons.** A monthly free reward track fed by experience, with rank-exclusive skins that cannot be bought. Gives levels a tangible reward without changing coin prices.
