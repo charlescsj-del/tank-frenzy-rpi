@@ -183,9 +183,11 @@ async function quickPlay(){
 }
 $('quickPlay').addEventListener('click',quickPlay);
 setInterval(()=>{if(lobbyVisible&&!document.hidden)refreshRooms();},5000);
+// Tanks answer the controls in battle and, as a warm-up, while Quick Play is still searching.
+const driving=phase=>phase==='playing'||phase==='searching';
 function send(data){if(socket?.readyState===WebSocket.OPEN&&socket.bufferedAmount<32768)socket.send(JSON.stringify(data));}
 function sendInput(){
-  if(!joined||(latest&&latest.phase!=='playing'))return;
+  if(!joined||(latest&&!driving(latest.phase)))return;
   const me=tanks.find(t=>t.id===myId);
   const aim=touchAim?{x:(me?.x??500)+touchAim.x*150,y:(me?.y??330)+touchAim.y*150}:pointer.active?pointer:{x:(me?.x??500)+Math.cos(me?.aim||0)*150,y:(me?.y??330)+Math.sin(me?.aim||0)*150};
   const move=moveInput();
@@ -211,7 +213,7 @@ function advancePrediction(me,now){
   for(let i=0;i<steps;i++){if(!predictedBlocked(predicted.x+dx,predicted.y,me))predicted.x+=dx;if(!predictedBlocked(predicted.x,predicted.y+dy,me))predicted.y+=dy;}
 }
 function predictOwnTank(me,now){
-  const usable=joined&&!spectating&&latest?.phase==='playing'&&me.hp>0;
+  const usable=joined&&!spectating&&driving(latest?.phase)&&me.hp>0;
   if(!usable||!predicted.active||predicted.life!==me.life){Object.assign(predicted,{active:usable,x:me.targetX,y:me.targetY,a:me.a,life:me.life,at:now,input:moveInput(),history:[]});if(!usable)return false;}
   advancePrediction(me,now);rememberPrediction(now);predicted.input=moveInput();
   me.x=predicted.x;me.y=predicted.y;me.a=predicted.a;return true;
@@ -392,10 +394,10 @@ function crownIcon(){
 function levelChip(level){const chip=document.createElement('span');chip.className='level-chip';chip.textContent='LV '+level;chip.setAttribute('aria-label','Level '+level);return chip;}
 function renderMatchmaking(data){
   const searching=data.phase==='searching';$('matchmakingTitle').textContent=searching?'Finding opponents':'Get ready!';
-  $('matchmaking').classList.toggle('is-ready',!searching);
+  $('matchmaking').classList.toggle('is-ready',!searching);$('matchmaking').classList.toggle('warm-up',searching);
   $('matchmaking').classList.toggle('is-teams',data.settings?.mode==='teams');
   const humanCount=data.players.filter(p=>!p.bot&&p.connected).length;
-  const note=searching?humanCount+'/4 players found · AI fills any open seats.':'Everyone ready? Enter the field for a 3-second countdown.';
+  const note=searching?humanCount+'/4 players found · AI fills any open seats. Drive and shoot to warm up.':'Everyone ready? Enter the field for a 3-second countdown.';
   $('matchmakingNote').textContent=(FIELD.mapLabels[mapLayout]?FIELD.mapLabels[mapLayout]+' · ':'')+note;
   const seconds=Math.max(1,Math.ceil(searching?data.searchIn:data.readyIn));
   $('matchmakingTime').textContent=searching?'Finding a match · '+seconds+'s':String(seconds);
@@ -439,7 +441,7 @@ function updateRoomPhase(data){
   const waiting=data.phase==='waiting',countdown=data.phase==='countdown',results=data.phase==='results',postgame=data.phase==='postgame';
   const matching=['searching','ready'].includes(data.phase);$('matchmaking').hidden=!matching;$('arena').classList.toggle('matchmaking-open',matching);if(matching)renderMatchmaking(data);
   $('waitingRoom').hidden=!waiting;$('arena').classList.toggle('waiting-room',waiting);
-  $('arena').classList.toggle('battle-field',!waiting&&!matching&&(joined||spectating));
+  $('arena').classList.toggle('battle-field',!waiting&&data.phase!=='ready'&&(joined||spectating));
   if(countdown&&typeof garageOpen!=='undefined'&&garageOpen&&typeof closeGarage==='function')closeGarage();
   $('changeTank').hidden=spectating||!(results||postgame);
   $('vehicleResultNote').hidden=data.ruleset!=='vehicle-test';$('vehicleResultNote').textContent=FIELD.vehicleNotice;
@@ -850,7 +852,7 @@ function updateTouchControls(){
   document.body.classList.toggle('mobile-playing',mobile&&(joined||spectating));
   $('viewMode').hidden=!joined;
   $('viewMode').setAttribute('aria-label',mapOverview?'Close view':'Full map');$('viewMode').title=mapOverview?'Close view':'Full map';$('viewMode').setAttribute('aria-pressed',String(mapOverview));
-  $('thumbControls').hidden=!mobile||!joined||(latest?.phase!=null&&latest.phase!=='playing');
+  $('thumbControls').hidden=!mobile||!joined||(latest?.phase!=null&&!driving(latest.phase));
   document.body.classList.toggle('in-room',(joined||spectating)&&!mobile);
   $('introControls').textContent=mobile?'Left thumb to move. Right thumb to aim and fire.':'Move with WASD. Aim with your mouse. Click to fire.';
   $('networkNote').textContent=mobile?'LEFT THUMB / MOVE · RIGHT THUMB / AIM + FIRE':'WASD / MOVE · MOUSE / AIM · LEFT CLICK / FIRE';

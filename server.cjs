@@ -49,7 +49,7 @@ function previewTags(req,url,publicUrl){
   const tags=[['property','og:type','website'],['property','og:site_name','Tank Frenzy'],['property','og:title',title],['property','og:description',text],['property','og:url',origin+'/'+(room?'?room='+encodeURIComponent(room):'')],['property','og:image',origin+'/og-image.jpg'],['property','og:image:type','image/jpeg'],['property','og:image:width','1200'],['property','og:image:height','630'],['property','og:image:alt','Cartoon tanks battling in a sunny quarry'],['name','twitter:card','summary_large_image'],['name','twitter:title',title],['name','twitter:description',text],['name','twitter:image',origin+'/og-image.jpg']];
   return tags.map(([key,name,content])=>`<meta ${key}="${name}" content="${escapeHtml(content)}">`).join('\n');
 }
-function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progressFile=leaderboardFile?path.join(path.dirname(leaderboardFile),'player-progress.json'):null,rewardsEnabled=true,vehicleClassesEnabled=false,onRoomCreated=null,adminPassword='',adminPath='admin',quickSearchSeconds=12,quickReadySeconds=5}={}){
+function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progressFile=leaderboardFile?path.join(path.dirname(leaderboardFile),'player-progress.json'):null,rewardsEnabled=true,vehicleClassesEnabled=false,onRoomCreated=null,adminPassword='',adminPath='admin',quickSearchSeconds=12,quickReadySeconds=5,quickFirstMatch=true}={}){
   // The admin page lives at a private address of your choosing; nothing in the game links to it.
   const adminRoot='/'+(/^[A-Za-z0-9_-]{3,64}$/.test(adminPath)?adminPath:'admin');
   // Hidden spectators watch a room with a short-lived pass from the admin page. They are not
@@ -329,7 +329,8 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
           if(msg.mode==='create'&&rooms.has(code)&&rooms.get(code).players.size>0){send(ws,{type:'error',message:'That arena already exists. Choose another code or browse arenas to join it.'});ws.close();return;}
           if(msg.mode==='join'&&(!rooms.has(code)||rooms.get(code).players.size===0)){send(ws,{type:'error',message:'That arena is no longer available. Browse arenas or create a new one.'});ws.close();return;}
           if(rooms.has(code)&&rooms.get(code).players.size===0)rooms.delete(code);
-          const created=!rooms.has(code);
+          // A player's very first Quick Play match starts at once against AI when nobody else is searching.
+          const created=!rooms.has(code),instant=created&&msg.type==='quick'&&quickFirstMatch&&!leaderboard.known(profile.id)&&!progress.played(profile.id);
           if(!rooms.has(code)){
             if(rooms.size>=32){send(ws,{type:'error',message:'Server is full. Try an existing room.'});ws.close();return;}
             if(key&&[...rooms.values()].filter(room=>room.creator===key).length>=limits.arenas){send(ws,{type:'error',title:'Too many arenas',message:'Your network already has '+limits.arenas+' open arenas. Join one of them, or wait for one to end.'});ws.close();return;}
@@ -342,6 +343,7 @@ function createGameServer({ingress=false,publicUrl='',leaderboardFile=null,progr
           if(room.ruleset==='vehicle-test'&&msg.vehicleRevision!==F.vehicleRevision){if(created)rooms.delete(code);send(ws,{type:'error',message:'Reload the game to join this vehicle test.'});ws.close();return;}
           const player=room.add(name,{profileId:profile.id,vehicle:progress.vehicleOf(profile.id)});if(!player){send(ws,{type:'error',message:'Arena full (4 players). AI seats cannot be replaced. Join when a human leaves or choose another arena.'});ws.close();return;}
           player.profileId=profile.id;player.skin=progress.skinOf(profile.id);player.level=progress.levelOf(profile.id);player.crown=crowned(profile.id);player.country=country;session={room,player,profile,token:randomBytes(24).toString('hex'),ws};sessions.set(session.token,session);
+          if(instant){room.fillQuick();room.beginQuickBattle();}
           if(created)try{onRoomCreated?.({code,name:player.name,mode:room.settings.mode,url:publicUrl?publicUrl+'/?room='+encodeURIComponent(code):''});}catch{/* Notifications never block play. */}
         }
         session.ws=ws;clearTimeout(joinTimeout);settle();send(ws,{type:'welcome',...(requeued?{requeued:true}:{}),id:session.player.id,token:session.token,profile:session.profile,progress:{...progress.view(session.profile.id),enabled:rewardsEnabled},slot:session.player.slot,room:code,seq:session.player.seq});sendRaw(ws,encodeState(session.room.snapshot()));const result=session.room.lastResults?.get(session.player.id);if(result)send(ws,result);return;

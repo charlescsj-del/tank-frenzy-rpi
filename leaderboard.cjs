@@ -29,6 +29,7 @@ class Leaderboard {
       this.matches=Array.isArray(data.matches)?data.matches.filter(m=>Number.isFinite(m?.t)&&Array.isArray(m.players)):[];
     }catch(error){console.error('Tank Frenzy: ignoring unreadable leaderboard:',error.message);}
   }
+  known(profileId){return this.entries.has(profileId);}
   identify(secret){
     const credential=typeof secret==='string'&&/^[a-f0-9]{48}$/.test(secret)?secret:randomBytes(24).toString('hex');
     return {secret:credential,id:createHash('sha256').update(credential).digest('hex')};

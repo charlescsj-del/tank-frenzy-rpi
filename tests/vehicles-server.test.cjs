@@ -2,7 +2,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),{once}=require('node:events'),{WebSocket}=require('ws');
 const {createGameServer}=require('../server.cjs'),F=require('../shared.js');
 async function setup(t,enabled=true){
-  const game=createGameServer({vehicleClassesEnabled:enabled,quickSearchSeconds:60});game.server.listen(0,'127.0.0.1');await once(game.server,'listening');t.after(()=>game.close());const base='http://127.0.0.1:'+game.server.address().port;
+  const game=createGameServer({vehicleClassesEnabled:enabled,quickSearchSeconds:60,quickFirstMatch:false});game.server.listen(0,'127.0.0.1');await once(game.server,'listening');t.after(()=>game.close());const base='http://127.0.0.1:'+game.server.address().port;
   const action=async body=>{const res=await fetch(base+'/progress',{method:'POST',headers:{'Content-Type':'application/json','X-Tank-Player':'1'},body:JSON.stringify(body)});return {status:res.status,...await res.json()};};
   const join=async message=>{const ws=new WebSocket(base.replace('http','ws')+'/ws'),messages=[];ws.on('message',raw=>messages.push(JSON.parse(raw)));await once(ws,'open');const response=new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(Error('Join timed out')),3000);ws.on('message',raw=>{const value=JSON.parse(raw);if(['welcome','error'].includes(value.type)){clearTimeout(timeout);resolve(value);}});});ws.send(JSON.stringify(message));return {ws,messages,response:await response};};
   const load=await action({action:'load'});return {game,base,action,join,profile:load.profile};
