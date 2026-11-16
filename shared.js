@@ -1,6 +1,6 @@
 (function(root) {
   const data = {
-    version:'3.11.0',maxHealth:10,laserDamage:4,laserRadius:6,barrelLength:40,doubleBarrelOffset:6,turretHeight:28,
+    version:'3.12.0',maxHealth:10,laserDamage:4,laserRadius:6,barrelLength:40,doubleBarrelOffset:6,turretHeight:28,
     mapLabels:{quarry:'Quarry',crossroads:'Crossroads'},
     // Badges with a stat and target unlock from lifetime totals and show progress in the Garage.
     achievements:[

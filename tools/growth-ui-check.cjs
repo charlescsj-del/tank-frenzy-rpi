@@ -17,8 +17,8 @@ const out=process.env.ARTIFACT_DIR||path.join(__dirname,'../artifacts/growth');f
     const pc=await browser.newPage({viewport:{width:1440,height:900}});watch(pc);await pc.addInitScript(shareStub);
     await pc.goto(base);await pc.waitForFunction(()=>playerProgress?.level);
     // Home: a new player sees Level 1 and how far the next level is.
-    assert.equal(await pc.locator('#levelHomeTitle').textContent(),'Level 1 · Recruit');assert.equal(await pc.locator('#levelHomeNote').textContent(),'80 XP to Level 2');
-    for(const [width,height]of [[1440,900],[390,844],[320,568],[844,390]]){await pc.setViewportSize({width,height});await fits(pc,'#quickPlay');await pc.locator('#levelHome').scrollIntoViewIfNeeded();await fits(pc,'#levelHome');await pc.screenshot({path:path.join(out,'home-'+width+'.png')});await pc.evaluate(()=>scrollTo(0,0));}
+    assert.equal(await pc.locator('#levelHomeTitle').textContent(),'Level 1 · Recruit');assert.equal(await pc.locator('#levelHomeNote').textContent(),'80 XP to Level 2');assert.equal(await pc.locator('#homeTank .tank-portrait').count(),1,'your own tank on the home screen');assert.deepEqual(await pc.locator('.progress-shortcuts .tile-label').allTextContents(),['Daily','Missions','Weekly']);assert.deepEqual(await pc.locator('.progress-shortcuts .tile-value').allTextContents(),['Day 1','0/3','0/3']);
+    for(const [width,height]of [[1440,900],[390,844],[320,568],[844,390]]){await pc.setViewportSize({width,height});await fits(pc,'#quickPlay');await pc.locator('#levelHome').scrollIntoViewIfNeeded();await fits(pc,'#levelHome');await pc.locator('.progress-shortcuts').scrollIntoViewIfNeeded();await fits(pc,'.progress-shortcuts');for(const id of ['dailyHome','missionsHome','weeklyHome'])assert(await pc.locator('#'+id).evaluate(e=>e.scrollWidth<=e.clientWidth+1&&e.getBoundingClientRect().height>=44),id+' is a readable, touch-sized tile');await pc.screenshot({path:path.join(out,'home-'+width+'.png')});await pc.evaluate(()=>scrollTo(0,0));}
     await pc.setViewportSize({width:1440,height:900});
     const profile=await pc.evaluate(()=>({id:profileId}));
     // A friend arena with one AI: the level chip shows in the lobby.
@@ -46,20 +46,27 @@ const out=process.env.ARTIFACT_DIR||path.join(__dirname,'../artifacts/growth');f
     await pc.waitForFunction(()=>latest?.phase==='results'&&lastResult?.reward?.xp);await pc.locator('#rewardXp').waitFor({state:'visible'});
     const reward=await pc.evaluate(()=>lastResult.reward);assert.equal(reward.xp.levelUp,true);assert(reward.medals['double-kill']>=1&&reward.medals['first-blood']===1&&reward.medals.revenge>=1);
     assert.match(await pc.locator('#rewardXpTitle').textContent(),/^LEVEL UP! Level \d+ · /);assert.equal(await pc.locator('#rewardXpGain').textContent(),'+'+reward.xp.total+' XP');
-    assert.equal(await pc.locator('#rewardXpNote').textContent(),'Promoted to Private!');assert.match(await pc.locator('#rewardMedals').textContent(),/^Medals · First Blood · Double Kill/);
+    assert.equal(await pc.locator('#rewardXpNote').textContent(),'Promoted to Private!');assert.deepEqual((await pc.locator('#rewardMedals .medal-chip').allTextContents()).slice(0,2),['First Blood','Double Kill']);assert.match(await pc.locator('#rewardMedals').getAttribute('aria-label'),/^Medals: First Blood · Double Kill/);assert.equal(await pc.locator('#rewardMedals .medal-icon svg').count(),await pc.locator('#rewardMedals .medal-chip').count());
     assert.match(await pc.locator('#rewardNext').textContent(),/^Next · \d+ XP to Level \d+ · /);
-    assert.equal(await pc.locator('#rewardTotal').textContent(),'+'+reward.total+' coins');assert.equal(reward.total,20+30+30+20,'levels add no coins');
+    await pc.waitForFunction(total=>document.getElementById('rewardTotal').textContent==='+'+total+' coins',reward.total);assert.equal(await pc.locator('#rewardTotal').getAttribute('aria-label'),'+'+reward.total+' coins');assert.equal(reward.total,20+30+30+20,'levels add no coins');
     await pc.waitForTimeout(1700);const level=await pc.evaluate(()=>playerProgress.level);
     assert.equal(await pc.locator('#rewardXpFill').evaluate(e=>e.style.width),Math.round(100*level.into/level.need)+'%','the bar settles on the saved progress');
     await pc.locator('#matchRewards').scrollIntoViewIfNeeded();await pc.screenshot({path:path.join(out,'results-desktop.png')});
-    await pc.locator('#shareResult').click();const shared=await pc.evaluate(()=>window.shared);assert.equal(shared.length,1);
+    // Where the device can share files, the result goes out as a picture with the text as its caption.
+    await pc.evaluate(()=>{Object.defineProperty(navigator,'canShare',{configurable:true,value:data=>Array.isArray(data?.files)&&data.files.every(f=>f.type==='image/png')});});
+    await pc.locator('#shareResult').click();await pc.waitForFunction(()=>window.shared.length===1);
+    const card=await pc.evaluate(async()=>{const data=window.shared[0],file=data.files[0],image=await createImageBitmap(file),bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(const b of bytes)binary+=String.fromCharCode(b);return {name:file.name,type:file.type,size:file.size,width:image.width,height:image.height,text:data.text,url:data.url,base64:btoa(binary)};});
+    assert.deepEqual([card.name,card.type,card.width,card.height],['tank-frenzy-result.png','image/png',1080,1080]);assert(card.size>30000,'the picture has real content ('+card.size+' bytes)');assert.match(card.text,/Can you beat me\? https:\/\/tanks\.example\/$/);assert.equal(card.url,undefined);
+    fs.writeFileSync(path.join(out,'result-card.png'),Buffer.from(card.base64,'base64'));
+    await pc.evaluate(()=>{window.shared=[];Object.defineProperty(navigator,'canShare',{configurable:true,value:undefined});});
+    await pc.locator('#shareResult').click();await pc.waitForFunction(()=>window.shared.length>0);const shared=await pc.evaluate(()=>window.shared);assert.equal(shared.length,1);
     assert.equal(shared[0].title,'Tank Frenzy');assert.equal(shared[0].url,'https://tanks.example/');
     assert.match(shared[0].text,/^🏆 Victory in Tank Frenzy! 10 kills · 1 death · /);assert.match(shared[0].text,/🏅 First Blood/);assert.match(shared[0].text,new RegExp('Level '+level.level+' '+level.rank));assert.match(shared[0].text,/Can you beat me\?$/);
     assert(!shared[0].text.includes(profile.id),'no private identifiers are shared');
     for(const [width,height]of [[390,844],[320,640],[844,390]]){await resize(pc,width,height);await pc.locator('#rewardXp').scrollIntoViewIfNeeded();await fits(pc,'#rewardXp');await pc.screenshot({path:path.join(out,'results-'+width+'.png')});await pc.locator('#shareResult').scrollIntoViewIfNeeded();await fits(pc,'#shareResult');}
     // Without a share sheet the summary is copied instead.
     await resize(pc,1440,900);await pc.evaluate(()=>{Object.defineProperty(navigator,'share',{configurable:true,value:undefined});window.copied=null;Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.copied=text;}}});});
-    await pc.locator('#shareResult').click();await pc.waitForFunction(()=>window.copied);assert.match(await pc.evaluate(()=>window.copied),/Can you beat me\? https:\/\/tanks\.example\/$/);assert.match(await pc.locator('#shareResult').textContent(),/Copied/);
+    const saving=pc.waitForEvent('download');await pc.locator('#shareResult').click();await pc.waitForFunction(()=>window.copied);assert.match(await pc.evaluate(()=>window.copied),/Can you beat me\? https:\/\/tanks\.example\/$/);assert.equal((await saving).suggestedFilename(),'tank-frenzy-result.png');assert.equal(await pc.locator('#shareResult').textContent(),'Copied · Picture saved too ✓');
     // Garage: level bar, all badges, progress on the counted ones.
     await pc.evaluate(()=>leave());await pc.locator('#levelHome').click();await pc.waitForFunction(()=>!progressLoading&&garageOpen);
     assert.equal(await pc.locator('#garageLevelTitle').textContent(),'Level '+level.level+' · '+level.rank);assert.equal(await pc.locator('.achievement-item').count(),F.achievements.length);
@@ -78,6 +85,6 @@ const out=process.env.ARTIFACT_DIR||path.join(__dirname,'../artifacts/growth');f
     await pc.evaluate(()=>leave());await friend.evaluate(()=>leave());await pc.evaluate(()=>{window.shared=[];Object.defineProperty(navigator,'share',{configurable:true,value:async data=>{window.shared.push(data);}});});
     await pc.locator('#createRoom').click();await pc.waitForFunction(()=>latest?.phase==='waiting');await pc.locator('#shareRoom').click();await pc.locator('#nativeShare').click();
     const invite=(await pc.evaluate(()=>window.shared))[0];assert.match(invite.url,/^https:\/\/tanks\.example\/\?room=/);assert.match(invite.text,/Join my Tank Frenzy arena/);
-    assert.deepEqual(errors,[]);console.log('Growth UI passed: home level, lobby and lineup chips, medal toasts, results experience and level-up, next goal, share sheet and copy fallback, badges with progress, 4 viewports.');
+    assert.deepEqual(errors,[]);console.log('Growth UI passed: home level, lobby and lineup chips, medal toasts, results experience and level-up, next goal, picture share, text share and copy-and-save fallback, badges with progress, 4 viewports.');
   }finally{await browser?.close();await game.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

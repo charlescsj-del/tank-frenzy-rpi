@@ -24,7 +24,8 @@ function server(options={}){
       return require(name);
     }};
   vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../server.cjs'),'utf8'),sandbox);
-  const game=sandbox.module.exports.createGameServer(options);
+  // These tests group brand-new guests, so the instant first match stays off unless a test asks for it.
+  const game=sandbox.module.exports.createGameServer({quickFirstMatch:false,...options});
   function join(room,mode,name='Player',token,settings){const socket=new Socket();game.wss.emit('connection',socket);socket.emit('message',JSON.stringify({type:'join',room,mode,name,token,settings}));return socket;}
   function list(){let body,headers={};game.server.emit('request',{url:'/rooms',method:'GET'},{setHeader(k,v){headers[k]=v;},end(raw){body=JSON.parse(raw);}});return {body,headers};}
   function read(url,{method='GET',headers:requestHeaders={}}={}){return new Promise((resolve,reject)=>{

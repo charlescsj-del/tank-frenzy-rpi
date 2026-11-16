@@ -49,6 +49,7 @@ class Room {
   }
   fillQuick(){
     this.botSkill=this.chooseBotSkill?.(this.humans())||'easy';
+    this.shells=[];for(const p of this.players.values()){p.input=neutral();p.pendingShot=false;}
     while(this.players.size<F.maxPlayers)this.add('',{bot:true});
     this.phase='ready';this.readyUntil=this.time+this.readySeconds;this.readyIds=new Set();
   }
@@ -147,7 +148,7 @@ class Room {
   setInput(p,m){
     if(!Number.isSafeInteger(m.seq)||m.seq<=p.seq||!Number.isFinite(m.x)||!Number.isFinite(m.y)||!Number.isFinite(m.aimX)||!Number.isFinite(m.aimY)||typeof m.fire!=='boolean')return;
     p.seq=m.seq;p.lastInput=this.time;
-    if(this.phase!=='playing'){p.input=neutral();p.pendingShot=false;return;}
+    if(this.phase!=='playing'&&this.phase!=='searching'){p.input=neutral();p.pendingShot=false;return;}
     if(m.fire&&!p.input.fire&&p.hp>0)p.pendingShot=true;
     p.input={x:clamp(m.x,-1,1),y:clamp(m.y,-1,1),aimX:clamp(m.aimX,-200,F.width+200),aimY:clamp(m.aimY,-200,F.height+200),fire:m.fire};
   }
@@ -225,7 +226,7 @@ class Room {
     if(target)this.damage(target,p.id,F.laserDamage);
   }
   fire(p){
-    if(this.phase!=='playing'||p.cool>0||this.winner)return;
+    if(this.phase!=='playing'&&this.phase!=='searching'||p.cool>0||this.winner)return;
     const power=this.settings.powers&&p.powerUntil>this.time?p.power:null;
     const count=power==='double'?2:1;
     if(power!=='laser'&&(this.shells.length+count>F.maxShells||this.shells.filter(s=>s.owner===p.id).length+count>F.maxShellsPerPlayer))return;
@@ -257,7 +258,8 @@ class Room {
       if(!this.humans().length)return;
       if(this.phase==='searching'&&(this.humans().length>=F.maxPlayers||this.time>=this.searchUntil))this.fillQuick();
       else if(this.phase==='ready'){while(this.players.size<F.maxPlayers)this.add('',{bot:true});if(this.time>=this.readyUntil||this.humans().every(p=>this.readyIds.has(p.id)))this.beginQuickBattle();}
-      return;
+      // While searching, tanks can drive and shoot as a warm-up. Nothing is damaged, collected or counted.
+      if(this.phase!=='searching')return;
     }
     if(this.phase==='waiting')return;
     if(this.phase==='countdown'){
@@ -267,7 +269,7 @@ class Room {
     if(this.phase==='results'){if(this.time>=this.rematchUntil){this.phase='postgame';this.rematchVotes.clear();}else this.checkRematch();return;}
     if(this.phase==='postgame')return;
     this.pickups=this.pickups.filter(p=>p.expiresAt>this.time);
-    if(this.settings.powers&&this.time>=this.nextPickup){this.spawnPickup();this.nextPickup=this.time+F.pickupInterval;}
+    if(this.settings.powers&&this.phase==='playing'&&this.time>=this.nextPickup){this.spawnPickup();this.nextPickup=this.time+F.pickupInterval;}
     for(const p of this.players.values())if(p.bot)Bots.think(this,p,rayBox);
     for(const p of this.players.values()){
       if(!p.connected)continue;

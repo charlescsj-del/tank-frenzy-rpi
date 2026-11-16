@@ -4,7 +4,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const {createGameServer}=require('../server.cjs'),{generateMap}=require('../map-generator.cjs'),F=require('../shared.js');
 const out=process.env.ARTIFACT_DIR||path.join(__dirname,'../artifacts/vehicles');fs.mkdirSync(out,{recursive:true});
 (async()=>{
-  const game=createGameServer({vehicleClassesEnabled:true,quickSearchSeconds:20});let browser;const errors=[];
+  const game=createGameServer({vehicleClassesEnabled:true,quickSearchSeconds:20,quickFirstMatch:false});let browser;const errors=[];
   try{
     game.server.listen(0,'127.0.0.1');await once(game.server,'listening');const base='http://127.0.0.1:'+game.server.address().port;
     browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.CHROMIUM_EXECUTABLE_PATH}:{})});

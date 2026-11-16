@@ -1,5 +1,16 @@
 # Changelog
 
+## v3.12.0 [2026-11-16]
+
+- **Livelier battles.** Muzzle flashes, a small camera kick when you fire, dust behind moving tanks, clearer track marks, a fireball with tumbling plates in the destroyed tank's colour, scorch marks that fade over half a minute, smoke from wrecks and a puff where a shell ends. Your own hits show a hit marker with a tick and, on phones that support it, a short buzz. Nearby explosions shake the screen a little.
+- **Final blow.** The match-winning kill plays for about a second in slow motion, with the camera closing in, before the results appear.
+- **Instant first match.** A player who has never finished a match and presses Play with nobody else searching starts at once against three easy AI tanks: no search and no line-up, straight to the 3–2–1 countdown. If someone is already searching, the newcomer joins them instead. From the second match on, Quick Play queues as before.
+- **Warm up while you wait.** During the Quick Play search the field is live: drive and shoot under a compact search bar. Nothing is damaged, collected or counted, and the line-up and battle start from fresh spawns.
+- **Share a picture.** Share result now sends a square picture with your tank, the score, medals and level where the device can share files; otherwise it shares the text, and on a computer it copies the text and saves the picture.
+- **Tidier home and results.** The home screen shows your own tank beside your level and three progress tiles (Daily, Missions, Weekly). Results open with every player's score at a glance, coins count up, the experience bar fills after them and medals appear as coloured chips.
+- With reduced motion switched on in the device settings there is no shake, dust, debris or slow motion, and results appear at once.
+- Technical: effects are client-only and bounded (at most 420 particles, 14 scorch marks); battle snapshots and rules are unchanged. `Room.step` simulates movement and shells in `searching` with damage, pickups and statistics off, and `fillQuick` clears warm-up shells. `createGameServer({quickFirstMatch})` (default on) controls the instant first match; a profile is new when neither the leaderboard nor the progress file has a finished match for it. New checks: `tests/warmup.test.cjs`, `tools/feel-ui-check.cjs` and `tools/quickstart-ui-check.cjs`.
+
 ## v3.11.0 [2026-11-15]
 
 - **Daily missions.** Three small goals every Malaysia day, the same for everyone, from a pool of ten (destroy 8 tanks, collect 3 power-ups, earn 2 medals, and so on). Each pays 40 experience once; all three add 60 more. Experience only, no coins. Shown on the home screen, in the Garage and on results.

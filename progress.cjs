@@ -33,6 +33,7 @@ class Progress {
   edit(id){const p=JSON.parse(JSON.stringify(this.players.get(id)||blank()));this.players.set(id,p);return p;}
   ensure(id){if(!this.players.has(id))this.commit(()=>this.players.set(id,blank()));return this.view(id);}
   skinOf(id){return this.players.get(id)?.equipped||'classic';}
+  played(id){return (this.players.get(id)?.stats.matches||0)>0;}
   levelOf(id){return F.levelOf(this.players.get(id)?.xp||0).level;}
   vehicleOf(id){return F.vehicleOf(this.players.get(id)?.selectedVehicle).id;}
   selectVehicle(id,vehicle){

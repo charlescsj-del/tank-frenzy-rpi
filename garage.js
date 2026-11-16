@@ -19,13 +19,22 @@ function loadPlayerProgress(){
 function renderProgressHome(){
   const p=playerProgress;if(!p)return;
   $('coinBalance').textContent=p.coins.toLocaleString()+' coins';$('garageButton').setAttribute('aria-label','Garage · '+p.coins+' coins');
-  const daily=p.daily;$('dailyHome').textContent=p.enabled===false?'Daily rewards paused':daily.qualified?'Day '+daily.step+' complete · Tomorrow: Day '+daily.nextDay:'Daily reward · Day '+daily.nextDay;
-  const missions=p.missions?.missions||[];$('missionsHome').hidden=!missions.length;$('missionsHome').textContent=p.enabled===false?'Daily missions paused':'Daily missions · '+missions.filter(m=>m.completed).length+'/'+missions.length+' →';
-  const weekly=p.weekly?.challenges||[];$('weeklyHome').textContent=p.enabled===false?'Weekly challenges paused':'Weekly challenges · '+weekly.filter(c=>c.completed).length+'/'+weekly.length+' complete →';
+  const paused=p.enabled===false,daily=p.daily,missions=p.missions?.missions||[],weekly=p.weekly?.challenges||[],missionsDone=missions.filter(m=>m.completed).length,weeklyDone=weekly.filter(c=>c.completed).length;
+  homeTile('dailyHome','Daily',paused?'Paused':'Day '+(daily.qualified?daily.step:daily.nextDay),daily.qualified?' complete →':' →',paused?0:daily.step/7,daily.qualified,paused?'Daily rewards are paused.':daily.qualified?'Daily reward: Day '+daily.step+' earned. Tomorrow is Day '+daily.nextDay+'.':'Daily reward: play one standard match for Day '+daily.nextDay+'.');
+  $('missionsHome').hidden=!missions.length;homeTile('missionsHome','Missions',paused?'Paused':missionsDone+'/'+missions.length,' →',paused||!missions.length?0:missionsDone/missions.length,missions.length>0&&missionsDone===missions.length,paused?'Daily missions are paused.':'Daily missions: '+missionsDone+' of '+missions.length+' done.');
+  homeTile('weeklyHome','Weekly',paused?'Paused':weeklyDone+'/'+weekly.length,' complete →',paused||!weekly.length?0:weeklyDone/weekly.length,weekly.length>0&&weeklyDone===weekly.length,paused?'Weekly challenges are paused.':'Weekly challenges: '+weeklyDone+' of '+weekly.length+' complete.');
   $('progressHomeNote').textContent=p.persistent?'Play matches. Earn coins. Make it yours.':'Progress lasts for this server session. Ask the host to enable permanent storage.';
   $('progressHome').hidden=spectating;
   const level=p.level;$('levelHome').hidden=!level;
+  // The player's own tank, in the skin and class they will take into the next match.
+  const look=[lastTankSlot,p.equipped,p.selectedVehicle].join();if($('homeTank').look!==look&&typeof tankPortrait==='function'){$('homeTank').look=look;$('homeTank').replaceChildren(tankPortrait(lastTankSlot,p.equipped||'classic',p.selectedVehicle||'standard'));}
   if(level){$('levelHomeTitle').textContent='Level '+level.level+' · '+level.rank;$('levelHomeFill').style.width=xpPercent(level)+'%';$('levelHomeNote').textContent=(level.need-level.into)+' XP to Level '+(level.level+1);$('levelHome').setAttribute('aria-label','Level '+level.level+', '+level.rank+'. '+(level.need-level.into)+' experience to the next level. Open badges.');}
+}
+// One progress tile on the home screen: a short label, the number that matters and a bar.
+function homeTile(id,label,value,tail,ratio,done,description){
+  const tile=$(id),part=(tag,name,text)=>{const e=document.createElement(tag);e.className=name;e.textContent=text;return e;},bar=part('i','tile-bar',''),fill=document.createElement('i');
+  fill.style.width=Math.round(100*Math.max(0,Math.min(1,ratio||0)))+'%';bar.append(fill);bar.setAttribute('aria-hidden','true');
+  tile.replaceChildren(part('span','tile-label',label),part('span','tile-join',' · '),part('b','tile-value',value),part('span','tile-join',tail),bar);tile.classList.toggle('tile-done',Boolean(done));tile.setAttribute('aria-label',description+' Open details.');
 }
 const xpPercent=level=>Math.max(0,Math.min(100,Math.round(100*level.into/level.need)));
 function renderDaily(){
@@ -155,11 +164,12 @@ function showMatchRewards(result){
   $('matchHighlights').replaceChildren();
   for(const highlight of r.highlights||[]){const item=document.createElement('div'),title=document.createElement('strong'),detail=document.createElement('span');item.className='match-highlight';title.textContent=highlight.title;detail.textContent=highlight.detail;item.append(title,detail);$('matchHighlights').append(item);}
   $('matchHighlights').hidden=!(r.highlights?.length);
-  $('rewardTotal').textContent='+'+r.total+' coins';
+  $('rewardTotal').textContent='+'+r.total+' coins';$('rewardTotal').setAttribute('aria-label','+'+r.total+' coins');
   $('rewardBreakdown').textContent=r.reason||['Completed +'+r.completion,r.victory?'Victory +'+r.victory:'',r.kills?'Kills +'+r.kills:'',r.daily?'Day '+r.daily.day+' +'+r.daily.coins:'',r.daily?.collectionBonus?'Full collection +'+r.daily.collectionBonus:''].filter(Boolean).join(' · ');
   $('rewardWeekly').hidden=!r.weekly?.length;$('rewardWeekly').textContent=(r.weekly||[]).map(c=>'Weekly: '+c.name+' +'+c.coins).join(' · ');
   showExperience(r);
-  const medals=medalSummary(r.medals);$('rewardMedals').hidden=!medals;$('rewardMedals').textContent=medals?'Medals · '+medals:'';
+  const medals=FIELD.medals.filter(m=>r.medals?.[m.id]);$('rewardMedals').hidden=!medals.length;$('rewardMedals').setAttribute('aria-label','Medals: '+medalSummary(r.medals));
+  $('rewardMedals').replaceChildren(...medals.map((m,i)=>{const chip=document.createElement('span'),count=r.medals[m.id];chip.className='medal-chip medal-'+m.id;chip.style.setProperty('--i',String(i));chip.title=m.description;chip.append(medalIcon(),m.name+(count>1?' ×'+count:''));return chip;}));
   const missionLine=[...(r.missions||[]).map(m=>'Mission: '+m.name+' +'+m.xp+' XP'),r.missionSweep?'All three missions +'+r.missionSweep+' XP':''].filter(Boolean).join(' · ');$('rewardMissions').hidden=!missionLine;$('rewardMissions').textContent=missionLine;
   $('rewardRivals').replaceChildren(...(r.rivals||[]).slice(0,3).map(rival=>{const line=document.createElement('p');line.textContent=!rival.wins&&!rival.losses&&rival.allied?'With '+rival.name+' · '+rival.allied+(rival.allied===1?' match':' matches')+' as team mates':'vs '+rival.name+' · '+(rival.wins===rival.losses?'Level at '+rivalScore(rival):rival.wins>rival.losses?'You lead '+rivalScore(rival):'You trail '+rivalScore(rival));return line;}));$('rewardRivals').hidden=!(r.rivals||[]).length;
   const next=nextGoals();$('rewardNext').hidden=!next;$('rewardNext').textContent=next?'Next · '+next:'';
@@ -167,23 +177,36 @@ function showMatchRewards(result){
   const skin=FIELD.skins.find(s=>s.id===r.skin);$('rewardSkin').hidden=!skin;$('equipRewardSkin').hidden=!skin;
   if(skin){$('rewardSkin').replaceChildren(TankSkins.portrait(lastTankSlot,skin.id));const text=document.createElement('span');text.textContent='Day 7 unlocked · '+skin.name+' · Yours forever';$('rewardSkin').append(text);$('equipRewardSkin').textContent=playerProgress?.equipped===skin.id?'Equipped ✓':'Equip '+skin.name;$('equipRewardSkin').disabled=playerProgress?.equipped===skin.id;}
   $('rewardProtect').hidden=!playerProgress?.stats.matches||Boolean(localStorageSafe('tank-frenzy-recovery-saved')); 
+  playRewardReveal();
+}
+function medalIcon(){
+  const holder=document.createElement('i');holder.className='medal-icon';holder.setAttribute('aria-hidden','true');
+  if(document.createElementNS){const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg'),use=document.createElementNS(ns,'use');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('width','100%');svg.setAttribute('height','100%');use.setAttribute('href','#ui-medal');svg.append(use);holder.append(svg);}
+  return holder;
+}
+// When the results come into view: coins count up, then the experience bar fills. Once per round.
+let revealKey='';
+function playRewardReveal(){
+  const result=lastResult,r=result?.reward;if(!r||$('matchRewards').hidden||$('results').hidden||revealKey===result.roundId)return;revealKey=result.roundId;
+  if(reducedMotion||typeof requestAnimationFrame!=='function'){showExperience(r);return;}
+  const started=performance.now(),key=revealKey,count=()=>{if(revealKey!==key||lastResult!==result)return;const k=Math.min(1,(performance.now()-started)/750);$('rewardTotal').textContent='+'+Math.round(r.total*(1-(1-k)**3))+' coins';if(k<1)requestAnimationFrame(count);};
+  if(r.total>0)count();
+  clearTimeout(xpTimer);xpTimer=setTimeout(()=>showExperience(r,true),420);
 }
 const medalSummary=medals=>FIELD.medals.filter(m=>medals?.[m.id]).map(m=>m.name+(medals[m.id]>1?' ×'+medals[m.id]:'')).join(' · ');
 let xpTimer=null;
 // Fill the bar from where the player stood to where they stand now; a new level refills from empty.
-function showExperience(r){
-  const xp=r.xp;$('rewardXp').hidden=!xp;clearTimeout(xpTimer);if(!xp)return;
+function showExperience(r,animate=false){
+  const xp=r.xp;$('rewardXp').hidden=!xp;if(!animate)clearTimeout(xpTimer);if(!xp)return;
   const fill=$('rewardXpFill'),set=level=>{fill.style.width=xpPercent(level)+'%';$('rewardXpBar').setAttribute('aria-valuenow',String(xpPercent(level)));};
   $('rewardXp').classList.toggle('level-up',xp.levelUp);
   $('rewardXpTitle').textContent=(xp.levelUp?'LEVEL UP! ':'')+'Level '+xp.after.level+' · '+xp.after.rank;$('rewardXpGain').textContent='+'+xp.total+' XP';
   const note=[xp.promotion?'Promoted to '+xp.promotion+'!':'',r.winStreak>=2?r.winStreak+' wins in a row · +'+xp.streak+' XP':''].filter(Boolean).join(' ');$('rewardXpNote').textContent=note;$('rewardXpNote').hidden=!note;
   $('rewardXpBar').setAttribute('aria-label','Experience towards Level '+(xp.after.level+1));
-  if(reducedMotion||typeof requestAnimationFrame!=='function'){set(xp.after);return;}
-  set(xp.before);
-  requestAnimationFrame(()=>{
-    if(!xp.levelUp){set(xp.after);return;}
-    fill.style.width='100%';xpTimer=setTimeout(()=>{fill.style.transition='none';fill.style.width='0%';void fill.offsetWidth;fill.style.transition='';set(xp.after);},750);
-  });
+  // Until the results are revealed the bar waits where the player stood before the match.
+  if(!animate){set(reducedMotion||typeof requestAnimationFrame!=='function'||revealKey===lastResult?.roundId?xp.after:xp.before);return;}
+  if(!xp.levelUp){set(xp.after);return;}
+  fill.style.width='100%';xpTimer=setTimeout(()=>{fill.style.transition='none';fill.style.width='0%';void fill.offsetWidth;fill.style.transition='';set(xp.after);},750);
 }
 // One short line of what is closest: the next level and the nearest unfinished weekly goal.
 function nextGoals(){
@@ -200,11 +223,45 @@ function resultShareText(){
   const won=latest.settings?.mode==='teams'?me.team===latest.winner.team:me.id===latest.winner.id,medals=medalSummary(r?.medals);
   return (won?'🏆 Victory':'💥 Good battle')+' in Tank Frenzy! '+me.kills+(me.kills===1?' kill':' kills')+' · '+me.deaths+(me.deaths===1?' death':' deaths')+(me.shots?' · 🎯 '+Math.round(100*Math.min(me.hits,me.shots)/me.shots)+'%':'')+(medals?' · 🏅 '+medals:'')+(playerProgress?.level?' · Level '+playerProgress.level.level+' '+playerProgress.level.rank:'')+'\nCan you beat me?';
 }
+// A square picture of the result for chats and stories: outcome, the player's own tank, score, medals and level.
+function drawResultCard(){
+  const me=latest?.players.find(p=>p.id===myId),r=lastResult?.reward;if(!me||!latest?.winner||typeof document.createElement('canvas').getContext!=='function')return null;
+  const canvas=document.createElement('canvas'),c=canvas.getContext('2d'),S=1080,font=(size,weight=900)=>weight+' '+size+'px ui-rounded,"Trebuchet MS",sans-serif';if(!c)return null;canvas.width=canvas.height=S;
+  const won=latest.settings?.mode==='teams'?me.team===latest.winner.team:me.id===latest.winner.id,level=playerProgress?.level;
+  const text=(value,x,y,size,color,{align='center',weight=900,max=S-120}={})=>{c.font=font(size,weight);c.textAlign=align;c.fillStyle=color;c.fillText(value,x,y,max);};
+  const box=(x,y,w,h,r,fill,stroke)=>{c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=4;c.stroke();}};
+  const sky=c.createLinearGradient(0,0,0,S);sky.addColorStop(0,'#3c7a5a');sky.addColorStop(1,'#163a31');c.fillStyle=sky;c.fillRect(0,0,S,S);
+  c.fillStyle='#ffffff0a';for(let x=0;x<S;x+=180)for(let y=0;y<S;y+=180)if((x+y)%360===0)c.fillRect(x,y,180,180);
+  box(30,30,S-60,S-60,54,null,'#c7d99455');
+  c.font=font(64);c.textAlign='center';const tank=c.measureText('TANK ').width,frenzy=c.measureText('FRENZY').width,left=S/2-(tank+frenzy)/2;
+  text('TANK ',left,128,64,'#fff8df',{align:'left'});text('FRENZY',left+tank,128,64,'#ffb347',{align:'left'});
+  text(won?'VICTORY!':'GOOD BATTLE!',S/2,250,won?108:88,won?'#ffd45e':'#fff8df');
+  // The player's tank in its own skin.
+  if(typeof TankSkins!=='undefined'){const art=document.createElement('canvas');TankSkins.draw(art,me.skin||'classic',me.slot,900,me.vehicle||'standard');c.drawImage(art,S/2-426,165);}
+  text(me.name+(level?'  ·  Level '+level.level+' '+level.rank:''),S/2,702,46,'#fff8df');
+  const stats=[[String(me.kills),me.kills===1?'KILL':'KILLS'],[String(me.deaths),me.deaths===1?'DEATH':'DEATHS'],[me.shots?Math.round(100*Math.min(me.hits,me.shots)/me.shots)+'%':'—','HIT RATE']];
+  stats.forEach(([value,label],i)=>{const x=96+i*306;box(x,738,276,150,30,'#102f2d99','#a9c79a55');text(value,x+138,820,76,'#ffd45e',{max:250});text(label,x+138,866,26,'#c4d9bf',{max:250});});
+  const medals=FIELD.medals.filter(m=>r?.medals?.[m.id]).slice(0,4).map(m=>m.name+(r.medals[m.id]>1?' ×'+r.medals[m.id]:''));
+  if(medals.length)text('★ '+medals.join('  ·  '),S/2,944,34,'#ffe9a8');
+  let host='';try{host=new URL(networkBase).host;}catch{}
+  text('Can you beat me?'+(host?'  '+host:''),S/2,medals.length?1004:980,medals.length?32:38,'#b6d7b5',{weight:700});
+  return canvas;
+}
+async function resultCardFile(){
+  let canvas=null;try{canvas=drawResultCard();}catch{}
+  if(!canvas||typeof canvas.toBlob!=='function'||typeof File!=='function')return null;
+  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));return blob?new File([blob],'tank-frenzy-result.png',{type:'image/png'}):null;
+}
+// Share the picture where the device can; otherwise the text, and on a computer save the picture and copy the text.
 $('shareResult').addEventListener('click',async()=>{
   const text=resultShareText(),url=networkBase+'/';if(!text)return;
   try{
+    const file=await resultCardFile().catch(()=>null);
+    if(file&&navigator.share&&navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:'Tank Frenzy',text:text+' '+url});return;}
     if(navigator.share){await navigator.share({title:'Tank Frenzy',text,url});return;}
-    await navigator.clipboard.writeText(text+' '+url);$('shareResult').textContent='Copied · Paste it anywhere ✓';
+    await navigator.clipboard.writeText(text+' '+url);
+    let saved=false;if(file&&typeof URL.createObjectURL==='function'){const link=document.createElement('a'),href=URL.createObjectURL(file);link.href=href;link.download=file.name;link.click?.();saved=Boolean(link.click);setTimeout(()=>URL.revokeObjectURL(href),10000);}
+    $('shareResult').textContent=saved?'Copied · Picture saved too ✓':'Copied · Paste it anywhere ✓';
   }catch(error){if(error?.name!=='AbortError')$('shareResult').textContent='Sharing is unavailable here';}
 });
 $('levelHome').addEventListener('click',async()=>{await openGarage();if(garageOpen)$('garageLevel').scrollIntoView?.({block:'center'});});
