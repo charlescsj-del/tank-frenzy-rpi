@@ -200,11 +200,45 @@ function resultShareText(){
   const won=latest.settings?.mode==='teams'?me.team===latest.winner.team:me.id===latest.winner.id,medals=medalSummary(r?.medals);
   return (won?'🏆 Victory':'💥 Good battle')+' in Tank Frenzy! '+me.kills+(me.kills===1?' kill':' kills')+' · '+me.deaths+(me.deaths===1?' death':' deaths')+(me.shots?' · 🎯 '+Math.round(100*Math.min(me.hits,me.shots)/me.shots)+'%':'')+(medals?' · 🏅 '+medals:'')+(playerProgress?.level?' · Level '+playerProgress.level.level+' '+playerProgress.level.rank:'')+'\nCan you beat me?';
 }
+// A square picture of the result for chats and stories: outcome, the player's own tank, score, medals and level.
+function drawResultCard(){
+  const me=latest?.players.find(p=>p.id===myId),r=lastResult?.reward;if(!me||!latest?.winner||typeof document.createElement('canvas').getContext!=='function')return null;
+  const canvas=document.createElement('canvas'),c=canvas.getContext('2d'),S=1080,font=(size,weight=900)=>weight+' '+size+'px ui-rounded,"Trebuchet MS",sans-serif';if(!c)return null;canvas.width=canvas.height=S;
+  const won=latest.settings?.mode==='teams'?me.team===latest.winner.team:me.id===latest.winner.id,level=playerProgress?.level;
+  const text=(value,x,y,size,color,{align='center',weight=900,max=S-120}={})=>{c.font=font(size,weight);c.textAlign=align;c.fillStyle=color;c.fillText(value,x,y,max);};
+  const box=(x,y,w,h,r,fill,stroke)=>{c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=4;c.stroke();}};
+  const sky=c.createLinearGradient(0,0,0,S);sky.addColorStop(0,'#3c7a5a');sky.addColorStop(1,'#163a31');c.fillStyle=sky;c.fillRect(0,0,S,S);
+  c.fillStyle='#ffffff0a';for(let x=0;x<S;x+=180)for(let y=0;y<S;y+=180)if((x+y)%360===0)c.fillRect(x,y,180,180);
+  box(30,30,S-60,S-60,54,null,'#c7d99455');
+  c.font=font(64);c.textAlign='center';const tank=c.measureText('TANK ').width,frenzy=c.measureText('FRENZY').width,left=S/2-(tank+frenzy)/2;
+  text('TANK ',left,128,64,'#fff8df',{align:'left'});text('FRENZY',left+tank,128,64,'#ffb347',{align:'left'});
+  text(won?'VICTORY!':'GOOD BATTLE!',S/2,250,won?108:88,won?'#ffd45e':'#fff8df');
+  // The player's tank in its own skin.
+  if(typeof TankSkins!=='undefined'){const art=document.createElement('canvas');TankSkins.draw(art,me.skin||'classic',me.slot,900,me.vehicle||'standard');c.drawImage(art,S/2-426,165);}
+  text(me.name+(level?'  ·  Level '+level.level+' '+level.rank:''),S/2,702,46,'#fff8df');
+  const stats=[[String(me.kills),me.kills===1?'KILL':'KILLS'],[String(me.deaths),me.deaths===1?'DEATH':'DEATHS'],[me.shots?Math.round(100*Math.min(me.hits,me.shots)/me.shots)+'%':'—','HIT RATE']];
+  stats.forEach(([value,label],i)=>{const x=96+i*306;box(x,738,276,150,30,'#102f2d99','#a9c79a55');text(value,x+138,820,76,'#ffd45e',{max:250});text(label,x+138,866,26,'#c4d9bf',{max:250});});
+  const medals=FIELD.medals.filter(m=>r?.medals?.[m.id]).slice(0,4).map(m=>m.name+(r.medals[m.id]>1?' ×'+r.medals[m.id]:''));
+  if(medals.length)text('★ '+medals.join('  ·  '),S/2,944,34,'#ffe9a8');
+  let host='';try{host=new URL(networkBase).host;}catch{}
+  text('Can you beat me?'+(host?'  '+host:''),S/2,medals.length?1004:980,medals.length?32:38,'#b6d7b5',{weight:700});
+  return canvas;
+}
+async function resultCardFile(){
+  let canvas=null;try{canvas=drawResultCard();}catch{}
+  if(!canvas||typeof canvas.toBlob!=='function'||typeof File!=='function')return null;
+  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));return blob?new File([blob],'tank-frenzy-result.png',{type:'image/png'}):null;
+}
+// Share the picture where the device can; otherwise the text, and on a computer save the picture and copy the text.
 $('shareResult').addEventListener('click',async()=>{
   const text=resultShareText(),url=networkBase+'/';if(!text)return;
   try{
+    const file=await resultCardFile().catch(()=>null);
+    if(file&&navigator.share&&navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:'Tank Frenzy',text:text+' '+url});return;}
     if(navigator.share){await navigator.share({title:'Tank Frenzy',text,url});return;}
-    await navigator.clipboard.writeText(text+' '+url);$('shareResult').textContent='Copied · Paste it anywhere ✓';
+    await navigator.clipboard.writeText(text+' '+url);
+    let saved=false;if(file&&typeof URL.createObjectURL==='function'){const link=document.createElement('a'),href=URL.createObjectURL(file);link.href=href;link.download=file.name;link.click?.();saved=Boolean(link.click);setTimeout(()=>URL.revokeObjectURL(href),10000);}
+    $('shareResult').textContent=saved?'Copied · Picture saved too ✓':'Copied · Paste it anywhere ✓';
   }catch(error){if(error?.name!=='AbortError')$('shareResult').textContent='Sharing is unavailable here';}
 });
 $('levelHome').addEventListener('click',async()=>{await openGarage();if(garageOpen)$('garageLevel').scrollIntoView?.({block:'center'});});
